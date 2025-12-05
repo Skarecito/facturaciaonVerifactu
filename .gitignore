@@ -1,0 +1,32 @@
+﻿## Ignorar carpetas de compilación
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+
+## Ignorar paquetes NuGet
+**/packages/
+*.nupkg
+
+## Ignorar archivos de usuario
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Ignorar archivos de configuración con datos sensibles
+**/appsettings.Development.json
+**/appsettings.Local.json
+
+## Ignorar archivos temporales
+*.tmp
+*.temp
+*.log
+*.cache
+
+## Ignorar carpetas de Rider
+**/.idea/
+
+## Ignorar archivos de sistema
+Thumbs.db
+.DS_Store
