@@ -10,7 +10,7 @@
         public decimal PrecioUnitario { get; set; }
         public decimal IVA { get; set; } = 21; // Por defecto 21%
         public string? Unidad { get; set; } = "Ud"; // Unidad de medida
-        public bool EsServicio { get; set; } = false;
+        public bool Activo { get; set; } = false;
     }
 
     /// <summary>
@@ -22,7 +22,8 @@
         public decimal PrecioUnitario { get; set; }
         public decimal IVA { get; set; }
         public string? Unidad { get; set; }
-        public bool EsServicio { get; set; }
+        public bool Activo { get; set; }
+        public DateTime FechaCreacion {  get; set; }
     }
 
     /// <summary>
@@ -36,7 +37,7 @@
         public decimal PrecioUnitario { get; set; }
         public decimal IVA { get; set; }
         public string? Unidad { get; set; }
-        public bool EsServicio { get; set; }
+        public bool Activo { get; set; }
         public DateTime FechaCreacion { get; set; }
         public DateTime FechaModificacion { get; set; }
     }

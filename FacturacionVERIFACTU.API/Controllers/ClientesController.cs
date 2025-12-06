@@ -22,12 +22,12 @@ namespace FacturacionVERIFACTU.API.Controllers
 
         public ClientesController(
              ApplicationDbContext context,
-             ITenantContext tentantContext,
+             ITenantContext tenantContext,
              IValidator<CrearClienteDto> crearValidator,
              IValidator<ActualizarClienteDto> actualizarValidator)
         {
             _context = context;
-            _tenantContext = tentantContext;
+            _tenantContext = tenantContext;
             _crearValidator = crearValidator;
             _actualizarValidator = actualizarValidator;
         }
@@ -79,7 +79,7 @@ namespace FacturacionVERIFACTU.API.Controllers
                     Pais = c.Pais,
                     Email = c.Email,
                     Telefono = c.Telefono,
-                    FechaCreaccion = c.FechaAlta,
+                    FechaCreaccion = c.FechaCreacion,
                     FechaModificacion = c.FechaModificacion
                 })
                 .ToListAsync();
@@ -119,7 +119,7 @@ namespace FacturacionVERIFACTU.API.Controllers
                     Pais = c.Pais,
                     Email = c.Email,
                     Telefono = c.Telefono,
-                    FechaCreacion = c.FechaCreacion,
+                    FechaCreaccion = c.FechaCreacion,
                     FechaModificacion = c.FechaModificacion
                 })
                 .FirstOrDefaultAsync();
@@ -130,5 +130,146 @@ namespace FacturacionVERIFACTU.API.Controllers
             return Ok(cliente);
         }
 
+        ///<summary>
+        ///Crear un nuevo cliente
+        /// </summary>
+
+        [HttpPost]
+        public async Task<ActionResult<ClienteResponseDto>> CrearCliente(CrearClienteDto dto)
+        {
+            //Validar con FluentValidation
+            var validationResult = await _crearValidator.ValidateAsync(dto);
+            if (!validationResult.IsValid)
+                return BadRequest(validationResult.Errors);
+
+            var tenantId = _tenantContext.GetTenantId();
+            if (tenantId == null)
+                return Unauthorized(new { message = "Tenant no identificado" });
+
+            var exiteNIF = await _context.Clientes
+                .AnyAsync(c=> c.TenantId == tenantId.Value && c.NIF == dto.NIF);
+
+            if (exiteNIF)
+                return Conflict(new { message = "Ya existe un cliente con ese NIF" });
+
+            var cliente = new Cliente
+            {
+                TenantId = tenantId.Value,
+                NIF = dto.NIF,
+                Nombre = dto.Nombre,
+                Direccion = dto.Direccion,
+                CodigoPostal = dto.CodigoPostal,
+                Ciudad = dto.Poblacion,
+                Provincia = dto.Provincia,
+                Pais = dto.Pais ?? "España",
+                Email = dto.Email,
+                Telefono = dto.Telefono,
+                FechaCreacion = DateTime.UtcNow,
+                FechaModificacion = DateTime.UtcNow
+            };
+
+            _context.Clientes.Add(cliente);
+            await _context.SaveChangesAsync();
+
+            var response = new ClienteResponseDto
+            {
+                ClienteId = cliente.Id,
+                NIF = cliente.NIF,
+                Nombre = cliente.Nombre,
+                Direccion = cliente.Direccion,
+                CodigoPostal = cliente.CodigoPostal,
+                Poblacion = cliente.Ciudad,
+                Provincia = cliente.Provincia,
+                Pais = cliente.Pais,
+                Email = cliente.Email,
+                Telefono = cliente.Telefono,
+                FechaCreaccion = cliente.FechaCreacion,
+                FechaModificacion = cliente.FechaModificacion
+            };
+
+            return CreatedAtAction(nameof(GetCliente), new { id = cliente.Id }, response);
+        }
+
+        ///<summary>
+        ///Actualiza un cliente existente
+        /// </summary>
+        [HttpPut("{id}")]
+        public async Task<ActionResult<ClienteResponseDto>> ActualizarCliente (int id, ActualizarClienteDto dto)
+        {
+            //Validar con FluentValidation
+            var validationResult = await _actualizarValidator.ValidateAsync(dto);
+            if (!validationResult.IsValid)
+                return BadRequest(validationResult.Errors);
+
+            var tenantId = _tenantContext.GetTenantId();
+            if (tenantId == null)
+                return Unauthorized(new { message = "Tenant no identificado" });
+
+            var cliente = await _context.Clientes
+                .FirstOrDefaultAsync(c => c.Id == id && c.TenantId == tenantId.Value);
+
+            if (cliente == null)
+                return NotFound(new { message = "Cliente no encontrado" });
+
+            cliente.Nombre = dto.Nombre;
+            cliente.Direccion = dto.Direccion;
+            cliente.CodigoPostal = dto.CodigoPostal;
+            cliente.Ciudad = dto.Poblacion;
+            cliente.Provincia = dto.Provincia;
+            cliente.Pais = dto.Pais;
+            cliente.Email = dto.Email;
+            cliente.Telefono = dto.Telefono;
+            cliente.FechaModificacion = dto.FechaModificacion;
+
+            await _context.SaveChangesAsync();
+
+            var response = new ClienteResponseDto
+            {
+                ClienteId = cliente.Id,
+                NIF = cliente.NIF,
+                Nombre = cliente.Nombre,
+                Direccion = cliente.Direccion,
+                CodigoPostal = cliente.CodigoPostal,
+                Poblacion = cliente.Ciudad,
+                Provincia = cliente.Provincia,
+                Pais = cliente.Pais,
+                Email = cliente.Email,
+                Telefono = cliente.Telefono,
+                FechaCreaccion = cliente.FechaCreacion,
+                FechaModificacion = cliente.FechaModificacion
+            };
+
+            return Ok(response);
+                
+        }
+
+        ///<summary>
+        ///Elimina un cliente
+        ///</summary>
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> EliminarCliente(int id)
+        {
+            var tenantId = _tenantContext.GetTenantId();
+            if (tenantId == null)
+                return Unauthorized(new { message = "Tenant no encontrado" });
+
+            var cliente = await _context.Clientes
+                .FirstOrDefaultAsync(c => c.Id == id && c.TenantId == tenantId.Value);
+
+            if (cliente == null)
+                return NotFound(new { message = "Cliente no encontrado" });
+
+            var tieneFacturas = await _context.Facturas
+                .AnyAsync(f => f.ClienteId == cliente.Id);
+
+            if (tieneFacturas)
+                return BadRequest(new { message = "No se puede eliminar el cliente porque tiene facturas asociadas" });
+
+            _context.Clientes.Remove(cliente);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+                    
+        }
     }
 }

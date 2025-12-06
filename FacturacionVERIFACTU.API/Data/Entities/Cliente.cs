@@ -42,6 +42,10 @@ namespace FacturacionVERIFACTU.API.Data.Entities
         public string? Provincia {  get; set; }
 
         [MaxLength(100)]
+        [Column("pais")]
+        public string? Pais { get; set; }
+
+        [MaxLength(100)]
         [Column("email")]
         public string? Email {  get; set; }
 
@@ -52,8 +56,11 @@ namespace FacturacionVERIFACTU.API.Data.Entities
         [Column("activo")]
         public bool Activo { get; set; } = true;
 
-        [Column("fecha_alta")]
-        public DateTime FechaAlta { get; set; } = DateTime.UtcNow;
+        [Column("fecha_creacion")]
+        public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
+        [Column("fecha_modificaion")]
+        public DateTime FechaModificacion { get; set; } = DateTime.UtcNow;
 
         //Relaciones
         [ForeignKey("TenantId")]
