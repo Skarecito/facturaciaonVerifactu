@@ -219,7 +219,7 @@ namespace FacturacionVERIFACTU.API.Controllers
             cliente.Pais = dto.Pais;
             cliente.Email = dto.Email;
             cliente.Telefono = dto.Telefono;
-            cliente.FechaModificacion = dto.FechaModificacion;
+            cliente.FechaModificacion = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 

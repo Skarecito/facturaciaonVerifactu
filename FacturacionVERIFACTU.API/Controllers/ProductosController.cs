@@ -231,6 +231,7 @@ namespace FacturacionVERIFACTU.API.Controllers
         ///<summary>
         ///Elimina un producto
         /// </summary>
+        [HttpDelete("{id}")]
         public async Task<ActionResult> EliminarProducto(int id)
         {
             var tenantId = _tenantContext.GetTenantId();

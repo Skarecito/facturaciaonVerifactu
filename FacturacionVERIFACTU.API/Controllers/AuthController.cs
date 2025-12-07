@@ -4,8 +4,8 @@ using FacturacionVERIFACTU.API.Data.Services;
 using FacturacionVERIFACTU.API.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Transactions;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using FacturacionVERIFACTU.API.Data.Interfaces;
+
 
 namespace FacturacionVERIFACTU.API.Controllers
 {
@@ -65,7 +65,7 @@ namespace FacturacionVERIFACTU.API.Controllers
                 var usuario = new Usuario
                 {
                     Email = request.Email,
-                    PasswordHash = _hashService.Hash(request.Password),
+                    PasswordHash = _hashService.HashPassword(request.Password),
                     NombreCompleto = request.NombreCompleto,
                     Rol = "Admin", // primer usuario es admin
                     TenantId = tenant.Id,
@@ -140,7 +140,7 @@ namespace FacturacionVERIFACTU.API.Controllers
             }
 
             // Verificar contraseña
-            if (_hashService.Verify(request.Password, usuario.PasswordHash))
+            if (_hashService.VerifyPassword(request.Password, usuario.PasswordHash))
             {
                 return Unauthorized(new { message = "Credenciales inválidas" });
             }
