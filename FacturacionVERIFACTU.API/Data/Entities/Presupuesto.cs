@@ -13,20 +13,24 @@ namespace FacturacionVERIFACTU.API.Data.Entities
 
         [Required]
         [Column("tenant_id")]
-        public int TenantId {  get; set; }
+        public int TenantId { get; set; }
 
         [Required]
         [Column("cliente_id")]
-        public int ClienteId {  get; set; }
+        public int ClienteId { get; set; }
 
         [Required]
         [Column("serie_id")]
-        public int SerieId {  get; set; }
+        public int SerieId { get; set; }
 
         [Required]
         [MaxLength(50)]
         [Column("numero")]
         public string Numero { get; set; } = string.Empty;
+
+        // CAMPO ADICIONAL: ejercicio (año del presupuesto)
+        [Column("ejercicio")]
+        public int Ejercicio { get; set; }
 
         [Column("fecha")]
         public DateTime Fecha { get; set; } = DateTime.UtcNow;
@@ -34,22 +38,28 @@ namespace FacturacionVERIFACTU.API.Data.Entities
         [Column("fecha_validez")]
         public DateTime FechaValidez { get; set; }
 
-        [Column("base_imponible",TypeName ="decimal(18,2)")]
-        public decimal BaseImponible {  get; set; }
+        [Column("base_imponible", TypeName = "decimal(18,2)")]
+        public decimal BaseImponible { get; set; }
 
-        [Column("total_iva",TypeName ="decimal(18,2)")]
-        public decimal TotalIva {  get; set; }
+        [Column("total_iva", TypeName = "decimal(18,2)")]
+        public decimal TotalIva { get; set; }
 
-        [Column("total",TypeName ="decimal(28,2)")]
-        public decimal Total {  get; set; }
+        [Column("total", TypeName = "decimal(18,2)")]
+        public decimal Total { get; set; }
 
         [MaxLength(20)]
         [Column("estado")]
-        public string Estado { get; set; } = "Borrador"; //Borrador, enviado, aceptado
+        public string Estado { get; set; } = "Borrador"; // Borrador, Enviado, Aceptado, Rechazado
 
         [MaxLength(500)]
         [Column("observaciones")]
-        public string? Observaciones {  get; set; }
+        public string? Observaciones { get; set; }
+
+        [Column("fecha_creacion")]
+        public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
+        [Column("fecha_modificacion")]
+        public DateTime? FechaModificacion { get; set; }
 
 
         //Relaciones
@@ -58,8 +68,11 @@ namespace FacturacionVERIFACTU.API.Data.Entities
 
         [ForeignKey("ClienteId")]
         public Cliente Cliente { get; set; } = null;
+       
+        [ForeignKey("SerieId")]
+        public SerieNumeracion Serie { get; set; } = null!;
 
-        public ICollection<LineaPrespuesto> Lineas { get; set; } = new List<LineaPrespuesto>();
+        public ICollection<LineaPresupuesto> Lineas { get; set; } = new List<LineaPresupuesto>();
         public ICollection<Albaran> Albaranes { get; set; } = new List<Albaran>();
     }
 }

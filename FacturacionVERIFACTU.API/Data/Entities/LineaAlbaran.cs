@@ -38,6 +38,18 @@ namespace API.Data.Entities
         [Column("importe", TypeName = "decimal(18,2)")]
         public decimal Importe { get; set; }
 
+        [Column("porcentaje_descuento", TypeName = "decimal(5,2)")]
+        public decimal PorcentajeDescuento { get; set; } = 0;
+
+        [Column("importe_descuento", TypeName = "decimal(18,2)")]
+        public decimal ImporteDescuento { get; set; } = 0;
+
+        [Column("base_imponible", TypeName = "decimal(18,2)")]
+        public decimal BaseImponible { get; set; } = 0;
+
+        [Column("importe_iva", TypeName = "decimal(18,2)")]
+        public decimal ImporteIva { get; set; } = 0;
+
         // Relaciones
         [ForeignKey("AlbaranId")]
         public Albaran Albaran { get; set; } = null!;

@@ -19,11 +19,13 @@ namespace FacturacionVERIFACTU.API.Data
         public DbSet<SerieNumeracion> SeriesNumeraciones => Set<SerieNumeracion>();
         public DbSet<CierreEjercicio> CierreEjercicios => Set<CierreEjercicio>();
         public DbSet<Presupuesto> Presupuestos => Set<Presupuesto>();
+        public DbSet<LineaPresupuesto> LineasPresupuesto => Set<LineaPresupuesto>();
         public DbSet<Albaran> Albaranes => Set<Albaran>();
         public DbSet<LineaAlbaran> LineasAlbaranes => Set<LineaAlbaran>();
         public DbSet<Factura> Facturas => Set<Factura>();
         public DbSet<LineaFactura> LineasFacturas => Set<LineaFactura>();
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+        public DbSet<SerieNumeracion> SeriesNumeracion => Set<SerieNumeracion>();
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -137,7 +139,7 @@ namespace FacturacionVERIFACTU.API.Data
                 .OnDelete(DeleteBehavior.SetNull);
 
             // Presupuesto -> LineasPresupuesto
-            modelBuilder.Entity<LineaPrespuesto>()
+            modelBuilder.Entity<LineaPresupuesto>()
                 .HasOne(l => l.Presupuesto)
                 .WithMany(p => p.Lineas)
                 .HasForeignKey(l => l.PresupuestoId)
@@ -158,7 +160,7 @@ namespace FacturacionVERIFACTU.API.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Producto -> LineasPresupuesto
-            modelBuilder.Entity<LineaPrespuesto>()
+            modelBuilder.Entity<LineaPresupuesto>()
                 .HasOne(l => l.Producto)
                 .WithMany(p => p.LineasPresupuesto)
                 .HasForeignKey(l => l.ProductoId)

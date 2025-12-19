@@ -74,6 +74,15 @@ namespace API.Data.Entities
         [ForeignKey("SerieId")]
         public SerieNumeracion Serie { get; set; } = null!;
 
+        [Column("fecha_creacion")]
+        public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
+        [Column("fecha_modificacion")]
+        public DateTime? FechaModificacion { get; set; }
+
+        [Column("ejercicio")]
+        public int Ejercicio { get; set; }
+
         [ForeignKey("PresupuestoId")]
         public Presupuesto? Presupuesto { get; set; }
 

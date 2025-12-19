@@ -143,10 +143,12 @@ namespace FacturacionVERIFACTU.API.Controllers
                 return BadRequest(validationResult.Errors);
 
             var tenantId = _tenantContext.GetTenantId();
-            return Unauthorized(new { message = "Tenant no encontrado" });
+            if (tenantId == null)
+                return Unauthorized(new { message = "Tenant no encontrado" });
 
             var existeCodigo = await _context.Productos
                 .AnyAsync(p => p.TenantId == tenantId.Value && p.Codigo == dto.Codigo);
+
             if (existeCodigo)
                 return Conflict(new { message = "Ya existe un porducto con ese codigo" });
 

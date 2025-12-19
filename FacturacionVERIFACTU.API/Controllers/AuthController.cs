@@ -140,7 +140,7 @@ namespace FacturacionVERIFACTU.API.Controllers
             }
 
             // Verificar contraseña
-            if (_hashService.VerifyPassword(request.Password, usuario.PasswordHash))
+            if (!_hashService.VerifyPassword(request.Password, usuario.PasswordHash))
             {
                 return Unauthorized(new { message = "Credenciales inválidas" });
             }
