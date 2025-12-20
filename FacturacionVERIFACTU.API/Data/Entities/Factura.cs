@@ -48,7 +48,12 @@ namespace API.Data.Entities
         [Column("observaciones")]
         public string? Observaciones { get; set; }
 
-        // VERIFACTU
+        [Column("ejercicio")]
+        public int Ejercicio { get; set; }
+
+        // ============================================
+        // CAMPOS VERIFACTU - YA EXISTENTES
+        // ============================================
         [MaxLength(64)]
         [Column("huella")]
         public string? Huella { get; set; }
@@ -63,7 +68,31 @@ namespace API.Data.Entities
         [Column("fecha_envio_verifactu")]
         public DateTime? FechaEnvioVERIFACTU { get; set; }
 
-        // Relaciones
+        // ============================================
+        // CAMPOS VERIFACTU - NUEVOS A AGREGAR
+        // ============================================
+        [MaxLength(2)]
+        [Column("tipo_factura_verifactu")]
+        public string? TipoFacturaVERIFACTU { get; set; } // F1, F2, F3
+
+        [Column("qr_verifactu")]
+        public byte[]? QRVerifactu { get; set; } // Imagen QR en bytes
+
+        [MaxLength(500)]
+        [Column("url_verifactu")]
+        public string? UrlVERIFACTU { get; set; } // URL de verificación AEAT
+
+        [MaxLength(50)]
+        [Column("numero_factura_rectificada")]
+        public string? NumeroFacturaRectificada { get; set; } // Si es rectificativa
+
+        [MaxLength(20)]
+        [Column("tipo_rectificacion")]
+        public string? TipoRectificacion { get; set; } // S (Sustitución), I (Diferencias)
+
+        // ============================================
+        // RELACIONES - YA EXISTENTES
+        // ============================================
         [ForeignKey("TenantId")]
         public Tenant Tenant { get; set; } = null!;
 
@@ -74,6 +103,7 @@ namespace API.Data.Entities
         public SerieNumeracion Serie { get; set; } = null!;
 
         public ICollection<LineaFactura> Lineas { get; set; } = new List<LineaFactura>();
+
         public ICollection<Albaran> Albaranes { get; set; } = new List<Albaran>();
     }
 }

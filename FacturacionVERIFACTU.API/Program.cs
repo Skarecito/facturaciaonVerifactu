@@ -9,6 +9,7 @@ using System.Text;
 using FluentValidation;
 using FacturacionVERIFACTU.API.Validators;
 using System.Threading.RateLimiting;
+using FacturacionVERIFACTU.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -67,6 +68,7 @@ builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<ISerieNumeracionService, SerieNumeracionService>();
 builder.Services.AddScoped<IPresupuestoService, PresupuestoService>();
 builder.Services.AddScoped<IAlbaranService, AlbaranService>();
+builder.Services.AddScoped<VERIFACTUService>();
 
 // ===== CONTROLLERS & SWAGGER =====
 builder.Services.AddControllers();
