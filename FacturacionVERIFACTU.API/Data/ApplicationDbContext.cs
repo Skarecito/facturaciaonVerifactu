@@ -1,6 +1,8 @@
 ﻿using API.Data.Entities;
 using FacturacionVERIFACTU.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.OpenApi.Validations;
 
 namespace FacturacionVERIFACTU.API.Data
 {
@@ -28,9 +30,72 @@ namespace FacturacionVERIFACTU.API.Data
         public DbSet<SerieNumeracion> SeriesNumeracion => Set<SerieNumeracion>();
 
 
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            //Auto generar Chemas para nuestros tenants
+            var nuevosTenants = ChangeTracker.Entries<Tenant>()
+                .Where(e => e.State == EntityState.Added)
+                .Select(e => e.Entity)
+                .Where(t => string.IsNullOrEmpty(t.Schema))
+                .ToList();
+
+            foreach(var tenant in nuevosTenants)
+            {
+                //Generar schema basado en NIF
+                var nifLimpio = new string(tenant.NIF
+                    .Where(char.IsLetterOrDigit)
+                    .ToArray())
+                    .ToLower();
+
+                //Limitar a 20 caracteres
+                if (nifLimpio.Length < 20)
+                    nifLimpio = nifLimpio.Substring(0, 20);
+
+                var schemaBase = $"tenant_{nifLimpio}";
+
+                //Asegurar que sea unico
+                var schema = schemaBase;
+                var contador = 1;
+
+                while(await Tenants.AnyAsync(t => t.Schema == schema, cancellationToken))
+                {
+                    schema = $"{schemaBase}_{contador}";
+                    contador++;
+                }
+                tenant.Schema = schema;
+            }
+
+            //Guardar cambios
+            var result = await base.SaveChangesAsync(cancellationToken);
+
+            //Crear schemas fisicos en PoftgresSQL para los nuevos tenants
+            foreach(var tenant in nuevosTenants)
+            {
+                try
+                {
+                    await Database.ExecuteSqlRawAsync(
+                         $"CREATE SCHEMA IF NOT EXISTS {tenant.Schema}",
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    //log error para no fallar la transaccion
+                    Console.WriteLine($"Error creando schema {tenant.Schema}: {ex.Message}");
+                }
+            }
+
+            return result;
+        }
+        
+        
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<Tenant>()
+                .HasIndex(t => t.Schema)
+                .IsUnique()
+                .HasDatabaseName("IX_tenants_schema");
 
             modelBuilder.Entity<Tenant>()
                .HasIndex(t => t.NIF)
@@ -97,11 +162,30 @@ namespace FacturacionVERIFACTU.API.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Tenant -> Cierres
-            modelBuilder.Entity<CierreEjercicio>()
-                .HasOne(c => c.Tenant)
-                .WithMany()
-                .HasForeignKey(c => c.TenantId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // API/Data/AppDbContext.cs - En OnModelCreating
+
+            modelBuilder.Entity<CierreEjercicio>(entity =>
+            {
+                // Índice único: Un solo cierre activo por ejercicio y tenant
+                entity.HasIndex(e => new { e.TenantId, e.Ejercicio, e.EstaAbierto })
+                    .HasFilter("esta_abierto = false") // Solo un cierre "cerrado" por ejercicio
+                    .IsUnique();
+
+                entity.HasOne(e => e.Tenant)
+                    .WithMany()
+                    .HasForeignKey(e => e.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Usuario)
+                    .WithMany()
+                    .HasForeignKey(e => e.UsuarioId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.UsuarioReapertura)
+                    .WithMany()
+                    .HasForeignKey(e => e.UsuarioReaperturaId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
 
             // Cliente -> Presupuestos
             modelBuilder.Entity<Presupuesto>()

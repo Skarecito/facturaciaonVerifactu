@@ -1,0 +1,133 @@
+﻿@inherits LayoutComponentBase
+@using FacturacionVERIFACTU.Web.Services
+@using Microsoft.AspNetCore.Components.Authorization
+
+@inject AuthenticationService AuthService
+@inject NavigationManager Navigation
+
+
+<AuthorizeView>
+    <Authorized>
+        <div class="app_layout">
+            <Sidebar/>
+
+            <div class="main_content">
+                <Topbar />
+
+                <div class="page">
+                    <div class="sidebar">
+                        <NavMenu />
+                    </div>
+
+                    <main>
+                        <div class="top-row px-4">
+                            <div class="user-info">
+                                <span class="user-name">👤 @context.User.Identity?.Name</span>
+                                <button class="btn btn-logout" @onclick="Logout">
+                                    🚪 Cerrar Sesión
+                                </button>
+                            </div>
+                        </div>
+
+                        <article class="content px-4">
+                            @Body
+                        </article>
+                    </main>
+                </div>
+            </div>
+        </div>
+        
+    </Authorized>
+    <NotAuthorized>
+        @{
+            // Al eliminar el componente RedirectToLogin, permitimos que el 
+            // middleware de autenticación maneje la redirección a /login 
+            // como está configurado en Program.cs.
+        }
+    </NotAuthorized>
+</AuthorizeView>
+
+<style>
+    .page {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    main {
+        flex: 1;
+    }
+
+    .sidebar {
+        background-image: linear-gradient(180deg, #667eea 0%, #764ba2 70%);
+        width: 250px;
+        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        overflow-y: auto;
+    }
+
+    .top-row {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+        justify-content: flex-end;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        padding: 0 1.5rem;
+        margin-left: 250px;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .user-name {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .btn-logout {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background-color 0.2s;
+    }
+
+    .btn-logout:hover {
+        background-color: #c82333;
+    }
+
+    .content {
+        padding-top: 1.5rem;
+        margin-left: 250px;
+    }
+
+    @@media (max-width: 768px) {
+        .sidebar {
+            width: 0;
+            transform: translateX(-100%);
+        }
+
+        .top-row,
+        .content {
+            margin-left: 0;
+        }
+    }
+</style>
+
+@code {
+    private async Task Logout()
+    {
+        AuthService.Logout();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

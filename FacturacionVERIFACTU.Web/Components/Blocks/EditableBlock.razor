@@ -1,0 +1,15 @@
+﻿<div class="block">
+    <input value="@Text" @oninput="OnInput" placeholder="Escribe algo..." />
+</div>
+
+@code {
+    [Parameter] public string Text { get; set; } = "";
+    [Parameter] public EventCallback<string> TextChanged { get; set; }
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        Text = e.Value?.ToString() ?? "";
+        await TextChanged.InvokeAsync(Text);
+    }
+}
+

@@ -3,7 +3,7 @@ using FacturacionVERIFACTU.API.DTOs;
 using FacturacionVERIFACTU.API.Data.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Npgsql.Internal;
+
 
 
 namespace FacturacionVERIFACTU.API.Controllers
@@ -15,15 +15,18 @@ namespace FacturacionVERIFACTU.API.Controllers
     {
         private readonly IAlbaranService _albaranService;
         private readonly ITenantContext _tenantContext;
+        private readonly IPDFService _pdfService;
         private readonly ILogger<AlbaranesController> _logger;
 
         public AlbaranesController(
             IAlbaranService albaranService,
             ITenantContext tenantContext,
+            IPDFService pdfService,
             ILogger<AlbaranesController> logger)
         {
             _albaranService = albaranService;
             _tenantContext = tenantContext;
+            _pdfService = pdfService;
             _logger = logger;
         }
 
@@ -48,7 +51,7 @@ namespace FacturacionVERIFACTU.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al obtener albaranes");
-                return StatusCode(500, new { mensaje = "Erro al obtener albaranes" });
+                return StatusCode(500, new { mensaje = "Error al obtener albaranes" });
             }
         }
 
@@ -280,6 +283,51 @@ namespace FacturacionVERIFACTU.API.Controllers
             {
                 _logger.LogError(ex, "Error al convertir presupuesto {PresupuestoId} a albaran", presupuestoId);
                 return StatusCode(500, new { mensaje = "Error al convertir presupuesto a albaran" });
+            }
+        }
+
+        ///<summary>
+        ///Descarga el PDF del albarán
+        ///</summary>
+        [HttpGet("{id}/pdf")]
+        [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DescargarPDF(int id)
+        {
+            try
+            {
+                var tenantId = _tenantContext.GetTenantId();
+                if (tenantId == null || tenantId == 0)
+                {
+                    return Unauthorized(new { mensaje = "Tenant no identificado" });
+                }
+
+                // Obtener el schema del tenant para pasarlo al servicio PDF
+                var tenantSchema = _tenantContext.GetTenantSchema();
+                if (string.IsNullOrEmpty(tenantSchema))
+                {
+                    return Unauthorized(new { mensaje = "Schema del tenant no encontrado" });
+                }
+
+                // Generar PDF
+                var bytes = await _pdfService.GenerarPDFAlbaran(id, tenantId.Value);
+
+                // Obtener datos del albarán para el nombre del archivo
+                var albaran = await _albaranService.ObtenerPorIdAsync(tenantId.Value, id);
+                if (albaran == null)
+                {
+                    return NotFound(new { mensaje = $"Albarán {id} no encontrado" });
+                }
+
+                var nombreArchivo = $"Albaran-{albaran.SerieCodigo}-{albaran.Numero}.pdf";
+
+                return File(bytes, "application/pdf", nombreArchivo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al generar PDF del albarán {Id}", id);
+                return StatusCode(500, new { mensaje = "Error al generar el PDF del albarán" });
             }
         }
     }

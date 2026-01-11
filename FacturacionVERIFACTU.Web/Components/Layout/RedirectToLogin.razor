@@ -1,0 +1,10 @@
+﻿@* Components/Layout/RedirectToLogin.razor *@
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject NavigationManager Navigation
+
+@code {
+    protected override void OnInitialized()
+    {
+        Navigation.NavigateTo("/login");
+    }
+}

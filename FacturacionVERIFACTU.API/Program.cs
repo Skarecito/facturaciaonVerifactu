@@ -8,8 +8,10 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FluentValidation;
 using FacturacionVERIFACTU.API.Validators;
-using System.Threading.RateLimiting;
 using FacturacionVERIFACTU.API.Services;
+using Polly;
+using Polly.Extensions.Http;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,15 +62,50 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddValidatorsFromAssemblyContaining<CrearClienteValidator>();
 
+
+// ============================================
+// CONFIGURAR SERILOG
+// ============================================
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File(
+        path: "logs/verifactu-.txt",
+        rollingInterval: RollingInterval.Day,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
+        )
+    .CreateLogger();
+
 // ===== SERVICIOS =====
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IHashService, HashService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<ISerieNumeracionService, SerieNumeracionService>();
 builder.Services.AddScoped<IPresupuestoService, PresupuestoService>();
 builder.Services.AddScoped<IAlbaranService, AlbaranService>();
+builder.Services.AddScoped<IFacturaService, FacturaService>();
+builder.Services.AddScoped<ICierreEjercicioService, CierreEjercicioService>();
 builder.Services.AddScoped<VERIFACTUService>();
+builder.Services.AddScoped<IPDFService, PDFService>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowBlazor",
+        policy =>
+        {
+            policy.SetIsOriginAllowed(origin =>
+            {
+                var uri = new Uri(origin);
+                return uri.Host == "localhost" || uri.Host == "127.0.0.1";
+            })
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+});
 
 // ===== CONTROLLERS & SWAGGER =====
 builder.Services.AddControllers();
@@ -102,6 +139,22 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+// ============================================
+// CONFIGURAR HTTPCLIENT CON POLLY
+// ============================================
+var aeatUrl = builder.Configuration.GetValue<string>("VERIFACTU:AEATUrl")
+    ?? "https://prewww2.aeat.es/wlpl/TGVI-SJDT/VeriFactuServiceS";
+var timeoutSegundos = builder.Configuration.GetValue<int>("VERIFACTU:TimeoutSegundos", 30);
+
+builder.Services.AddHttpClient<AEATClient>(client =>
+{
+    client.BaseAddress = new Uri(aeatUrl);
+    client.Timeout = TimeSpan.FromSeconds(timeoutSegundos);
+    client.DefaultRequestHeaders.Add("Accept", "application/xml");
+})
+.AddPolicyHandler(GetRetryPolicy())
+.AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(timeoutSegundos)));
+
 // ===== CORS =====
 builder.Services.AddCors(options =>
 {
@@ -127,6 +180,7 @@ app.UseHttpsRedirection();
 
 // ⚠️ ORDEN CRÍTICO ⚠️
 app.UseHttpsRedirection();
+app.UseCors("AllowBlazor");
 app.UseAuthentication();   // 1️⃣ Valida JWT
 app.UseTenantMiddleware();  // 2️⃣ Extrae tenant_id
 app.UseAuthorization();     // 3️⃣ Verifica permisos
@@ -134,3 +188,25 @@ app.UseAuthorization();     // 3️⃣ Verifica permisos
 app.MapControllers();
 
 app.Run();
+
+// ============================================
+// POLÍTICAS DE POLLY
+// ============================================
+static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .WaitAndRetryAsync(
+            retryCount: 3,
+            sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+            onRetry: (outcome, timespan, retryAttempt, context) =>
+            {
+                Log.Warning(
+                    "Reintento {RetryAttempt} después de {Delay}s debido a: {Error}",
+                    retryAttempt,
+                    timespan.TotalSeconds,
+                    outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString() ?? "Unknown"
+                );
+            }
+        );
+}

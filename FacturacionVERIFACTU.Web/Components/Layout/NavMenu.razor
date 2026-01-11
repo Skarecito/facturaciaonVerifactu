@@ -1,0 +1,113 @@
+﻿<div class="nav-menu">
+    <div class="brand">
+        <h2>🧾 VERIFACTU</h2>
+        <p>Facturación</p>
+    </div>
+
+    <nav class="nav-links">
+        <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+            <span class="icon">📊</span>
+            <span>Dashboard</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="/clientes">
+            <span class="icon">👥</span>
+            <span>Clientes</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="/productos">
+            <span class="icon">📦</span>
+            <span>Productos</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="/presupuestos">
+            <span class="icon">📝</span>
+            <span>Presupuestos</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="/facturas">
+            <span class="icon">🧾</span>
+            <span>Facturas</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="/reportes">
+            <span class="icon">📈</span>
+            <span>Reportes</span>
+        </NavLink>
+
+        <div class="nav-divider"></div>
+
+        <NavLink class="nav-link" href="/configuracion">
+            <span class="icon">⚙️</span>
+            <span>Configuración</span>
+        </NavLink>
+    </nav>
+</div>
+
+<style>
+    .nav-menu {
+        padding: 20px;
+        color: white;
+    }
+
+    .brand {
+        text-align: center;
+        margin-bottom: 40px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+        .brand h2 {
+            font-size: 1.8rem;
+            margin: 0 0 5px 0;
+            font-weight: 700;
+        }
+
+        .brand p {
+            margin: 0;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+    .nav-links {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        color: rgba(255, 255, 255, 0.9);
+        text-decoration: none;
+        transition: all 0.2s;
+        font-weight: 500;
+    }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.25);
+            color: white;
+            font-weight: 600;
+        }
+
+        .nav-link .icon {
+            font-size: 1.3rem;
+            width: 24px;
+            text-align: center;
+        }
+
+    .nav-divider {
+        height: 2px;
+        background-color: rgba(255, 255, 255, 0.2);
+        margin: 15px 0;
+    }
+</style>
