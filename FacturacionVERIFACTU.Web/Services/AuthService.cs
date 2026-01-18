@@ -1,0 +1,106 @@
+﻿using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using System.Net.Http.Json;
+using FacturacionVERIFACTU.Web.Models.DTOs;
+
+namespace FacturacionVERIFACTU.Web.Services;
+
+public class AuthService : IAuthService
+{
+    private readonly HttpClient _httpClient;
+    private readonly ProtectedSessionStorage _sessionStorage;
+    private readonly ILogger<AuthService> _logger;
+
+    private const string TOKEN_KEY = "authToken";
+    private const string USER_KEY = "currentUser";
+
+    public AuthService(
+        HttpClient httpClient,
+        ProtectedSessionStorage sessionStorage,
+        ILogger<AuthService> logger)
+    {
+        _httpClient = httpClient;
+        _sessionStorage = sessionStorage;
+        _logger = logger;
+    }
+
+    public async Task<LoginResponse?> LoginAsync(LoginRequest request)  // ← CORREGIDO con ?
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/auth/login", request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Login fallido: {Error}", error);
+                return null;  // ← Retorna null si falla
+            }
+
+            var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
+
+            if (loginResponse == null)
+            {
+                _logger.LogError("Respuesta de login nula");
+                return null;  // ← Retorna null si deserialización falla
+            }
+
+            // Guardar en SessionStorage (se borra al cerrar navegador)
+            await _sessionStorage.SetAsync(TOKEN_KEY, loginResponse.AccessToken);
+            await _sessionStorage.SetAsync(USER_KEY, loginResponse.User);
+
+            _logger.LogInformation("Login exitoso para {Email}", request.Email);
+            return loginResponse;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en LoginAsync");
+            return null;  // ← Retorna null si hay excepción
+        }
+    }
+
+    public async Task LogoutAsync()
+    {
+        try
+        {
+            await _sessionStorage.DeleteAsync(TOKEN_KEY);
+            await _sessionStorage.DeleteAsync(USER_KEY);
+            _logger.LogInformation("Logout exitoso");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en LogoutAsync");
+        }
+    }
+
+    public async Task<string?> GetTokenAsync()
+    {
+        try
+        {
+            var result = await _sessionStorage.GetAsync<string>(TOKEN_KEY);
+            return result.Success ? result.Value : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<UserInfo?> GetCurrentUserAsync()
+    {
+        try
+        {
+            var result = await _sessionStorage.GetAsync<UserInfo>(USER_KEY);
+            return result.Success ? result.Value : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<bool> IsAuthenticatedAsync()
+    {
+        var token = await GetTokenAsync();
+        return !string.IsNullOrEmpty(token);
+    }
+}

@@ -11,7 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FacturacionVERIFACTU.Shared
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FacturacionVERIFACTU.Test", "FacturacionVERIFACTU.Test\FacturacionVERIFACTU.Test.csproj", "{6FB2AE94-B453-499C-A318-D0A5C5CECFD6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FacturacionVERIFACTU.Web", "FacturacionVERIFACTU.Web\FacturacionVERIFACTU.Web.csproj", "{81D9120F-35B6-4BBB-BF01-800AE63D31CD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FacturacionVERIFACTU.Web", "FacturacionVERIFACTU.Web\FacturacionVERIFACTU.Web.csproj", "{798454F1-6645-421E-951F-56CAE4E02359}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,10 +37,10 @@ Global
 		{6FB2AE94-B453-499C-A318-D0A5C5CECFD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6FB2AE94-B453-499C-A318-D0A5C5CECFD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6FB2AE94-B453-499C-A318-D0A5C5CECFD6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{81D9120F-35B6-4BBB-BF01-800AE63D31CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{81D9120F-35B6-4BBB-BF01-800AE63D31CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{81D9120F-35B6-4BBB-BF01-800AE63D31CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{81D9120F-35B6-4BBB-BF01-800AE63D31CD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{798454F1-6645-421E-951F-56CAE4E02359}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{798454F1-6645-421E-951F-56CAE4E02359}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{798454F1-6645-421E-951F-56CAE4E02359}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{798454F1-6645-421E-951F-56CAE4E02359}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,83 +1,62 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using FacturacionVERIFACTU.Web.Models;
 
-namespace FacturacionVERIFACTU.Web.Services;
-
-public class CustomAuthStateProvider : AuthenticationStateProvider
+namespace FacturacionVERIFACTU.Web.Services
 {
-    private readonly AuthStateService _authState;
-    private readonly HttpClient _httpClient;
-
-    public CustomAuthStateProvider(
-        AuthStateService authState,
-        HttpClient httpClient)
+    public class CustomAuthStateProvider : AuthenticationStateProvider
     {
-        _authState = authState;
-        _httpClient = httpClient;
-    }
+        private readonly IAuthService _authService;
+        private readonly ILogger<CustomAuthStateProvider> _logger;
 
-    public override Task<AuthenticationState> GetAuthenticationStateAsync()
-    {
-        var token = _authState.Token;
-
-        if (string.IsNullOrEmpty(token))
+        public CustomAuthStateProvider(
+            IAuthService authService,
+            ILogger<CustomAuthStateProvider> logger)
         {
-            return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity())));
+            _authService = authService;
+            _logger = logger;
         }
 
-        try
+        public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            var claims = ParseClaimsFromJwt(token);
+            try
+            {
+                var token = await _authService.GetTokenAsync();
 
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                if (!string.IsNullOrEmpty(token))
+                {
+                    return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+                }
 
-            var identity = new ClaimsIdentity(claims, "jwt");
-            var user = new ClaimsPrincipal(identity);
+                // Parsear JWT
+                var handler = new JwtSecurityTokenHandler();
+                var jwtToken = handler.ReadJwtToken(token);
 
-            return Task.FromResult(new AuthenticationState(user));
+                //Veriricar expiracion
+                if(jwtToken.ValidTo < DateTime.UtcNow)
+                {
+                    _logger.LogWarning("Token expirado");
+                    await _authService.LogoutAsync();
+                    return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+                }
+
+                //Crear ClaimsIdentity con los claims del JWT
+                var claims = jwtToken.Claims.ToList();
+                var identity = new ClaimsIdentity(claims, "jwt");
+                var user = new ClaimsPrincipal(identity);
+
+                return new AuthenticationState(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro obteniendo estado de autenticacion");
+                return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            }
         }
-        catch
+      
+        public void NotifyAuthenticationStateChanged()
         {
-            return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity())));
+            NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
         }
-    }
-
-    public void NotifyUserAuthentication(string token, UserInfo user)
-    {
-        var claims = ParseClaimsFromJwt(token);
-        var identity = new ClaimsIdentity(claims, "jwt");
-        var principal = new ClaimsPrincipal(identity);
-
-        _httpClient.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(principal)));
-    }
-
-    public void NotifyUserLogout()
-    {
-        _httpClient.DefaultRequestHeaders.Authorization = null;
-
-        var anonymousUser = new ClaimsPrincipal(new ClaimsIdentity());
-        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(anonymousUser)));
-    }
-
-    private List<Claim> ParseClaimsFromJwt(string jwt)
-    {
-        var claims = new List<Claim>();
-
-        try
-        {
-            var handler = new JwtSecurityTokenHandler();
-            var token = handler.ReadJwtToken(jwt);
-
-            claims.AddRange(token.Claims);
-        }
-        catch { }
-
-        return claims;
     }
 }

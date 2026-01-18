@@ -1,0 +1,36 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<h1 style="font-weight: 700; font-size: 2.5rem; letter-spacing: -0.04em; margin-bottom: 8px;">
+    Dashboard
+</h1>
+<p style="color: #666; margin-bottom: 2rem;">
+    Gestión centralizada de Verifactu
+</p>
+
+<div class="notion-grid">
+    <a href="/facturas" class="notion-card">
+        <div class="notion-card-icon-wrapper blue">
+            <i class="bi bi-receipt"></i>
+        </div>
+        <div class="notion-card-title">Facturas</div>
+        <div class="notion-card-desc">Emisión y control Verifactu</div>
+    </a>
+
+    <a href="/clientes" class="notion-card">
+        <div class="notion-card-icon-wrapper green">
+            <i class="bi bi-people"></i>
+        </div>
+        <div class="notion-card-title">Clientes</div>
+        <div class="notion-card-desc">Gestión de clientes</div>
+    </a>
+
+    <a href="/productos" class="notion-card">
+        <div class="notion-card-icon-wrapper purple">
+            <i class="bi bi-box-seam"></i>
+        </div>
+        <div class="notion-card-title">Productos</div>
+        <div class="notion-card-desc">Catálogo de productos</div>
+    </a>
+</div>

@@ -1,232 +1,94 @@
-@page "/login"
-@rendermode @(new InteractiveServerRenderMode(prerender: false))
-@using System.ComponentModel.DataAnnotations
-@using FacturacionVERIFACTU.Web.Models
+﻿@page "/login"
+@page "/Account/Login"
+@using FacturacionVERIFACTU.Web.Models.DTOs
 @using FacturacionVERIFACTU.Web.Services
-
-@inject AuthenticationService AuthService
-@inject NavigationManager Navigation
-@layout EmptyLayout
-
-<PageTitle>Iniciar Sesión - VERIFACTU</PageTitle>
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="login-container">
     <div class="login-card">
-        <div class="login-header">
-            <h1>🧾 VERIFACTU</h1>
-            <p>Sistema de Facturación Electrónica</p>
+        <div class="login-logo">
+            <h1>Verifactu Pro</h1>
+            <p>Gestión de facturación electrónica</p>
         </div>
 
         @if (!string.IsNullOrEmpty(errorMessage))
         {
-            <div class="alert alert-danger">
-                <strong>Error:</strong> @errorMessage
+            <div class="alert-modern error">
+                <i class="bi bi-exclamation-triangle"></i>
+                @errorMessage
             </div>
         }
 
-        @if (loginSuccess)
-        {
-            <div class="alert alert-success">
-                <strong>✅ Login exitoso!</strong> Redirigiendo...
-            </div>
-        }
-
-        <EditForm Model="Input" OnValidSubmit="LoginUser" FormName="login">
+        <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
             <DataAnnotationsValidator />
 
-            <div class="form-group">
-                <label for="email">Email</label>
-                <InputText @bind-Value="Input.Email" class="form-control" placeholder="tu@email.com" />
-                <ValidationMessage For="() => Input.Email" />
+            <div class="mb-3">
+                <InputText @bind-Value="loginModel.Email"
+                           class="notion-input-modern"
+                           placeholder="email@empresa.com"
+                           type="email" />
+                <ValidationMessage For="@(() => loginModel.Email)" />
             </div>
 
-            <div class="form-group">
-                <label for="password">Contraseña</label>
-                <InputText type="password" @bind-Value="Input.Password" class="form-control" placeholder="••••••••" />
-                <ValidationMessage For="() => Input.Password" />
+            <div class="mb-3">
+                <InputText @bind-Value="loginModel.Password"
+                           class="notion-input-modern"
+                           placeholder="Contraseña"
+                           type="password" />
+                <ValidationMessage For="@(() => loginModel.Password)" />
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block" disabled="@isLoading">
+            <button type="submit" class="btn-modern" disabled="@isLoading">
                 @if (isLoading)
                 {
-                    <span>⏳ Iniciando sesión...</span>
+                    <span class="spinner-modern"></span>
+                    <span>Iniciando sesión...</span>
                 }
                 else
                 {
-                    <span>🔐 Iniciar Sesión</span>
+                    <span>Iniciar Sesión</span>
                 }
             </button>
         </EditForm>
-
-        <div class="login-footer">
-            <p>⚡ Powered by VERIFACTU © 2025</p>
-        </div>
     </div>
 </div>
 
-<style>
-    .login-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 20px;
-    }
-
-    .login-card {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        width: 100%;
-        max-width: 420px;
-        padding: 40px;
-    }
-
-    .login-header {
-        text-align: center;
-        margin-bottom: 30px;
-    }
-
-        .login-header h1 {
-            font-size: 2.5rem;
-            color: #667eea;
-            margin-bottom: 5px;
-        }
-
-        .login-header p {
-            color: #6c757d;
-            font-size: 0.95rem;
-        }
-
-    .form-group {
-        margin-bottom: 20px;
-    }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #333;
-        }
-
-    .form-control {
-        width: 100%;
-        padding: 12px;
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        font-size: 1rem;
-    }
-
-    .btn-primary {
-        width: 100%;
-        padding: 14px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        border-radius: 8px;
-        color: white;
-        font-size: 1.1rem;
-        font-weight: 600;
-        cursor: pointer;
-    }
-
-        .btn-primary:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-
-    .alert {
-        padding: 12px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-    }
-
-    .alert-danger {
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-
-    .alert-success {
-        background-color: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-
-    .login-footer {
-        text-align: center;
-        margin-top: 30px;
-        padding-top: 20px;
-        border-top: 1px solid #e0e0e0;
-    }
-
-        .login-footer p {
-            color: #6c757d;
-            font-size: 0.85rem;
-            margin: 0;
-        }
-</style>
-
 @code {
-    private string? errorMessage;
+    private LoginRequest loginModel = new();
+    private string errorMessage = string.Empty;
     private bool isLoading = false;
-    private bool loginSuccess = false;
 
-    [SupplyParameterFromForm]
-    private InputModel Input { get; set; } = new();
-
-    // Capturar ReturnUrl de la query string
-    [SupplyParameterFromQuery(Name = "returnUrl")]
-    private string? ReturnUrl { get; set; }
-
-    public async Task LoginUser()
+    private async Task HandleLogin()
     {
         isLoading = true;
         errorMessage = string.Empty;
-        loginSuccess = false;
-        StateHasChanged();
 
         try
         {
-            var result = await AuthService.LoginAsync(Input.Email, Input.Password);
+            var result = await AuthService.LoginAsync(loginModel);
 
-            if (result.Success)
+            if (result == null)
             {
-                loginSuccess = true;
-                StateHasChanged();
-
-                // Pequeña pausa para mostrar el mensaje
-                await Task.Delay(300);
-
-                // Redirigir a la URL original o al dashboard
-                var redirectUrl = string.IsNullOrEmpty(ReturnUrl) ? "/" : ReturnUrl;
-
-                // FORZAR recarga completa para que se actualice el estado de autenticación
-                Navigation.NavigateTo(redirectUrl, forceLoad: true);
+                errorMessage = "Email o contraseña incorrectos";
+                return;
             }
-            else
-            {
-                errorMessage = result.Message ?? "Credenciales inválidas";
-            }
+
+            // Notificar cambio de estado de autenticación
+            ((CustomAuthStateProvider)AuthStateProvider).NotifyAuthenticationStateChanged();
+
+            // Redirigir al dashboard
+            Nav.NavigateTo("/", true);
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error: {ex.Message}";
+            errorMessage = "Error de conexión. Intenta nuevamente.";
         }
         finally
         {
             isLoading = false;
-            StateHasChanged();
         }
-    }
-
-    private sealed class InputModel
-    {
-        [Required(ErrorMessage = "El email es requerido")]
-        [EmailAddress(ErrorMessage = "Email inválido")]
-        public string Email { get; set; } = "admin@verifactu.es";
-
-        [Required(ErrorMessage = "La contraseña es requerida")]
-        public string Password { get; set; } = "Admin123!";
     }
 }

@@ -1,103 +1,92 @@
-﻿using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+﻿using Microsoft.AspNetCore.Identity.Data;
+using System.Formats.Asn1;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
-namespace FacturacionVERIFACTU.Web.Services;
-
-public class ApiService
+namespace FacturacionVERIFACTU.Web.Services
 {
-    private readonly HttpClient _httpClient;
-    private readonly ProtectedSessionStorage _sessionStorage;
-    private const string TOKEN_KEY = "authToken";
-
-    public ApiService(
-        HttpClient httpClient,
-        ProtectedSessionStorage sessionStorage)
+    public class ApiService : IApiService
     {
-        _httpClient = httpClient;
-        _sessionStorage = sessionStorage;
-    }
+        private readonly HttpClient _httpClient;
+        private readonly IAuthService _authService;
+        private readonly ILogger<ApiService> _logger;
 
-    public async Task<T?> GetAsync<T>(string endpoint)
-    {
-        await EnsureAuthenticatedAsync();
-
-        try
+        public ApiService(
+            HttpClient httpCient,
+            IAuthService authService,
+            ILogger<ApiService> logger)
         {
-            var response = await _httpClient.GetAsync(endpoint);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<T>();
+            _httpClient = httpCient;
+            _authService = authService;
+            _logger = logger;
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error en GET {endpoint}: {ex.Message}");
-            throw;
-        }
-    }
 
-    public async Task<TResponse?> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
-    {
-        await EnsureAuthenticatedAsync();
-
-        try
+        private async Task AddAuthHeaderAsync()
         {
-            var response = await _httpClient.PostAsJsonAsync(endpoint, data);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<TResponse>();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error en POST {endpoint}: {ex.Message}");
-            throw;
-        }
-    }
-
-    public async Task<TResponse?> PutAsync<TRequest, TResponse>(string endpoint, TRequest data)
-    {
-        await EnsureAuthenticatedAsync();
-
-        try
-        {
-            var response = await _httpClient.PutAsJsonAsync(endpoint, data);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<TResponse>();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error en PUT {endpoint}: {ex.Message}");
-            throw;
-        }
-    }
-
-    public async Task<bool> DeleteAsync(string endpoint)
-    {
-        await EnsureAuthenticatedAsync();
-
-        try
-        {
-            var response = await _httpClient.DeleteAsync(endpoint);
-            return response.IsSuccessStatusCode;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error en DELETE {endpoint}: {ex.Message}");
-            throw;
-        }
-    }
-
-    private async Task EnsureAuthenticatedAsync()
-    {
-        try
-        {
-            var tokenResult = await _sessionStorage.GetAsync<string>(TOKEN_KEY);
-            if (tokenResult.Success && !string.IsNullOrEmpty(tokenResult.Value))
+            var token = await _authService.GetTokenAsync();
+            if (!string.IsNullOrEmpty(token))
             {
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenResult.Value);
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             }
         }
-        catch
+
+        public async Task<T?> GetAsync<T>(string endpoint)
         {
-            // Si falla, continuar sin token
+            try
+            {
+                await AddAuthHeaderAsync();
+                var response = await _httpClient.GetAsync(endpoint);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("GET {Endpoint} falló: {Status}", endpoint, response.StatusCode);
+                    return default;
+                }
+
+                return await response.Content.ReadFromJsonAsync<T>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GET {Endpoint}", endpoint);
+                return default;
+            }
+        }
+
+        public async Task<TResponse?> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
+        {
+            try
+            {
+                await AddAuthHeaderAsync();
+                var response = await _httpClient.PostAsJsonAsync(endpoint, data);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("POST {Endpoint} falló: {Status}", endpoint, response.StatusCode);
+                    return default;
+                }
+
+                return await response.Content.ReadFromJsonAsync<TResponse>();
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Error en POST {Endpoint}", endpoint);
+                return default;
+            }
+        }
+
+        public async Task<bool> DeleteAsync(string endpoint)
+        {
+            try
+            {
+                await AddAuthHeaderAsync();
+                var response = await _httpClient.DeleteAsync(endpoint);
+                return response.IsSuccessStatusCode;
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Error en DELETE {Endpoint}", endpoint);
+                return false;
+            }
         }
     }
 }
