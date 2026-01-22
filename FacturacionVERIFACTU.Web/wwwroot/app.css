@@ -1,288 +1,432 @@
 /* ========================================
-   RESET Y ESTRUCTURA BASE
+   RESET Y LIMPIEZA ANTI-AZUL
    ======================================== */
+:root {
+    --notion-bg: #ffffff;
+    --notion-sidebar: #fbfbfa;
+    --notion-text: #37352f;
+    --notion-border: #edeceb;
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-body {
+body, .notion-body-reset {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    color: #37352f;
-    background: #ffffff;
+    color: var(--notion-text);
+    background-color: var(--notion-bg) !important;
     line-height: 1.6;
 }
 
 /* ========================================
-   LAYOUT PRINCIPAL (Notion-style)
+   LAYOUT PRINCIPAL
    ======================================== */
 .notion-app {
     display: flex;
     min-height: 100vh;
+    background-color: white !important;
 }
 
 .notion-sidebar {
-    width: 240px;
-    background-color: #fbfbfa;
-    border-right: 1px solid #edeceb;
+    width: 260px !important;
+    min-width: 260px !important;
+    background-color: var(--notion-sidebar) !important;
+    border-right: 1px solid var(--notion-border) !important;
     height: 100vh;
+    display: flex !important;
+    flex-direction: column !important;
     position: sticky;
     top: 0;
-    flex-shrink: 0;
-    overflow-y: auto;
+    z-index: 100;
 }
 
 .notion-main {
     flex: 1;
-    overflow-y: auto;
+    background-color: white !important;
 }
 
 .notion-content {
-    max-width: 900px;
+    max-width: 1000px;
     margin: 0 auto;
-    padding: 60px 40px;
+    padding: 40px 60px;
 }
 
 /* ========================================
-   INPUTS MODERNOS
-   ======================================== */
-.notion-input-modern {
-    width: 100%;
-    border: 1px solid #e2e2e7 !important;
-    border-radius: 10px !important;
-    padding: 12px 16px !important;
-    font-size: 15px !important;
-    margin-bottom: 20px;
-    font-family: 'Inter', sans-serif;
-    transition: all 0.2s ease;
-}
-
-    .notion-input-modern:focus {
-        border-color: #000 !important;
-        box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05) !important;
-        outline: none !important;
-    }
-
-/* ========================================
-   BOTONES MODERNOS
-   ======================================== */
-.btn-modern {
-    background-color: #000 !important;
-    color: #fff !important;
-    border: none !important;
-    padding: 14px 20px !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
-    font-size: 15px !important;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    width: 100%;
-}
-
-    .btn-modern:hover {
-        opacity: 0.8;
-        transform: translateY(-1px);
-    }
-
-    .btn-modern:active {
-        transform: translateY(0);
-    }
-
-    .btn-modern:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-/* ========================================
-   NAVEGACIÓN (Sin subrayados)
-   ======================================== */
-.nav-link {
-    text-decoration: none !important;
-    color: rgba(55, 53, 47, 0.65) !important;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px !important;
-    border-radius: 6px;
-    margin: 2px 8px;
-    transition: all 0.15s ease;
-    font-size: 14px;
-}
-
-    .nav-link:hover,
-    .nav-link.active {
-        background-color: #efefee !important;
-        color: #37352f !important;
-    }
-
-    .nav-link i {
-        font-size: 18px;
-        width: 20px;
-        text-align: center;
-    }
-
-/* ========================================
-   CARDS DEL DASHBOARD
+   DASHBOARD (CUADRÍCULA CORREGIDA)
    ======================================== */
 .notion-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
+    display: grid !important;
+    /* Esto fuerza las columnas: mínimo 280px, máximo lo que quepa */
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 20px !important;
     margin-top: 32px;
 }
 
 .notion-card {
     background: #ffffff;
-    border: 1px solid #edeceb;
+    border: 1px solid var(--notion-border);
     border-radius: 12px;
     padding: 24px;
-    text-decoration: none;
-    color: #37352f;
+    text-decoration: none !important;
+    color: var(--notion-text) !important;
     transition: all 0.2s ease;
-    cursor: pointer;
+    display: block;
 }
 
     .notion-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
         border-color: #000;
     }
 
-.notion-card-icon-wrapper {
-    width: 48px;
-    height: 48px;
-    border-radius: 10px;
+/* ========================================
+   NAVEGACIÓN SIDEBAR (VISIBILIDAD CORREGIDA)
+   ======================================== */
+.notion-sidebar-header {
+    padding: 24px 16px;
+}
+
+.sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--notion-text);
+}
+
+.notion-nav-group {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 8px;
+    gap: 2px;
+}
+
+.nav-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(55, 53, 47, 0.45);
+    padding: 10px 12px;
+    text-transform: uppercase;
+}
+
+/* Unificamos nav-link y nav-item-link */
+.nav-link, .nav-item-link {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 8px 12px !important;
+    color: var(--notion-text) !important;
+    text-decoration: none !important;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: background 0.2s;
+    background: transparent;
+    border: none;
+    width: 100%;
+}
+
+    .nav-link:hover, .nav-item-link:hover, .nav-link.active {
+        background-color: #efefee !important;
+    }
+
+    /* Iconos de la sidebar */
+    .nav-link i, .nav-item-link i {
+        font-size: 18px;
+        color: rgba(55, 53, 47, 0.7);
+    }
+
+/* ========================================
+   LOGIN Y FORMULARIOS
+   ======================================== */
+.login-container {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 16px;
-    font-size: 24px;
+    min-height: 100vh;
+    background-color: white !important;
 }
 
-    .notion-card-icon-wrapper.blue {
-        background-color: #e3f2fd;
-        color: #1976d2;
+.btn-modern {
+    background-color: #000 !important;
+    color: #fff !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    width: 100%;
+    border: none;
+    cursor: pointer;
+}
+
+.notion-input-modern {
+    width: 100%;
+    border: 1px solid #e2e2e7 !important;
+    border-radius: 8px !important;
+    padding: 10px 14px !important;
+    margin-bottom: 15px;
+}
+
+/* Logout */
+.logout-btn {
+    color: #eb5757 !important;
+}
+
+    .logout-btn i {
+        color: #eb5757 !important;
     }
 
-    .notion-card-icon-wrapper.green {
-        background-color: #e8f5e9;
-        color: #388e3c;
+
+/* ELIMINAR EL RECUADRO DE ENFOQUE (OUTLINE) EN TÍTULOS Y LINKS */
+
+/* Quitar de los títulos */
+h1:focus, h2:focus, h3:focus, .login-header h1:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Quitar de los enlaces de la barra lateral y tarjetas */
+.nav-link:focus, .nav-item-link:focus, .notion-card:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Quitar de los botones al hacer click */
+.btn-modern:focus, .btn-modern:active {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* OPCIONAL: Si quieres que los inputs mantengan un foco bonito pero sin el borde grueso del navegador */
+.notion-input-modern:focus {
+    outline: none !important;
+    border-color: #000 !important;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Cabecera de Página Estilo Notion */
+.notion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.header-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-icon {
+    font-size: 32px;
+}
+
+.notion-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+}
+
+/* Toolbar de búsqueda */
+.notion-toolbar {
+    margin-bottom: 20px;
+}
+
+.notion-search-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #edeceb;
+    padding: 8px 0;
+    width: 100%;
+    max-width: 400px;
+}
+
+    .notion-search-wrapper i {
+        color: #a3a3a3;
     }
 
-    .notion-card-icon-wrapper.purple {
-        background-color: #f3e5f5;
-        color: #7b1fa2;
+.notion-search-input {
+    border: none;
+    outline: none;
+    font-size: 14px;
+    width: 100%;
+    background: transparent;
+}
+
+/* Badges (Estados) */
+.notion-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+    .notion-badge.active {
+        background-color: #e2f5ea;
+        color: #1e6148;
     }
 
-.notion-card-title {
-    font-size: 18px;
+    .notion-badge.inactive {
+        background-color: #f1f1f0;
+        color: #787774;
+    }
+
+/* Botones de acción en tabla */
+.notion-action-btn {
+    background: transparent;
+    border: none;
+    padding: 6px;
+    border-radius: 4px;
+    color: #a3a3a3;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+    .notion-action-btn:hover {
+        background-color: #efefee;
+        color: #37352f;
+    }
+
+    .notion-action-btn.delete:hover {
+        background-color: #ffeef0;
+        color: #eb5757;
+    }
+
+/* Botón secundario Notion */
+.btn-modern-secondary {
+    background: white;
+    border: 1px solid #edeceb;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+    .btn-modern-secondary:hover {
+        background: #fbfbfa;
+    }
+
+/* Row inactivo */
+.notion-row-inactive td {
+    opacity: 0.5;
+}
+
+.font-semibold {
     font-weight: 600;
+}
+
+/* Breadcrumb estilo Notion */
+.notion-breadcrumb {
+    font-size: 14px;
+    color: rgba(55, 53, 47, 0.5);
     margin-bottom: 8px;
 }
 
-.notion-card-desc {
-    font-size: 14px;
-    color: rgba(55, 53, 47, 0.65);
+    .notion-breadcrumb a {
+        color: inherit;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+        .notion-breadcrumb a:hover {
+            color: #37352f;
+        }
+
+/* Rejilla interna del formulario */
+.notion-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
 }
 
-/* ========================================
-   TABLAS MODERNAS
-   ======================================== */
-.notion-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    margin-top: 24px;
+.notion-form-container {
+    max-width: 720px; /* Ancho cómodo para lectura */
 }
 
-    .notion-table thead {
-        background-color: #fbfbfa;
-    }
-
-    .notion-table th {
-        padding: 12px 16px;
-        text-align: left;
-        font-weight: 600;
-        font-size: 14px;
-        color: rgba(55, 53, 47, 0.65);
-        border-bottom: 1px solid #edeceb;
-    }
-
-    .notion-table td {
-        padding: 12px 16px;
-        border-bottom: 1px solid #edeceb;
-        font-size: 14px;
-    }
-
-    .notion-table tbody tr:hover {
-        background-color: #fbfbfa;
-    }
-
-/* ========================================
-   ALERTAS Y MENSAJES
-   ======================================== */
-.alert-modern {
-    padding: 16px 20px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-    border-left: 4px solid;
+/* Errores de validación */
+.notion-error {
+    color: #eb5757;
+    font-size: 12px;
+    margin-top: -15px;
+    margin-bottom: 15px;
+    display: block;
 }
 
-    .alert-modern.error {
-        background-color: #ffebee;
-        border-color: #c62828;
-        color: #b71c1c;
-    }
-
-    .alert-modern.success {
-        background-color: #e8f5e9;
-        border-color: #2e7d32;
-        color: #1b5e20;
-    }
-
-    .alert-modern.info {
-        background-color: #e3f2fd;
-        border-color: #1565c0;
-        color: #0d47a1;
-    }
-
-/* ========================================
-   SPINNERS Y LOADING
-   ======================================== */
-.spinner-modern {
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #000;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    animation: spin 0.8s linear infinite;
-    display: inline-block;
-    margin-right: 8px;
+/* Acciones */
+.notion-form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #edeceb;
 }
 
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-/* ========================================
-   PÁGINA DE LOGIN
-   ======================================== */
-.login-container {
-    min-height: 100vh;
+/* Custom Checkbox estilo Notion */
+.notion-checkbox-container {
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #37352f;
+    user-select: none;
+    padding: 8px 0;
 }
 
-.login-card {
+    .notion-checkbox-container input {
+        width: 18px;
+        height: 18px;
+        accent-color: #000;
+    }
+
+/* Texto de código tipo etiqueta */
+.notion-code-text {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    background-color: #f1f1f0;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 13px;
+    color: #eb5757; /* Color tipo "code" en Notion */
+}
+
+/* Títulos con descripción debajo en la celda */
+.notion-cell-title {
+    font-weight: 600;
+    color: #37352f;
+}
+
+.notion-cell-desc {
+    font-size: 12px;
+    color: rgba(55, 53, 47, 0.5);
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Badge azul sutil para el IVA */
+.notion-badge-info {
+    background-color: #e7f3f8;
+    color: #0c7792;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+diff --git a/FacturacionVERIFACTU.Web/wwwroot/app.css b/FacturacionVERIFACTU.Web/wwwroot/app.css
+index 024cbc30988e88b844e90bf16b87d53e05f8c9ab..f5383efcd19c8bef36169b233b5b441a79c785d9 100644
+--- a/FacturacionVERIFACTU.Web/wwwroot/app.css + + + b/FacturacionVERIFACTU.Web/wwwroot/app.css
+@@ -285, 25 +285, 164 @@ body {
+    .login-card
+
+{
     background: white;
     border-radius: 16px;
     padding: 48px;
@@ -307,3 +451,255 @@ body {
         color: rgba(55, 53, 47, 0.65);
         font-size: 14px;
     }
+
+
+
+ /* ========================================
+   PÁGINAS MAESTRAS (Clientes/Productos)
+   ======================================== */
+ .notion-page-header {
+     display: flex;
+     align-items: flex-start;
+     justify-content: space-between;
+     gap: 16px;
+     margin-bottom: 24px;
+    
+}
+
+
+ .notion-page-header h1 {
+     font-size: 2rem;
+     font-weight: 700;
+     letter-spacing: -0.03em;
+     margin-bottom: 6px;
+    
+}
+
+
+ .notion-page-header p {
+     color: rgba(55, 53, 47, 0.65);
+     font-size: 14px;
+    
+}
+
+
+ .notion-toolbar {
+     display: flex;
+     gap: 12px;
+     align-items: center;
+     margin-bottom: 20px;
+    
+}
+
+
+ .notion-input {
+     width: 100%;
+     border: 1px solid #e2e2e7;
+     border-radius: 10px;
+     padding: 10px 14px;
+     font-size: 14px;
+     font-family: 'Inter', sans-serif;
+     transition: all 0.2s ease;
+    
+}
+
+    
+     .notion-input:focus {
+         border-color: #000;
+         box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.06);
+         outline: none;
+        
+    }
+
+ .notion-button {
+     border: 1px solid transparent;
+     background: #efefee;
+     color: #37352f;
+     padding: 10px 16px;
+     border-radius: 8px;
+     font-weight: 600;
+     font-size: 14px;
+     cursor: pointer;
+     transition: all 0.2s ease;
+     display: inline-flex;
+     align-items: center;
+     gap: 8px;
+    
+}
+
+    
+     .notion-button.primary {
+         background: #111;
+         color: #fff;
+        
+    }
+
+    
+     .notion-button.ghost {
+         background: #fff;
+         border-color: #edeceb;
+        
+    }
+
+    
+     .notion-button.danger {
+         background: #ffebee;
+         color: #b71c1c;
+         border-color: #ffcdd2;
+        
+    }
+
+    
+     .notion-button:hover {
+         transform: translateY(-1px);
+        
+    }
+
+
+ .notion-form {
+     display: grid;
+     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+     gap: 16px 20px;
+     margin-top: 16px;
+     margin-bottom: 24px;
+    
+}
+
+
+ .notion-field {
+     display: flex;
+     flex-direction: column;
+     gap: 6px;
+     font-size: 14px;
+    
+}
+
+    
+     .notion-field label {
+         font-weight: 600;
+         color: rgba(55, 53, 47, 0.8);
+        
+    }
+
+    
+     .notion-field.checkbox {
+         flex-direction: row;
+         align-items: center;
+         gap: 8px;
+        
+    }
+
+
+ .notion-form-actions {
+     display: flex;
+     gap: 12px;
+    
+}
+
+
+ .notion-actions {
+     display: flex;
+     gap: 8px;
+     flex-wrap: wrap;
+    
+}
+
+ .notion-empty {
+     padding: 24px 16px;
+     text-align: center;
+     color: rgba(55, 53, 47, 0.6);
+    
+}
+
+
+ .notion-loading {
+     display: flex;
+     align-items: center;
+     gap: 8px;
+     color: rgba(55, 53, 47, 0.6);
+     font-size: 14px;
+    
+}
+
+
+
+ .notion-table-wrapper {
+     width: 100%;
+     overflow-x: auto;
+    
+}
+
+
+/* Inputs estilo Notion: sin borde agresivo, solo una línea sutil */
+.notion-input {
+    width: 100%;
+    border: 1px solid transparent !important; /* Borde invisible por defecto */
+    border-bottom: 1px solid #edeceb !important; /* Solo línea inferior sutil */
+    border-radius: 0px !important;
+    padding: 8px 4px !important;
+    background: transparent !important;
+    transition: all 0.2s ease;
+}
+
+    .notion-input:hover {
+        background: #f7f7f5 !important; /* Fondo gris casi blanco al pasar el ratón */
+    }
+
+    .notion-input:focus {
+        outline: none !important;
+        border-bottom: 1px solid #37352f !important; /* Línea negra al escribir */
+        background: transparent !important;
+    }
+
+/* Botones: Colores planos y tipografía limpia */
+.notion-button.primary {
+    background: #37352f !important; /* Negro Notion */
+    color: white !important;
+    border: none !important;
+    padding: 6px 14px !important;
+    border-radius: 4px !important;
+    font-weight: 500 !important;
+}
+
+    .notion-button.primary:hover {
+        background: #504e46 !important;
+    }
+
+.notion-button.ghost {
+    background: transparent !important;
+    color: #37352f !important;
+    border: 1px solid #edeceb !important;
+    padding: 6px 14px !important;
+    border-radius: 4px !important;
+}
+
+    .notion-button.ghost:hover {
+        background: #efefee !important;
+    }
+
+/* Botón secundario para acompañar al btn-modern del login */
+.btn-modern-secondary {
+    background-color: #fff !important;
+    color: #37352f !important;
+    border: 1px solid #e2e2e7 !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+    .btn-modern-secondary:hover {
+        background-color: #fbfbfa !important;
+        border-color: #37352f !important;
+    }
+
+/* Ajuste para que las etiquetas se vean como en el login */
+.notion-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(55, 53, 47, 0.6);
+    margin-bottom: 6px;
+    margin-left: 2px;
+}

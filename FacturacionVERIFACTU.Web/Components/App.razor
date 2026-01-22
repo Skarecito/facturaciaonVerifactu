@@ -4,29 +4,29 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
+    
+    @* 1. Primero cargamos Bootstrap como base *@
     <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
-    <link rel="stylesheet" href="app.css?v=1.2" />
-    <link rel="stylesheet" href="FacturacionVERIFACTU.Web.styles.css" />
     
-    @* Fuente moderna Inter *@
+    @* 2. Cargamos fuentes e iconos *@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    @* Iconos Bootstrap Icons *@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
+    @* 3. ÚLTIMO: Tu CSS personalizado para que pise a todo lo anterior *@
+    <link rel="stylesheet" href="app.css?v=1.3" />
+    <link rel="stylesheet" href="FacturacionVERIFACTU.Web.styles.css" />
+    
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet @rendermode="InteractiveServer" />
+    <HeadOutlet @rendermode="new InteractiveServerRenderMode(prerender: false)" />
 </head>
 
-<body>
+@* Añadimos una clase de limpieza al body *@
+<body class="notion-body-reset">
     <CascadingAuthenticationState>
-        @* CRÍTICO: prerender=false para acceder a SessionStorage inmediatamente *@
         <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
     </CascadingAuthenticationState>
 
     <script src="_framework/blazor.web.js"></script>
-    
-    @* Monitor de inactividad *@
     <script src="js/sessionMonitor.js"></script>
 </body>
 </html>

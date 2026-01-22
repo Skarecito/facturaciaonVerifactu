@@ -16,15 +16,21 @@ namespace FacturacionVERIFACTU.API.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IHashService _hashService;
         private readonly IJwtService _jwtService;
+        private readonly ITenantInitializationService _tenantInitService;
+        private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             ApplicationDbContext context,
             IHashService hasService,
-            IJwtService jwtService)
+            IJwtService jwtService, 
+            ITenantInitializationService tenantIntiService,
+            ILogger<AuthController> logger)
         {
             _context = context;
             _hashService = hasService;
             _jwtService = jwtService;
+            _tenantInitService = tenantIntiService;
+            _logger = logger;
         }
 
         ///<summary>
@@ -33,94 +39,98 @@ namespace FacturacionVERIFACTU.API.Controllers
         [HttpPost("register")]
         public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request)
         {
-            //validar email unico
-            if (await _context.Usuarios.AnyAsync(u=> u.Email == request.Email))
-            {
-                return BadRequest(new { message = "El email ya esta registrado" });
-            }
-
-            //Validar NIF unico
-            if (await _context.Tenants.AnyAsync(t => t.NIF == request.NIF))
-            {
-                return BadRequest(new { message = "El NIF ya esta registrado" });
-            }
-
             using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
-                //1. Crear Tenant
+                // 1. Verificar email único
+                var emailExists = await _context.Usuarios.AnyAsync(u => u.Email == request.Email);
+                if (emailExists)
+                {
+                    return BadRequest(new { mensaje = "El email ya está registrado" });
+                }
+
+                // 2. Verificar NIF único
+                var nifExists = await _context.Tenants.AnyAsync(t => t.NIF == request.NIF);
+                if (nifExists)
+                {
+                    return BadRequest(new { mensaje = "El NIF ya está registrado" });
+                }
+
+                // 3. Crear Tenant
                 var tenant = new Tenant
                 {
-                    NombreEmpresa = request.NombreEmpresa,
+                    Nombre = request.NombreEmpresa,
                     NIF = request.NIF,
                     Activo = true,
-                    FechaCreacion = DateTime.UtcNow
+                    FechaAlta = DateTime.UtcNow
                 };
 
                 _context.Tenants.Add(tenant);
                 await _context.SaveChangesAsync();
 
-                //2.Crear usuario
+                // 4. Crear Usuario Admin
                 var usuario = new Usuario
                 {
                     Email = request.Email,
-                    PasswordHash = _hashService.HashPassword(request.Password),
-                    NombreCompleto = request.NombreCompleto,
-                    Rol = "Admin", // primer usuario es admin
-                    TenantId = tenant.Id,
+                    PasswordHash = _hashService.Hash(request.Password),
+                    Nombre = request.NombreCompleto,
+                    Rol = "Admin",
                     Activo = true,
+                    TenantId = tenant.Id,
                     FechaCreaccion = DateTime.UtcNow
                 };
 
                 _context.Usuarios.Add(usuario);
                 await _context.SaveChangesAsync();
 
-                //3.Generar tokens
+
+                // 5. ✨ INICIALIZAR TENANT (NUEVO)
+                await _tenantInitService.IncicializarTenantAsync(tenant.Id);
+
+                // 6. Generar tokens
                 var accessToken = await _jwtService.GenerateAccessToken(
-                    usuario.Id,
-                    usuario.Email,
-                    tenant.Id,
-                    usuario.Rol
-                 );
+                    usuario.Id, usuario.Email, tenant.Id, usuario.Rol);
+                var refreshToken =  _jwtService.GenerateRefreshToken();
 
-                var refreshToken = _jwtService.GenerateRefreshToken();
-
-                //4.Guardar refreshtoken
-                var tokenEntity = new RefreshToken
+                var refreshTokenEntity = new RefreshToken
                 {
                     Token = refreshToken,
                     UsuarioId = usuario.Id,
                     ExpiresAt = DateTime.UtcNow.AddDays(7),
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    Revoked = false
                 };
 
-                _context.RefreshTokens.Add(tokenEntity);
+                _context.RefreshTokens.Add(refreshTokenEntity);
                 await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
 
-                //5. Retornar respuesta
+                _logger.LogInformation("Empresa {Empresa} y usuario {Email} registrados correctamente",
+                    tenant.Nombre, usuario.Email);
+
                 return Ok(new AuthResponse
                 {
                     AccessToken = accessToken,
                     RefreshToken = refreshToken,
-                    ExpiresAt= DateTime.UtcNow.AddMinutes(30),
+                    ExpiresAt = DateTime.UtcNow.AddMinutes(30),
                     User = new UserInfo
                     {
                         UserId = usuario.Id,
                         Email = usuario.Email,
-                        NombreCompleto = usuario.NombreCompleto,
+                        NombreCompleto = usuario.Nombre,
                         TenantId = tenant.Id,
-                        NombreEmpresa = tenant.NombreEmpresa,
+                        NombreEmpresa = tenant.Nombre,
                         Role = usuario.Rol
-                    }   
+                    }
                 });
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                return StatusCode(500, new {message ="Error al registrar el usuario", error = ex.Message});
+                _logger.LogError(ex, "Error en registro de empresa");
+                return StatusCode(500, new { mensaje = "Error interno del servidor" });
             }
         }
         /// <summary>

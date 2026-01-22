@@ -1,0 +1,143 @@
+﻿@page "/productos"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<PageTitle>Productos - FacturaVERIFACTU</PageTitle>
+
+<div class="notion-content">
+    @* --- CABECERA ESTILO NOTION --- *@
+    <div class="notion-header">
+        <div class="header-main">
+            <span class="header-icon">📦</span>
+            <div>
+                <h1>Productos</h1>
+                <p style="color: rgba(55, 53, 47, 0.6); font-size: 14px; margin-top: 4px;">
+                    Administra tu catálogo de productos y servicios.
+                </p>
+            </div>
+        </div>
+        @* Usamos el botón negro principal para la acción destacada *@
+        <button class="btn-modern" @onclick="NuevoProducto" style="padding: 8px 16px;">
+            <i class="bi bi-plus-lg"></i> Nuevo producto
+        </button>
+    </div>
+
+    @* --- TOOLBAR DE BÚSQUEDA --- *@
+    <div class="notion-toolbar" style="border-bottom: 1px solid #edeceb; margin-bottom: 30px; margin-top: 10px;">
+        <div class="notion-search-wrapper" style="max-width: 100%; border: none; background: transparent;">
+            <i class="bi bi-search" style="font-size: 14px; color: rgba(55, 53, 47, 0.4);"></i>
+            <input class="notion-search-input"
+                   placeholder="Buscar por código o descripción..."
+                   @onkeyup="Buscar"
+                   @bind="searchText"
+                   @bind:event="oninput"
+                   style="border:none; outline:none; width: 100%; padding: 8px 12px;" />
+        </div>
+    </div>
+
+    @* --- CONTENIDO PRINCIPAL --- *@
+    @if (isLoading)
+    {
+        <div class="notion-loading" style="padding: 50px; text-align: center;">
+            <span class="spinner-border spinner-border-sm" role="status"></span>
+            <span style="margin-left: 10px; color: #787774;">Cargando catálogo...</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage) || (productos != null && !productos.Any()))
+    {
+        <div class="notion-empty-state" style="padding: 80px 0; text-align: center;">
+            <i class="bi bi-box-seam" style="font-size: 48px; color: #edeceb; margin-bottom: 16px; display: block;"></i>
+            <h4 style="font-weight: 600; margin-bottom: 8px;">No hay productos</h4>
+            <p style="color: #787774; font-size: 14px; margin-bottom: 24px;">Gestiona tus artículos y servicios para agilizar tus facturas.</p>
+            <button class="btn-modern-secondary" @onclick="NuevoProducto">Añadir primer producto</button>
+        </div>
+    }
+    else
+    {
+        @* El componente DataTable ya hereda el espaciado amplio que configuramos antes *@
+        <DataTable TItem="ProductoDto"
+                   Items="productos"
+                   Columns="columns"
+                   OnEdit="EditarProducto"
+                   OnDelete="EliminarProducto" />
+
+        <div class="notion-table-footer" style="margin-top: 20px; border-top: 1px solid #edeceb; padding-top: 12px; color: rgba(55, 53, 47, 0.4); font-size: 12px;">
+            <span>Total: @productos.Count productos en catálogo</span>
+        </div>
+    }
+</div>
+
+@code {
+    private List<ProductoDto> productos = new();
+    private string searchText = string.Empty;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    private readonly IReadOnlyList<DataTableColumn<ProductoDto>> columns =
+    [
+        new DataTableColumn<ProductoDto> { Header = "Código", Value = item => item.Codigo },
+        new DataTableColumn<ProductoDto> { Header = "Descripción", Value = item => item.Descripcion },
+        new DataTableColumn<ProductoDto> { Header = "Precio", Value = item => item.PrecioUnitario.ToString("C") },
+        new DataTableColumn<ProductoDto> { Header = "IVA", Value = item => $"{item.IVA:N0}%" },
+        new DataTableColumn<ProductoDto> { Header = "Estado", Value = item => item.Activo ? "Activo" : "Inactivo" }
+    ];
+
+    [Inject] private IApiService ApiService { get; set; } = null!;
+    [Inject] private NavigationManager NavManager { get; set; } = null!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarProductosAsync();
+    }
+
+    private async Task CargarProductosAsync(string? search = null)
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        var endpoint = string.IsNullOrWhiteSpace(search)
+            ? "api/productos"
+            : $"api/productos?search={Uri.EscapeDataString(search)}";
+
+        var response = await ApiService.GetAsync<PaginatedResponseDto<ProductoDto>>(endpoint);
+        if (response == null)
+        {
+            errorMessage = "No se pudieron cargar los productos.";
+            productos = new List<ProductoDto>();
+        }
+        else
+        {
+            productos = response.Items;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task Buscar()
+    {
+        await CargarProductosAsync(searchText);
+    }
+
+    private void NuevoProducto() => NavManager.NavigateTo("/productos/nuevo");
+
+    private void EditarProducto(ProductoDto producto) => NavManager.NavigateTo($"/productos/editar/{producto.ProductoId}");
+
+    private async Task EliminarProducto(ProductoDto producto)
+    {
+        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"¿Eliminar {producto.Codigo}?");
+        if (!confirm)
+        {
+            return;
+        }
+
+        var success = await ApiService.DeleteAsync($"api/productos/{producto.ProductoId}");
+        if (!success)
+        {
+            errorMessage = "No se pudo eliminar el producto.";
+            return;
+        }
+
+        await CargarProductosAsync(searchText);
+    }
+}

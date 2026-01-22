@@ -12,6 +12,8 @@ using FacturacionVERIFACTU.API.Services;
 using Polly;
 using Polly.Extensions.Http;
 using Serilog;
+using Polly.Bulkhead;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -90,6 +92,8 @@ builder.Services.AddScoped<IFacturaService, FacturaService>();
 builder.Services.AddScoped<ICierreEjercicioService, CierreEjercicioService>();
 builder.Services.AddScoped<VERIFACTUService>();
 builder.Services.AddScoped<IPDFService, PDFService>();
+builder.Services.AddScoped<ITenantInitializationService, TenantInitializationService> ();
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
 builder.Services.AddCors(options =>
 {

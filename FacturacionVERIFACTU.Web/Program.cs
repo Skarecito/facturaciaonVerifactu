@@ -1,38 +1,84 @@
-using Microsoft.AspNetCore.Components.Authorization;
 using FacturacionVERIFACTU.Web.Components;
 using FacturacionVERIFACTU.Web.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ========================================
-// SERVICIOS DE RAZOR COMPONENTS
+// 1. SERVICIOS DE INTERFAZ (BLAZOR SERVER)
 // ========================================
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 // ========================================
-// AUTENTICACIÓN Y AUTORIZACIÓN
+// 2. AUTENTICACIÓN Y ESTADO DE USUARIO
 // ========================================
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+    });
+
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddAuthorization();
+
+// Servicios esenciales de Blazor para sesión y auth
+builder.Services.AddScoped<ProtectedSessionStorage>();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
-builder.Services.AddScoped<IAuthService, AuthService>();
+
 
 // ========================================
-// HTTP CLIENT PARA API
+// 3. GESTIÓN DE TOKEN Y HTTP (SOLUCIÓN 401)
 // ========================================
-var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7001";
-builder.Services.AddScoped(sp => new HttpClient
+
+// Registramos el estado del token como Scoped (se comparte en toda la sesión del usuario)
+builder.Services.AddScoped<TokenState>();
+
+// El Handler debe ser Transient para que el Factory lo cree por cada cliente
+builder.Services.AddScoped<TokenHandler>();
+
+// A) Configuración del Cliente "VerifactuApi"
+builder.Services.AddHttpClient("VerifactuApi", client =>
 {
-    BaseAddress = new Uri(apiBaseUrl)
+    // Asegúrate de que este puerto coincide con tu Backend
+    client.BaseAddress = new Uri("http://localhost:5121/");
+})
+.AddHttpMessageHandler<TokenHandler>() // Inyecta el token en cada petición
+.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    // Bypass de SSL para desarrollo
+    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
 });
 
+// B) Cliente para AuthService (LOGIN)
+// IMPORTANTE: Este NO lleva TokenHandler porque el login no necesita token
+builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5121/");
+})
+.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+});
+
+// C) REGISTRO CLAVE: Hace que @inject HttpClient use la configuración de "VerifactuApi"
+builder.Services.AddScoped(sp =>
+{
+    var factory = sp.GetRequiredService<IHttpClientFactory>();
+    return factory.CreateClient("VerifactuApi");
+});
+
+// Otros servicios de negocio
 builder.Services.AddScoped<IApiService, ApiService>();
 
+// ========================================
+// 4. PIPELINE DE LA APLICACIÓN (MIDDLEWARE)
+// ========================================
 var app = builder.Build();
 
-// ========================================
-// PIPELINE HTTP
-// ========================================
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -42,6 +88,9 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

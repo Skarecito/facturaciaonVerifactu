@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using System.Net.Http.Json;
 using FacturacionVERIFACTU.Web.Models.DTOs;
+using FacturacionVERIFACTU.Web.Services;
 
 namespace FacturacionVERIFACTU.Web.Services;
 
@@ -27,7 +28,7 @@ public class AuthService : IAuthService
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("api/auth/login", request);
+            var response = await _httpClient.PostAsJsonAsync("api/Auth/login", request);
 
             if (!response.IsSuccessStatusCode)
             {

@@ -1,0 +1,196 @@
+﻿@page "/clientes/nuevo"
+@page "/clientes/editar/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<div class="notion-content">
+    <div class="notion-breadcrumb">
+        <a href="/clientes">Clientes</a> / @(Id == 0 ? "Nuevo" : "Editar")
+    </div>
+
+    <div class="notion-page-header">
+        <div class="header-main">
+            <span class="header-icon">@(Id == 0 ? "👤" : "📝")</span>
+            <div>
+                <h1>@(Id == 0 ? "Nuevo cliente" : "Editar cliente")</h1>
+                <p>Información completa de facturación y contacto.</p>
+            </div>
+        </div>
+    </div>
+
+    <EditForm Model="cliente" OnValidSubmit="GuardarAsync" class="notion-form-container">
+        <DataAnnotationsValidator />
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
+                <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
+            </div>
+        }
+
+        @* --- CUADRÍCULA DE CAMPOS ESTILO LOGIN --- *@
+        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+
+            @* Fila 1: Nombre y NIF *@
+            <div class="notion-input-group" style="grid-column: span 1;">
+                <label class="notion-label">Nombre / Razón Social</label>
+                <InputText @bind-Value="cliente.Nombre" class="notion-input-modern" placeholder="Nombre completo" />
+                <ValidationMessage For="() => cliente.Nombre" class="notion-error" />
+            </div>
+
+            <div class="notion-input-group" style="grid-column: span 1;">
+                <label class="notion-label">NIF / CIF</label>
+                <InputText @bind-Value="cliente.NIF" class="notion-input-modern" disabled="@(Id > 0)" placeholder="Ej: B12345678" />
+                <ValidationMessage For="() => cliente.NIF" class="notion-error" />
+            </div>
+
+            @* Fila 2: Email y Teléfono *@
+            <div class="notion-input-group">
+                <label class="notion-label">Email</label>
+                <InputText @bind-Value="cliente.Email" class="notion-input-modern" type="email" placeholder="correo@ejemplo.com" />
+                <ValidationMessage For="() => cliente.Email" class="notion-error" />
+            </div>
+
+            <div class="notion-input-group">
+                <label class="notion-label">Teléfono</label>
+                <InputText @bind-Value="cliente.Telefono" class="notion-input-modern" placeholder="600 000 000" />
+            </div>
+
+            @* Fila 3: Dirección Completa *@
+            <div class="notion-input-group" style="grid-column: span 2;">
+                <label class="notion-label">Dirección</label>
+                <InputText @bind-Value="cliente.Direccion" class="notion-input-modern" placeholder="Calle, número, piso..." />
+            </div>
+
+            @* Fila 4: Población y CP *@
+            <div class="notion-input-group">
+                <label class="notion-label">Población</label>
+                <InputText @bind-Value="cliente.Poblacion" class="notion-input-modern" placeholder="Ciudad o municipio" />
+            </div>
+
+            <div class="notion-input-group">
+                <label class="notion-label">Código Postal</label>
+                <InputText @bind-Value="cliente.CodigoPostal" class="notion-input-modern" placeholder="28001" />
+            </div>
+
+            @* Fila 5: Provincia y País *@
+            <div class="notion-input-group">
+                <label class="notion-label">Provincia</label>
+                <InputText @bind-Value="cliente.Provincia" class="notion-input-modern" />
+            </div>
+
+            <div class="notion-input-group">
+                <label class="notion-label">País</label>
+                <InputText @bind-Value="cliente.Pais" class="notion-input-modern" />
+            </div>
+
+            @* Fila 6: Estado Activo *@
+            <div class="notion-input-group" style="grid-column: span 2; display: flex; align-items: center; gap: 10px; padding: 10px 0;">
+                <InputCheckbox @bind-Value="cliente.Activo" id="chkActivo" style="width: 18px; height: 18px; accent-color: #000;" />
+                <label for="chkActivo" style="font-size: 14px; font-weight: 500; cursor: pointer;">Cliente activo</label>
+            </div>
+        </div>
+
+        @* --- ACCIONES --- *@
+        <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
+            <button type="submit" class="btn-modern" style="min-width: 140px;" disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                }
+                else
+                {
+                    <span>Guardar</span>
+                }
+            </button>
+
+            <button type="button" class="btn-modern-secondary" style="min-width: 140px;" @onclick="Cancelar">
+                Cancelar
+            </button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ClienteDto cliente = new();
+    private bool isSaving;
+    private string errorMessage = string.Empty;
+
+    [Inject] private IApiService ApiService { get; set; } = null!;
+    [Inject] private NavigationManager NavManager { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id <= 0)
+        {
+            return;
+        }
+
+        var response = await ApiService.GetAsync<ClienteDto>($"api/clientes/{Id}");
+        if (response == null)
+        {
+            errorMessage = "No se pudo cargar el cliente seleccionado.";
+            return;
+        }
+
+        cliente = response;
+    }
+
+    private async Task GuardarAsync()
+    {
+        isSaving = true;
+        errorMessage = string.Empty;
+
+        if (Id == 0)
+        {
+            var request = new CrearClienteDto
+            {
+                NIF = cliente.NIF,
+                Nombre = cliente.Nombre,
+                Email = cliente.Email,
+                Telefono = cliente.Telefono,
+                Direccion = cliente.Direccion,
+                CodigoPostal = cliente.CodigoPostal,
+                Poblacion = cliente.Poblacion,
+                Provincia = cliente.Provincia,
+                Pais = cliente.Pais
+            };
+
+            var result = await ApiService.PostAsync<CrearClienteDto, ClienteDto>("api/clientes", request);
+            if (result == null)
+            {
+                errorMessage = "No se pudo crear el cliente.";
+                isSaving = false;
+                return;
+            }
+        }
+        else
+        {
+            var request = new ActualizarClienteDto
+            {
+                Nombre = cliente.Nombre,
+                Email = cliente.Email,
+                Telefono = cliente.Telefono,
+                Direccion = cliente.Direccion,
+                CodigoPostal = cliente.CodigoPostal,
+                Poblacion = cliente.Poblacion,
+                Provincia = cliente.Provincia,
+                Pais = cliente.Pais
+            };
+
+            var result = await ApiService.PutAsync<ActualizarClienteDto, ClienteDto>($"api/clientes/{Id}", request);
+            if (result == null)
+            {
+                errorMessage = "No se pudo actualizar el cliente.";
+                isSaving = false;
+                return;
+            }
+        }
+
+        NavManager.NavigateTo("/clientes");
+    }
+
+    private void Cancelar() => NavManager.NavigateTo("/clientes");
+}

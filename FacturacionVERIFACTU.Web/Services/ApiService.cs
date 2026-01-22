@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Identity.Data;
-using System.Formats.Asn1;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
@@ -70,6 +69,28 @@ namespace FacturacionVERIFACTU.Web.Services
             catch(Exception ex)
             {
                 _logger.LogError(ex, "Error en POST {Endpoint}", endpoint);
+                return default;
+            }
+        }
+
+        public async Task<TResponse?> PutAsync<TRequest, TResponse>(string endpoint, TRequest data)
+        {
+            try
+            {
+                await AddAuthHeaderAsync();
+                var response = await _httpClient.PutAsJsonAsync(endpoint, data);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("PUT {Endpoint} falló: {Status}", endpoint, response.StatusCode);
+                    return default;
+                }
+
+                return await response.Content.ReadFromJsonAsync<TResponse>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en PUT {Endpoint}", endpoint);
                 return default;
             }
         }

@@ -39,4 +39,25 @@ namespace FacturacionVERIFACTU.Web.Models.DTOs
         public DateTime ExpiresAt { get; set; }
         public UserInfo User { get; set; } = new();
     }
+
+    public class CambiarPasswordDto
+    {
+        [Required(ErrorMessage = "La contraseña actual es obligatoria")]
+        public string PasswordActual { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La nueva contraseña es obligatoria")]
+        [MinLength(6, ErrorMessage = "La contraseña debe tener al menos 6 caracteres")]
+        public string PasswordNueva { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Debe confirmar la nueva contraseña")]
+        [Compare(nameof(PasswordNueva), ErrorMessage = "Las contraseñas no coinciden")]
+        public string ConfirmarPassword { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordResponseDto
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string? TemporalPassword { get; set; }
+    }
 }

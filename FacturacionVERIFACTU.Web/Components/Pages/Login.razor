@@ -9,47 +9,42 @@
 
 <div class="login-container">
     <div class="login-card">
-        <div class="login-logo">
-            <h1>Verifactu Pro</h1>
-            <p>Gestión de facturación electrónica</p>
+        <div class="login-header">
+            @* Puedes poner un icono aquí *@
+            <i class="bi bi-shield-lock-fill" style="font-size: 2rem; color: #000;"></i>
+            <h1>Iniciar sesión</h1>
+            <p>Introduce tus credenciales para acceder a Verifactu</p>
         </div>
 
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert-modern error">
-                <i class="bi bi-exclamation-triangle"></i>
-                @errorMessage
-            </div>
-        }
-
-        <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+        <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
             <DataAnnotationsValidator />
 
-            <div class="mb-3">
-                <InputText @bind-Value="loginModel.Email"
-                           class="notion-input-modern"
-                           placeholder="email@empresa.com"
-                           type="email" />
-                <ValidationMessage For="@(() => loginModel.Email)" />
+            <div class="notion-input-group">
+                <label class="notion-label">Email</label>
+                <InputText @bind-Value="loginModel.Email" class="notion-input-modern" placeholder="nombre@empresa.com" autofocus />
             </div>
 
-            <div class="mb-3">
-                <InputText @bind-Value="loginModel.Password"
-                           class="notion-input-modern"
-                           placeholder="Contraseña"
-                           type="password" />
-                <ValidationMessage For="@(() => loginModel.Password)" />
+            <div class="notion-input-group">
+                <label class="notion-label">Contraseña</label>
+                <InputText @bind-Value="loginModel.Password" type="password" class="notion-input-modern" placeholder="••••••••" />
             </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e;">
+                    <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
+                </div>
+            }
 
             <button type="submit" class="btn-modern" disabled="@isLoading">
                 @if (isLoading)
                 {
-                    <span class="spinner-modern"></span>
-                    <span>Iniciando sesión...</span>
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span class="ms-2">Iniciando sesión...</span>
                 }
                 else
                 {
-                    <span>Iniciar Sesión</span>
+                    <span>Entrar</span>
                 }
             </button>
         </EditForm>
@@ -68,6 +63,7 @@
 
         try
         {
+            // 1. Intentamos el login
             var result = await AuthService.LoginAsync(loginModel);
 
             if (result == null)
@@ -76,19 +72,32 @@
                 return;
             }
 
-            // Notificar cambio de estado de autenticación
-            ((CustomAuthStateProvider)AuthStateProvider).NotifyAuthenticationStateChanged();
-
-            // Redirigir al dashboard
-            Nav.NavigateTo("/", true);
+            // 2. IMPORTANTE: No hace falta el Notify si usas forceLoad: true.
+            // La recarga forzada obligará al sistema a reconstruir el AuthState
+            // leyendo el SessionStorage recién guardado.
+            Nav.NavigateTo("/", forceLoad: true);
         }
         catch (Exception ex)
         {
-            errorMessage = "Error de conexión. Intenta nuevamente.";
+            errorMessage = "Error de conexión: " + ex.Message;
         }
         finally
         {
             isLoading = false;
         }
     }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        // Si ya está autenticado, no le dejes estar en la página de Login
+        if (user.Identity is not null && user.Identity.IsAuthenticated)
+        {
+            Nav.NavigateTo("/");
+        }
+    }
+    
 }

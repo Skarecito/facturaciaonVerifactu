@@ -23,24 +23,34 @@ namespace FacturacionVERIFACTU.Web.Services
             {
                 var token = await _authService.GetTokenAsync();
 
-                if (!string.IsNullOrEmpty(token))
+                // 1. Si NO hay token, devolver estado Anónimo inmediatamente
+                if (string.IsNullOrEmpty(token))
                 {
                     return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
                 }
 
-                // Parsear JWT
+                // 2. Si SÍ hay token, procedemos a leerlo
                 var handler = new JwtSecurityTokenHandler();
-                var jwtToken = handler.ReadJwtToken(token);
 
-                //Veriricar expiracion
-                if(jwtToken.ValidTo < DateTime.UtcNow)
+                // Validamos que sea un JWT bien formado
+                if (!handler.CanReadToken(token))
                 {
-                    _logger.LogWarning("Token expirado");
                     await _authService.LogoutAsync();
                     return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
                 }
 
-                //Crear ClaimsIdentity con los claims del JWT
+                var jwtToken = handler.ReadJwtToken(token);
+
+                // 3. Verificar expiración
+                if (jwtToken.ValidTo < DateTime.UtcNow)
+                {
+                    _logger.LogWarning("El token ha expirado.");
+                    await _authService.LogoutAsync();
+                    return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+                }
+
+                // 4. Crear la identidad con los Claims del token
+                // IMPORTANTE: El string "jwt" indica que el usuario ESTÁ autenticado
                 var claims = jwtToken.Claims.ToList();
                 var identity = new ClaimsIdentity(claims, "jwt");
                 var user = new ClaimsPrincipal(identity);
@@ -49,11 +59,11 @@ namespace FacturacionVERIFACTU.Web.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro obteniendo estado de autenticacion");
+                _logger.LogError(ex, "Error obteniendo estado de autenticación");
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
             }
         }
-      
+
         public void NotifyAuthenticationStateChanged()
         {
             NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());

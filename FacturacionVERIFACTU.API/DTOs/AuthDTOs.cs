@@ -6,22 +6,27 @@ namespace FacturacionVERIFACTU.API.DTOs
     // ===== Request DTOs
     public class RegisterRequest
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage ="El email es obligatorio")]
+        [EmailAddress(ErrorMessage ="Email invalido")]
         public string Email { get; set; } = string.Empty;
 
-        [Required]
-        [MinLength(8,ErrorMessage ="La contraseña debe contener al menos 8 caracteres")]
-        public string Password { get; set; } = string.Empty ;
+        [Required(ErrorMessage = "La contraseña es obligatoria")]
+        [MinLength(8, ErrorMessage = "Mínimo 8 caracteres")]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$",
+         ErrorMessage = "La contraseña debe contener mayúsculas, minúsculas, números y caracteres especiales")]
+        public string Password { get; set; } = string.Empty;
 
-        [Required]
+        [Required(ErrorMessage ="El nombre es obligatorio")]
+        [MinLength(3,ErrorMessage ="Minimo 3 caracteres")]
         public string NombreCompleto { get; set; } = string.Empty;
 
-        [Required]
+        [Required (ErrorMessage ="El nombre de la empresa es obligatorio")]
+        [MinLength(3,ErrorMessage ="Minimo 3 caracteres")]
         public string NombreEmpresa {  get; set; } = string.Empty ;
 
-        [Required]
-        [RegularExpression(@"^[A-Z]\d{8}$", ErrorMessage = "NIF inválido (formato: A12345678)")]
+        [Required(ErrorMessage ="El NIF es obligatorio")]
+        [RegularExpression(@"^[A-Z]\d{8}$|^\d{8}[A-Z]$",
+            ErrorMessage = "NIF inválido (formato: A12345678 o 12345678A)")]
         public string NIF { get; set; } = string.Empty;
     }
 
@@ -59,5 +64,27 @@ namespace FacturacionVERIFACTU.API.DTOs
         public int TenantId {  get; set; }
         public string NombreEmpresa { get; set; } = string.Empty;
         public string Role {  get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordResponseDto
+    {
+        public bool Success { get; set; }
+        public string Mensaje { get; set; } = string.Empty;
+        public string? Email { get; set; }
+        public string? PasswordTemporal { get; set; }
+    }
+
+    public class CambiarPasswordDto
+    {
+        [Required(ErrorMessage = "La contraseña actual es obligatoria")]
+        public string CurrentPassword { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La nueva contraseña es obligatoria")]
+        [MinLength(6, ErrorMessage = "La contraseña debe tener al menos 6 caracteres")]
+        public string NewPassword { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Debe confirmar la nueva contraseña")]
+        [Compare(nameof(NewPassword), ErrorMessage = "Las contraseñas no coinciden")]
+        public string ConfirmarPassword { get; set; } = string.Empty;
     }
 }

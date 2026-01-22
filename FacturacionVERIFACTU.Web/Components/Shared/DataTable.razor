@@ -1,0 +1,77 @@
+﻿@using System.Linq
+@typeparam TItem
+
+<div class="notion-table-wrapper">
+    <table class="notion-table">
+        <thead>
+            <tr>
+                @foreach (var column in Columns)
+                {
+                    @* Aplicamos padding generoso y alineación a la izquierda por defecto *@
+                    <th style="padding: 12px 20px; text-align: left; font-size: 12px; color: rgba(55, 53, 47, 0.5); font-weight: 500; letter-spacing: 0.05em;">
+                        @column.Header.ToUpper()
+                    </th>
+                }
+                @if (OnEdit.HasDelegate || OnDelete.HasDelegate)
+                {
+                    <th style="padding: 12px 20px; text-align: right; font-size: 12px; color: rgba(55, 53, 47, 0.5); font-weight: 500;">
+                        ACCIONES
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @if (Items == null || !Items.Any())
+            {
+                <tr>
+                    <td colspan="@(Columns.Count + (OnEdit.HasDelegate || OnDelete.HasDelegate ? 1 : 0))">
+                        <div class="notion-empty" style="padding: 40px; text-align: center; color: rgba(55, 53, 47, 0.4);">
+                            No hay resultados para mostrar.
+                        </div>
+                    </td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in Items)
+                {
+                    <tr class="notion-row">
+                        @foreach (var column in Columns)
+                        {
+                            @* Aumentamos el padding vertical a 16px para dar más espacio *@
+                            <td style="padding: 16px 20px; border-top: 1px solid var(--notion-border); vertical-align: middle;">
+                                @column.Value(item)
+                            </td>
+                        }
+                        @if (OnEdit.HasDelegate || OnDelete.HasDelegate)
+                        {
+                            <td style="padding: 16px 20px; border-top: 1px solid var(--notion-border); text-align: right; vertical-align: middle;">
+                                <div class="notion-actions" style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    @if (OnEdit.HasDelegate)
+                                    {
+                                        <button class="notion-action-btn" @onclick="() => OnEdit.InvokeAsync(item)" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    }
+                                    @if (OnDelete.HasDelegate)
+                                    {
+                                        <button class="notion-action-btn delete" @onclick="() => OnDelete.InvokeAsync(item)" title="Eliminar">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        }
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<DataTableColumn<TItem>> Columns { get; set; } = new List<DataTableColumn<TItem>>();
+    [Parameter] public IEnumerable<TItem>? Items { get; set; }
+    [Parameter] public EventCallback<TItem> OnEdit { get; set; }
+    [Parameter] public EventCallback<TItem> OnDelete { get; set; }
+}

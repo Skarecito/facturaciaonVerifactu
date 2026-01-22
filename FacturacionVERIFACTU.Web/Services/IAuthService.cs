@@ -7,8 +7,8 @@ namespace FacturacionVERIFACTU.Web.Services
     {
         Task<LoginResponse?> LoginAsync(LoginRequest request);
         Task LogoutAsync();
-        Task<string> GetTokenAsync();
-        Task<UserInfo> GetCurrentUserAsync();
+        Task<string?> GetTokenAsync();
+        Task<UserInfo?> GetCurrentUserAsync();
         Task<bool> IsAuthenticatedAsync();
     }
 }
