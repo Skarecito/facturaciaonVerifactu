@@ -10,10 +10,13 @@
 
     <div class="notion-page-header">
         <div class="header-main">
-            <span class="header-icon">@(Id == 0 ? "👤" : "📝")</span>
+            
+            <span class="header-icon">
+                <i class="bi bi-people-fill"></i>
+            </span>
             <div>
                 <h1>@(Id == 0 ? "Nuevo cliente" : "Editar cliente")</h1>
-                <p>Información completa de facturación y contacto.</p>
+                
             </div>
         </div>
     </div>
@@ -89,7 +92,39 @@
                 <InputCheckbox @bind-Value="cliente.Activo" id="chkActivo" style="width: 18px; height: 18px; accent-color: #000;" />
                 <label for="chkActivo" style="font-size: 14px; font-weight: 500; cursor: pointer;">Cliente activo</label>
             </div>
+
+            @*Fila 7: Configuracion fiscal*@
+            <div class="notion-input-group">
+                <label class="notion-label">Tipo de Cliente</label>
+                <InputSelect @bind-Value="cliente.TipoCliente" class="notion-input-modern">
+                    <option value="B2B">B2B</option>
+                    <option value="B2C">B2C</option>
+                    <option value="Profecional">Profecional</option>
+                    <option value="Minorista">Minorista</option>
+                </InputSelect>
+            </div>
+
+            <div class="notion-input-group">
+                <label class="notion-label">Retencion por defecto</label>
+                <InputNumber @bind-Value="cliente.PorcentajeRetencionDefecto"
+                    class="notion-input-modern"
+                    step="0.01"
+                    onforminput="0"
+                    placeholder="0,00"/>
+            </div>
+
+            <div class="notion-input-group" style="grip-colunm; span2;display:flex; align-items: center;gap:10px;padding:10px 0;">
+                <InputCheckbox @bind-Value="cliente.RegimenRecargoEquivalencia" id="chkRecargo" style="width: 18px; height: 18px; accent-color: #000;"/>
+                <label for="chkRecargo" style="font-size: 14px; font-weight: 500; cursor:pointer;">Recargo de equivalencia</label>
+            </div>
+
+            <div class="notion-input-group" style="grid-column: span 2;">
+                <label class="notion-label">Notas fiscales</label>
+                <InputTextArea @bind-Value="cliente.NotasFiscales" class="notion-input-modern" rows="4" placeholder="Observaciones fiscales del cliente" />
+            </div>
         </div>
+
+
 
         @* --- ACCIONES --- *@
         <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
@@ -114,7 +149,7 @@
 @code {
     [Parameter] public int Id { get; set; }
 
-    private ClienteDto cliente = new();
+    private ClienteDto cliente = new() {Activo = true};
     private bool isSaving;
     private string errorMessage = string.Empty;
 
@@ -155,7 +190,12 @@
                 CodigoPostal = cliente.CodigoPostal,
                 Poblacion = cliente.Poblacion,
                 Provincia = cliente.Provincia,
-                Pais = cliente.Pais
+                Pais = cliente.Pais,
+                Activo= cliente.Activo,
+                RegimenRecargoEquivalencia = cliente.RegimenRecargoEquivalencia,
+                PorcentajeRetencionDefecto = cliente.PorcentajeRetencionDefecto,
+                TipoCliente=cliente.TipoCliente,
+                NotasFiscales = cliente.NotasFiscales
             };
 
             var result = await ApiService.PostAsync<CrearClienteDto, ClienteDto>("api/clientes", request);
@@ -177,7 +217,12 @@
                 CodigoPostal = cliente.CodigoPostal,
                 Poblacion = cliente.Poblacion,
                 Provincia = cliente.Provincia,
-                Pais = cliente.Pais
+                Pais = cliente.Pais,
+                Activo = cliente.Activo,
+                RegimenRecargoEquivalencia = cliente.RegimenRecargoEquivalencia,
+                PorcentajeRetencionDefecto = cliente.PorcentajeRetencionDefecto,
+                TipoCliente = cliente.TipoCliente,
+                NotasFiscales = cliente.NotasFiscales
             };
 
             var result = await ApiService.PutAsync<ActualizarClienteDto, ClienteDto>($"api/clientes/{Id}", request);

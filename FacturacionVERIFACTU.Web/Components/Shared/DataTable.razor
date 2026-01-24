@@ -1,4 +1,5 @@
 ﻿@using System.Linq
+@using System.Reflection
 @typeparam TItem
 
 <div class="notion-table-wrapper">
@@ -7,14 +8,13 @@
             <tr>
                 @foreach (var column in Columns)
                 {
-                    @* Aplicamos padding generoso y alineación a la izquierda por defecto *@
-                    <th style="padding: 12px 20px; text-align: left; font-size: 12px; color: rgba(55, 53, 47, 0.5); font-weight: 500; letter-spacing: 0.05em;">
+                    <th style="padding: 12px 20px; text-align: left; font-size: 11px; color: rgba(55, 53, 47, 0.4); font-weight: 600; letter-spacing: 0.05em; border-bottom: 1px solid #edeceb;">
                         @column.Header.ToUpper()
                     </th>
                 }
                 @if (OnEdit.HasDelegate || OnDelete.HasDelegate)
                 {
-                    <th style="padding: 12px 20px; text-align: right; font-size: 12px; color: rgba(55, 53, 47, 0.5); font-weight: 500;">
+                    <th style="padding: 12px 20px; text-align: right; font-size: 11px; color: rgba(55, 53, 47, 0.4); font-weight: 600; border-bottom: 1px solid #edeceb;">
                         ACCIONES
                     </th>
                 }
@@ -25,8 +25,9 @@
             {
                 <tr>
                     <td colspan="@(Columns.Count + (OnEdit.HasDelegate || OnDelete.HasDelegate ? 1 : 0))">
-                        <div class="notion-empty" style="padding: 40px; text-align: center; color: rgba(55, 53, 47, 0.4);">
-                            No hay resultados para mostrar.
+                        <div style="padding: 60px; text-align: center; color: #adaca8; font-size: 14px;">
+                            <i class="bi bi-inbox" style="font-size: 24px; display: block; margin-bottom: 8px; opacity: 0.5;"></i>
+                            No hay datos disponibles
                         </div>
                     </td>
                 </tr>
@@ -35,28 +36,47 @@
             {
                 @foreach (var item in Items)
                 {
-                    <tr class="notion-row">
+                    @* EL DETALLITO: Detectamos si el item tiene una propiedad 'Activo'. 
+                       Si es false, aplicamos la clase de atenuación automáticamente.
+                    *@
+                    var isInactive = IsItemInactive(item);
+
+                    <tr class="notion-row @(isInactive ? "notion-row-inactive" : "")">
                         @foreach (var column in Columns)
                         {
-                            @* Aumentamos el padding vertical a 16px para dar más espacio *@
-                            <td style="padding: 16px 20px; border-top: 1px solid var(--notion-border); vertical-align: middle;">
-                                @column.Value(item)
+                            <td style="padding: 14px 20px; vertical-align: middle; border-bottom: 1px solid #f7f7f5;">
+                                @* Si el valor es "Activo" o "Inactivo", le ponemos el Badge estilo Notion *@
+                                @{
+                                    var cellValue = column.Value(item);
+                                    if (cellValue?.ToString() == "Activo")
+                                    {
+                                        <span class="notion-badge active">Activo</span>
+                                    }
+                                    else if (cellValue?.ToString() == "Inactivo")
+                                    {
+                                        <span class="notion-badge inactive">Inactivo</span>
+                                    }
+                                    else
+                                    {
+                                        @cellValue
+                                    }
+                                }
                             </td>
                         }
                         @if (OnEdit.HasDelegate || OnDelete.HasDelegate)
                         {
-                            <td style="padding: 16px 20px; border-top: 1px solid var(--notion-border); text-align: right; vertical-align: middle;">
-                                <div class="notion-actions" style="display: flex; gap: 8px; justify-content: flex-end;">
+                            <td style="padding: 14px 20px; text-align: right; vertical-align: middle; border-bottom: 1px solid #f7f7f5;">
+                                <div class="notion-actions" style="display: flex; gap: 4px; justify-content: flex-end;">
                                     @if (OnEdit.HasDelegate)
                                     {
-                                        <button class="notion-action-btn" @onclick="() => OnEdit.InvokeAsync(item)" title="Editar">
-                                            <i class="bi bi-pencil"></i>
+                                        <button class="notion-action-btn" @onclick="() => OnEdit.InvokeAsync(item)">
+                                            <i class="bi bi-pencil-fill" style="font-size: 13px;"></i>
                                         </button>
                                     }
                                     @if (OnDelete.HasDelegate)
                                     {
-                                        <button class="notion-action-btn delete" @onclick="() => OnDelete.InvokeAsync(item)" title="Eliminar">
-                                            <i class="bi bi-trash3"></i>
+                                        <button class="notion-action-btn delete" @onclick="() => OnDelete.InvokeAsync(item)">
+                                            <i class="bi bi-trash3" style="font-size: 13px;"></i>
                                         </button>
                                     }
                                 </div>
@@ -74,4 +94,16 @@
     [Parameter] public IEnumerable<TItem>? Items { get; set; }
     [Parameter] public EventCallback<TItem> OnEdit { get; set; }
     [Parameter] public EventCallback<TItem> OnDelete { get; set; }
+
+    // Lógica para detectar automáticamente si el registro está inactivo
+    private bool IsItemInactive(TItem item)
+    {
+        if (item == null) return false;
+        var propertyInfo = item.GetType().GetProperty("Activo");
+        if (propertyInfo != null && propertyInfo.PropertyType == typeof(bool))
+        {
+            return !(bool)propertyInfo.GetValue(item)!;
+        }
+        return false;
+    }
 }

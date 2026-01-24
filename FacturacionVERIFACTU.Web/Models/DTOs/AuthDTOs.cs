@@ -56,8 +56,8 @@ namespace FacturacionVERIFACTU.Web.Models.DTOs
 
     public class ResetPasswordResponseDto
     {
-        public bool Success { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public string? TemporalPassword { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string PasswordTemporal {  get; set; } = string.Empty;
+        public string Mensaje {  get; set; } = string.Empty;
     }
 }

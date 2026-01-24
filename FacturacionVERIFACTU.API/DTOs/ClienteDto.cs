@@ -14,6 +14,7 @@
         public string? Pais { get; set; } = "España";
         public string? Email {  get; set; }
         public string? Telefono {  get; set; }
+        public bool Activo { get; set; }
 
         // ⭐ CONFIGURACIÓN FISCAL (opcional)
         public bool RegimenRecargoEquivalencia { get; set; } = false;
@@ -36,6 +37,11 @@
         public string? Email { get; set; }
         public string? Telefono { get; set; }
         public DateTime FechaModificacion { get; set; }
+        public bool Activo { get; set; }
+        public bool RegimenRecargoEquivalencia { get; set; }
+        public decimal PorcentajeRetencionDefecto { get; set; }
+        public string TipoCliente { get; set; } = "B2B";
+        public string? NotasFiscales { get; set; }
         
     }
 
@@ -56,6 +62,7 @@
         public string? Telefono { get; set; }
         public DateTime FechaCreaccion { get; set; }
         public DateTime FechaModificacion { get; set; }
+        public bool Activo { get; set; }
 
         public bool RegimenRecargoEquivalencia { get; set; } = false;
         public decimal PorcentajeRetencionDefecto { get; set; } = 0;

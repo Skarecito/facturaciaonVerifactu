@@ -11,10 +11,11 @@
 
     <div class="notion-page-header">
         <div class="header-main">
-            <span class="header-icon">@(Id == 0 ? "📦" : "✏️")</span>
+            <span class="header-icon">
+                <i class="bi bi-archive"></i>
+            </span>
             <div>
                 <h1>@(Id == 0 ? "Nuevo producto" : "Editar producto")</h1>
-                <p>Define los precios, impuestos y códigos de tu catálogo.</p>
             </div>
         </div>
     </div>
@@ -93,7 +94,7 @@
 @code {
     [Parameter] public int Id { get; set; }
 
-    private ProductoDto producto = new();
+    private ProductoDto producto = new() {Activo = true};
     private bool isSaving;
     private string errorMessage = string.Empty;
 

@@ -24,6 +24,10 @@ public class ClienteDto
     public string? Provincia { get; set; }
     public string? Pais { get; set; } = "España";
     public bool Activo { get; set; }
+    public bool RegimenRecargoEquivalencia {  get; set; }
+    public decimal PorcentajeRetencionDefecto {  get; set; }
+    public string TipoCliente { get; set; } = "B2B";
+    public string? NotasFiscales {  get; set; }
 }
 
 public class CrearClienteDto
@@ -46,6 +50,10 @@ public class CrearClienteDto
     public string? Provincia { get; set; }
     public string? Pais { get; set; } = "España";
     public bool Activo { get; set; }
+    public bool RegimenRecargoEquivalencia {  get; set; }
+    public decimal PorcentajeRetencionDefecto {  get; set; }
+    public string TipoCliente { get; set; } = "B2B";
+    public string? NotasFiscales { get; set; }
 }
 
 public class ActualizarClienteDto
@@ -64,4 +72,8 @@ public class ActualizarClienteDto
     public string? Provincia { get; set; }
     public string? Pais { get; set; } = "España";
     public bool Activo { get;set; }
+    public bool RegimenRecargoEquivalencia { get; set; }
+    public decimal PorcentajeRetencionDefecto { get; set; }
+    public string TipoCliente { get; set; } = "B2B";
+    public string? NotasFiscales { get; set; }
 }

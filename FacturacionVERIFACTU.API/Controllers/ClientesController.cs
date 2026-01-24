@@ -80,7 +80,12 @@ namespace FacturacionVERIFACTU.API.Controllers
                     Email = c.Email,
                     Telefono = c.Telefono,
                     FechaCreaccion = c.FechaCreacion,
-                    FechaModificacion = c.FechaModificacion
+                    FechaModificacion = c.FechaModificacion,
+                    Activo = c.Activo,
+                    RegimenRecargoEquivalencia = c.RegimenRecargoEquivalencia,
+                    PorcentajeRetencionDefecto = c.PorcentajeRetencionDefecto ?? 0,
+                    TipoCliente = c.TipoCliente,
+                    NotasFiscales = c.NotasFiscales
                 })
                 .ToListAsync();
 
@@ -120,7 +125,12 @@ namespace FacturacionVERIFACTU.API.Controllers
                     Email = c.Email,
                     Telefono = c.Telefono,
                     FechaCreaccion = c.FechaCreacion,
-                    FechaModificacion = c.FechaModificacion
+                    FechaModificacion = c.FechaModificacion,
+                    Activo = c.Activo,
+                    RegimenRecargoEquivalencia = c.RegimenRecargoEquivalencia,
+                    PorcentajeRetencionDefecto = c.PorcentajeRetencionDefecto ?? 0,
+                    TipoCliente = c.TipoCliente,
+                    NotasFiscales = c.NotasFiscales
                 })
                 .FirstOrDefaultAsync();
 
@@ -165,7 +175,12 @@ namespace FacturacionVERIFACTU.API.Controllers
                 Email = dto.Email,
                 Telefono = dto.Telefono,
                 FechaCreacion = DateTime.UtcNow,
-                FechaModificacion = DateTime.UtcNow
+                FechaModificacion = DateTime.UtcNow,
+                Activo = dto.Activo,
+                RegimenRecargoEquivalencia = dto.RegimenRecargoEquivalencia,
+                PorcentajeRetencionDefecto = dto.PorcentajeRetencionDefecto,
+                TipoCliente = dto.TipoCliente,
+                NotasFiscales = dto.NotasFiscales
             };
 
             _context.Clientes.Add(cliente);
@@ -184,7 +199,13 @@ namespace FacturacionVERIFACTU.API.Controllers
                 Email = cliente.Email,
                 Telefono = cliente.Telefono,
                 FechaCreaccion = cliente.FechaCreacion,
-                FechaModificacion = cliente.FechaModificacion
+                FechaModificacion = cliente.FechaModificacion,
+                Activo = cliente.Activo,
+                RegimenRecargoEquivalencia = cliente.RegimenRecargoEquivalencia,
+                PorcentajeRetencionDefecto = cliente.PorcentajeRetencionDefecto ?? 0,
+                TipoCliente = cliente.TipoCliente,
+                NotasFiscales = cliente.NotasFiscales
+                
             };
 
             return CreatedAtAction(nameof(GetCliente), new { id = cliente.Id }, response);
@@ -220,6 +241,11 @@ namespace FacturacionVERIFACTU.API.Controllers
             cliente.Email = dto.Email;
             cliente.Telefono = dto.Telefono;
             cliente.FechaModificacion = DateTime.UtcNow;
+            cliente.Activo = dto.Activo;
+            cliente.RegimenRecargoEquivalencia = dto.RegimenRecargoEquivalencia;
+            cliente.PorcentajeRetencionDefecto = dto.PorcentajeRetencionDefecto;
+            cliente.TipoCliente = dto.TipoCliente;
+            cliente.NotasFiscales = dto.NotasFiscales;
 
             await _context.SaveChangesAsync();
 
@@ -236,7 +262,12 @@ namespace FacturacionVERIFACTU.API.Controllers
                 Email = cliente.Email,
                 Telefono = cliente.Telefono,
                 FechaCreaccion = cliente.FechaCreacion,
-                FechaModificacion = cliente.FechaModificacion
+                FechaModificacion = cliente.FechaModificacion,
+                Activo = cliente.Activo,
+                RegimenRecargoEquivalencia = cliente.RegimenRecargoEquivalencia,
+                PorcentajeRetencionDefecto = cliente.PorcentajeRetencionDefecto ?? 0,
+                TipoCliente = cliente.TipoCliente,
+                NotasFiscales = cliente.NotasFiscales
             };
 
             return Ok(response);

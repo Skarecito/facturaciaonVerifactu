@@ -95,6 +95,31 @@ namespace FacturacionVERIFACTU.Web.Services
             }
         }
 
+        public async Task<TResponse?> PatchAsync<TRequest, TResponse>(string endpoint, TRequest data)
+        {
+            try
+            {
+                await AddAuthHeaderAsync();
+                var request = new HttpRequestMessage(HttpMethod.Patch, endpoint)
+                {
+                    Content = JsonContent.Create(data)
+                };
+                var response = await _httpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("PATC {Endpoint} fallo: {Status}", endpoint, response.StatusCode);
+                    return default;
+                }
+                return await response.Content.ReadFromJsonAsync<TResponse>();
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Error en PATCH {Endpoint}", endpoint);
+                return default;
+            }
+        }
+
         public async Task<bool> DeleteAsync(string endpoint)
         {
             try

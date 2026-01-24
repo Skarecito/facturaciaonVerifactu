@@ -3,6 +3,7 @@ using FacturacionVERIFACTU.Web.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using CurrieTechnologies.Razor.SweetAlert2;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,6 +78,9 @@ builder.Services.AddScoped<IApiService, ApiService>();
 // ========================================
 // 4. PIPELINE DE LA APLICACIÓN (MIDDLEWARE)
 // ========================================
+
+builder.Services.AddSweetAlert2(); 
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())

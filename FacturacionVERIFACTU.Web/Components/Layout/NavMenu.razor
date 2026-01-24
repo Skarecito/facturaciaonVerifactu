@@ -18,6 +18,11 @@
         <i class="bi bi-grid-1x2"></i>
         <span>Dashboard</span>
     </NavLink>
+    
+    <NavLink class="nav-item-link" href="/presupuestos">
+        <i class="bi bi-file-earmark-text"></i>
+        <span>Presupuestos</span>
+    </NavLink>
 
     <NavLink class="nav-item-link" href="/facturas">
         <i class="bi bi-receipt"></i>
@@ -33,10 +38,26 @@
         <i class="bi bi-archive"></i>
         <span>Productos</span>
     </NavLink>
+
+    <NavLink class="nav-item-link" href="/empresa">
+        <i class="bi bi-building"></i>
+        <span>Mi empresa</span>
+    </NavLink>
+
+    <AuthorizeView Roles="Admin">
+        <NavLink class="nav-item-link" href="/usuarios">
+            <i class="bi bi-person-badge"></i>
+            <span>Usuarios</span>
+        </NavLink>
+    </AuthorizeView>
 </nav>
 
 <nav class="notion-nav-group logout-section">
     <hr class="sidebar-divider" />
+           <NavLink class="nav-item-link" href="/perfil">
+                <i class="bi bi-gear"></i>
+                <span>Mi perfil</span>
+           </NavLink>
     <button class="nav-item-link logout-btn" @onclick="HandleLogout">
         <i class="bi bi-box-arrow-right"></i>
         <span>Cerrar Sesión</span>

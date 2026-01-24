@@ -1,0 +1,103 @@
+﻿@page "/perfil"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<PageTitle>Mi perfil - FacturacionVERIFACTU</PageTitle>
+
+<div class="notion-content">
+    <div class="notion-header">
+        <div class="header-main">
+            <span class="header-icon">🔐</span>
+            <div>
+                <h1>Mi perfil</h1>
+                <p style="color: rgba(55, 53, 47, 0.6); font-size: 14px; margin-top: 4px;">
+                    Actualiza tu contraseña de acceso de forma segura.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <EditForm Model="model" OnValidSubmit="CambiarPasswordAsync" class="notion-form-container">
+        <DataAnnotationsValidator />
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
+                <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success" style="font-size: 13px; border-radius: 8px; border: none; background-color: #f0fff5; color: #0f5132; margin-bottom: 20px; padding: 12px;">
+                <i class="bi bi-check-circle-fill"></i> @successMessage
+            </div>
+        }
+
+        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="notion-input-group" style="grid-column: span 2;">
+                <label class="notion-label">Contraseña actual</label>
+                <InputText @bind-Value="model.CurrentPassword" type="password" class="notion-input-modern" />
+                <ValidationMessage For="() => model.CurrentPassword" class="notion-error" />
+            </div>
+
+            <div class="notion-input-group">
+                <label class="notion-label">Nueva contraseña</label>
+                <InputText @bind-Value="model.NewPassword" type="password" class="notion-input-modern" />
+                <ValidationMessage For="() => model.NewPassword" class="notion-error" />
+            </div>
+
+            <div class="notion-input-group">
+                <label class="notion-label">Confirmar contraseña</label>
+                <InputText @bind-Value="model.ConfirmPassword" type="password" class="notion-input-modern" />
+                <ValidationMessage For="() => model.ConfirmPassword" class="notion-error" />
+            </div>
+        </div>
+
+        <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
+            <button type="submit" class="btn-modern" style="min-width: 160px;" disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                }
+                else
+                {
+                    <span>Actualizar contraseña</span>
+                }
+            </button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private ChangePasswordDto model = new();
+    private bool isSaving;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    [Inject] private IApiService ApiService { get; set; } = null!;
+
+    private async Task CambiarPasswordAsync()
+    {
+        isSaving = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        var response = await ApiService.PostAsync<ChangePasswordDto, ApiMessageDto>("api/usuarios/cambiar-password", model);
+        if (response == null)
+        {
+            errorMessage = "No se pudo actualizar la contraseña.";
+            isSaving = false;
+            return;
+        }
+
+        successMessage = response.Mensaje;
+        model = new ChangePasswordDto();
+        isSaving = false;
+    }
+
+    private sealed class ApiMessageDto
+    {
+        public string Mensaje { get; set; } = "Contraseña actualizada correctamente";
+    }
+}

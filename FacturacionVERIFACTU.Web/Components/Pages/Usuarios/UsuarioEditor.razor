@@ -1,0 +1,168 @@
+﻿@page "/usuarios/nuevo"
+@page "/usuarios/editar/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+
+<div class="notion-content">
+    <div class="notion-breadcrumb">
+        <a href="/usuarios">Usuarios</a> / @(Id == 0 ? "Nuevo" : "Editar")
+    </div>
+
+    <div class="notion-page-header">
+        <div class="header-main">
+            <span class="header-icon">
+                <i class="bi bi-person-badge"></i>
+            </span>
+            <div>
+                <h1>@(Id == 0 ? "Nuevo usuario" : "Editar usuario")</h1>
+            </div>
+        </div>
+    </div>
+
+    <EditForm Model="model" OnValidSubmit="GuardarAsync" class="notion-form-container">
+        <DataAnnotationsValidator />
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
+                <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
+            </div>
+        }
+
+        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="notion-input-group">
+                <label class="notion-label">Nombre completo</label>
+                <InputText @bind-Value="model.NombreCompleto" class="notion-input-modern" placeholder="Nombre y apellidos" />
+                <ValidationMessage For="() => model.NombreCompleto" class="notion-error" />
+            </div>
+
+            <div class="notion-input-group">
+                <label class="notion-label">Rol</label>
+                <InputSelect @bind-Value="model.Role" class="notion-input-modern">
+                    @foreach (var role in roles)
+                    {
+                        <option value="@role">@role</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => model.Role" class="notion-error" />
+            </div>
+
+            @if (Id == 0)
+            {
+                <div class="notion-input-group" style="grid-column: span 2;">
+                    <label class="notion-label">Email</label>
+                    <InputText @bind-Value="createModel.Email" class="notion-input-modern" type="email" placeholder="correo@empresa.com" />
+                    <ValidationMessage For="() => createModel.Email" class="notion-error" />
+                </div>
+
+                <div class="notion-input-group" style="grid-column: span 2;">
+                    <label class="notion-label">Contraseña temporal</label>
+                    <InputText @bind-Value="createModel.Password" class="notion-input-modern" type="password" placeholder="Mínimo 8 caracteres" />
+                    <ValidationMessage For="() => createModel.Password" class="notion-error" />
+                </div>
+            }
+            else
+            {
+                <div class="notion-input-group" style="grid-column: span 2;">
+                    <label class="notion-label">Email (solo lectura)</label>
+                    <InputText @bind-Value="email" class="notion-input-modern" disabled />
+                </div>
+            }
+
+            <div class="notion-input-group" style="grid-column: span 2; display: flex; align-items: center; gap: 10px; padding: 10px 0;">
+                <InputCheckbox @bind-Value="model.Activo" id="chkActivo" style="width: 18px; height: 18px; accent-color: #000;" />
+                <label for="chkActivo" style="font-size: 14px; font-weight: 500; cursor: pointer;">Usuario activo</label>
+            </div>
+        </div>
+
+        <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
+            <button type="submit" class="btn-modern" style="min-width: 140px;" disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                }
+                else
+                {
+                    <span>Guardar</span>
+                }
+            </button>
+
+            <button type="button" class="btn-modern-secondary" style="min-width: 140px;" @onclick="Cancelar">
+                Cancelar
+            </button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private readonly IReadOnlyList<string> roles = new[] { "Admin", "Usuario", "Consulta" };
+    private UpdateUsuarioDto model = new();
+    private CreateUsuarioDto createModel = new();
+    private string email = string.Empty;
+    private bool isSaving;
+    private string errorMessage = string.Empty;
+
+    [Inject] private IApiService ApiService { get; set; } = null!;
+    [Inject] private NavigationManager NavManager { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id <= 0)
+        {
+            model.Role = "Usuario";
+            model.Activo = true;
+            createModel.Role = "Usuario";
+            createModel.Activo = true;
+            return;
+        }
+
+        var response = await ApiService.GetAsync<UsuarioResponseDto>($"api/usuarios/{Id}");
+        if (response == null)
+        {
+            errorMessage = "No se pudo cargar el usuario seleccionado.";
+            return;
+        }
+
+        model.NombreCompleto = response.NombreCompleto;
+        model.Role = response.Role;
+        model.Activo = response.Activo;
+        email = response.Email;
+    }
+
+    private async Task GuardarAsync()
+    {
+        isSaving = true;
+        errorMessage = string.Empty;
+
+        if (Id == 0)
+        {
+            createModel.NombreCompleto = model.NombreCompleto;
+            createModel.Role = model.Role;
+            createModel.Activo = model.Activo;
+
+            var result = await ApiService.PostAsync<CreateUsuarioDto, UsuarioResponseDto>("api/usuarios", createModel);
+            if (result == null)
+            {
+                errorMessage = "No se pudo crear el usuario.";
+                isSaving = false;
+                return;
+            }
+        }
+        else
+        {
+            var result = await ApiService.PutAsync<UpdateUsuarioDto, UsuarioResponseDto>($"api/usuarios/{Id}", model);
+            if (result == null)
+            {
+                errorMessage = "No se pudo actualizar el usuario.";
+                isSaving = false;
+                return;
+            }
+        }
+
+        NavManager.NavigateTo("/usuarios");
+    }
+
+    private void Cancelar() => NavManager.NavigateTo("/usuarios");
+}

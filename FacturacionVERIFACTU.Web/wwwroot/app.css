@@ -703,3 +703,187 @@ index 024cbc30988e88b844e90bf16b87d53e05f8c9ab..f5383efcd19c8bef36169b233b5b441a
     margin-bottom: 6px;
     margin-left: 2px;
 }
+
+.icon-container-modern {
+    width: 48px;
+    height: 48px;
+    background-color: #f1f1ef; /* Gris Notion muy suave */
+    border-radius: 12px; /* Bordes redondeados modernos, no círculo total */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #37352f; /* Color casi negro de Notion */
+    margin-right: 16px;
+    border: 1px solid #edeceb; /* Borde casi invisible */
+}
+
+    /* Si quieres que cada sección tenga un toque de color sutil */
+    .icon-container-modern i {
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+    }
+
+
+
+.notion-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-bottom: 8px;
+}
+
+.notion-tab {
+    border: 1px solid #edeceb;
+    background: #fbfbfa;
+    color: #37352f;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+    .notion-tab.active {
+        background: #37352f;
+        color: #fff;
+        border-color: #37352f;
+    }
+
+    .notion-tab .tab-count {
+        background: rgba(255, 255, 255, 0.2);
+        color: inherit;
+        padding: 2px 6px;
+        border-radius: 999px;
+        font-size: 11px;
+    }
+
+.presupuesto-lines-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 28px 0 12px;
+}
+
+    .presupuesto-lines-header h3 {
+        margin: 0;
+        font-size: 18px;
+    }
+
+.lines-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.presupuesto-totales {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+    border-top: 1px solid #edeceb;
+    padding-top: 16px;
+}
+
+.totales-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    color: rgba(55, 53, 47, 0.7);
+}
+
+    .totales-item strong {
+        font-size: 16px;
+        color: #37352f;
+    }
+
+    .totales-item.highlight strong {
+        color: #0f5132;
+    }
+
+.convertir-factura {
+    margin-top: 32px;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #edeceb;
+    background: #fbfbfa;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 1000;
+}
+
+.modal-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    border-radius: 16px;
+    width: min(900px, 90vw);
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    z-index: 1001;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #edeceb;
+}
+
+.modal-body {
+    padding: 16px 20px 24px;
+    overflow-y: auto;
+    max-height: calc(80vh - 80px);
+}
+
+.modal-table {
+    margin-top: 16px;
+}
+
+/* Fondo oscurecido sutil */
+.notion-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 15, 15, 0.4); /* El gris de Notion para overlays */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(2px); /* Toque moderno */
+}
+
+/* Forzar que SweetAlert2 use nuestra tipografía y bordes */
+.notion-swal-popup {
+    font-family: 'Inter', sans-serif !important;
+    border-radius: 12px !important;
+    padding: 2rem !important;
+}
+
+.swal2-title {
+    font-size: 1.25rem !important;
+    color: #37352f !important;
+}
+
+.swal2-html-container {
+    color: rgba(55, 53, 47, 0.6) !important;
+}
+
+/* Hacer que los botones de la librería hereden tu estilo */
+.swal2-confirm.btn-modern {
+    border-radius: 8px !important;
+    padding: 10px 24px !important;
+}

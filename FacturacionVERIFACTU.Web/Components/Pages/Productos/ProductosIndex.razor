@@ -1,39 +1,43 @@
 ﻿@page "/productos"
 @using Microsoft.AspNetCore.Authorization
+@inject SweetAlertService Swal
 @attribute [Authorize]
+
 
 <PageTitle>Productos - FacturaVERIFACTU</PageTitle>
 
 <div class="notion-content">
-    @* --- CABECERA ESTILO NOTION --- *@
+    @* --- CABECERA: Igual que en Clientes --- *@
     <div class="notion-header">
         <div class="header-main">
-            <span class="header-icon">📦</span>
+            @* Icono circular sutil igual que en clientes *@
+            <span class="header-icon">
+                <i class="bi bi-archive"></i>
+            </span>
             <div>
                 <h1>Productos</h1>
-                <p style="color: rgba(55, 53, 47, 0.6); font-size: 14px; margin-top: 4px;">
-                    Administra tu catálogo de productos y servicios.
-                </p>
             </div>
         </div>
-        @* Usamos el botón negro principal para la acción destacada *@
-        <button class="btn-modern" @onclick="NuevoProducto" style="padding: 8px 16px;">
+        @* Botón con el estilo secundario moderno que usas en el index de clientes *@
+        <button class="btn-modern-secondary" @onclick="NuevoProducto">
             <i class="bi bi-plus-lg"></i> Nuevo producto
         </button>
     </div>
 
-    @* --- TOOLBAR DE BÚSQUEDA --- *@
-    <div class="notion-toolbar" style="border-bottom: 1px solid #edeceb; margin-bottom: 30px; margin-top: 10px;">
-        <div class="notion-search-wrapper" style="max-width: 100%; border: none; background: transparent;">
-            <i class="bi bi-search" style="font-size: 14px; color: rgba(55, 53, 47, 0.4);"></i>
-            <input class="notion-search-input"
-                   placeholder="Buscar por código o descripción..."
-                   @onkeyup="Buscar"
-                   @bind="searchText"
+    @* --- TOOLBAR DE BÚSQUEDA: Copiado exactamente de Clientes --- *@
+    <div class="notion-toolbar" style="border-bottom: 1px solid #edeceb; margin-bottom: 30px;">
+        <div class="notion-search-wrapper" style="max-width: 100%; border: none;">
+            <i class="bi bi-search" style="font-size: 14px;"></i>
+            <input @bind="searchText"
                    @bind:event="oninput"
-                   style="border:none; outline:none; width: 100%; padding: 8px 12px;" />
+                   @onkeyup="Buscar"
+                   placeholder="Buscar por código o descripción..."
+                   class="notion-search-input" />
         </div>
     </div>
+
+    
+</div>
 
     @* --- CONTENIDO PRINCIPAL --- *@
     @if (isLoading)
@@ -65,7 +69,7 @@
             <span>Total: @productos.Count productos en catálogo</span>
         </div>
     }
-</div>
+
 
 @code {
     private List<ProductoDto> productos = new();
@@ -125,8 +129,26 @@
 
     private async Task EliminarProducto(ProductoDto producto)
     {
-        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"¿Eliminar {producto.Codigo}?");
-        if (!confirm)
+        var confirm = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "¿Eliminar producto?",
+                Text = $"El producto {producto.Codigo} se borrará permanentemente.",
+                Icon = SweetAlertIcon.Warning,
+                ShowCancelButton = true,
+                ConfirmButtonText = "Eliminar",
+                CancelButtonText = "Cancelar",
+                ConfirmButtonColor = "#eb5757", // Rojo Notion
+                CancelButtonColor = "#37352f",  // Negro/Gris Notion
+                Background = "#ffffff",
+                CustomClass = new SweetAlertCustomClass
+                {
+                    Popup = "notion-swal-popup",
+                    ConfirmButton = "btn-modern",
+                    CancelButton = "btn-modern-secondary"
+                }
+            });
+        
+        if (confirm.IsDenied)
         {
             return;
         }
