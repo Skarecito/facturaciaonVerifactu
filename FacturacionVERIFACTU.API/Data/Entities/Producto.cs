@@ -32,6 +32,9 @@ namespace FacturacionVERIFACTU.API.Data.Entities
         [Column("iva", TypeName = "decimal(5,2)")]
         public decimal IVA { get; set; } = 21.00m;
 
+        [Column("tipo_impuesto_id")]
+        public int? TipoImpuestoId { get; set; }
+
         [MaxLength(20)]
         [Column("unidad")]
         public string Unidad { get; set; } = "Ud";
@@ -44,16 +47,6 @@ namespace FacturacionVERIFACTU.API.Data.Entities
 
         [Column("fecha_modificacion")]
         public DateTime FechaModificacion { get; set; } = DateTime.UtcNow;
-
-        [Column("iva_defecto", TypeName = "decimal(5,2)")]
-        public decimal IVADefecto { get; set; } = 21; // 21%, 10%, 4%
-
-        [Column("recargo_equivalencia_defecto", TypeName = "decimal(5,2)")]
-        public decimal? RecargoEquivalenciaDefecto { get; set; } = 5.2m; // 5.2%, 1.4%, 0.5%
-
-        [Column("tipo_iva")]
-        [MaxLength(20)]
-        public string TipoIVA { get; set; } = "General";
 
         //Relaciones
         [ForeignKey("TenantId")]

@@ -2,6 +2,7 @@
 @page "/presupuestos/editar/{Id:int}"
 @using Microsoft.AspNetCore.Authorization
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
 @attribute [Authorize]
 
 <div class="notion-content">
@@ -21,8 +22,9 @@
         </div>
     </div>
 
-    <EditForm Model="presupuesto" OnValidSubmit="GuardarAsync" class="notion-form-container">
+    <EditForm EditContext="editContext" OnValidSubmit="GuardarAsync" OnInvalidSubmit="OnInvalidSubmit" class="notion-form-container">
         <DataAnnotationsValidator />
+        <ValidationSummary />
 
         @if (!string.IsNullOrEmpty(errorMessage))
         {
@@ -31,12 +33,20 @@
             </div>
         }
 
+        @if (!EsEditable && Id > 0)
+        {
+            <div class="alert alert-warning" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff9e6; color: #8a6d1f; margin-bottom: 20px; padding: 12px;">
+                <i class="bi bi-info-circle-fill"></i> Solo se puede editar en estado Borrador.
+            </div>
+        }
+
         <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
             <div class="notion-input-group" style="grid-column: span 2;">
                 <label class="notion-label">Cliente</label>
-                <InputSelect @bind-Value="presupuesto.ClienteId" class="notion-input-modern">
+                <input class="notion-input-modern" placeholder="Filtrar clientes..." @bind="clienteFiltro" @bind:event="oninput" disabled="@(!EsEditable)" />
+                <InputSelect @bind-Value="presupuesto.ClienteId" class="notion-input-modern" @onchange="OnClienteChanged" disabled="@(!EsEditable)">
                     <option value="0">Selecciona un cliente</option>
-                    @foreach (var cliente in clientes)
+                    @foreach (var cliente in ClientesFiltrados)
                     {
                         <option value="@cliente.ClienteId">@cliente.Nombre (@cliente.NIF)</option>
                     }
@@ -44,28 +54,42 @@
             </div>
 
             <div class="notion-input-group">
-                <label class="notion-label">Serie</label>
-                <InputNumber @bind-Value="presupuesto.SerieId" class="notion-input-modern" min="1" />
-            </div>
+        <label class="notion-label">Serie</label>
+        <InputSelect @bind-Value="presupuesto.SerieId" class="notion-input-modern" disabled="@(Id > 0)">
+            <option value="0">Selecciona una serie</option>
+            @foreach (var serie in SeriesPresupuestos)
+            {
+                <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio)</option>
+            }
+        </InputSelect>
+    </div>
 
             <div class="notion-input-group">
                 <label class="notion-label">Fecha emisión</label>
-                <InputDate @bind-Value="presupuesto.FechaEmision" class="notion-input-modern" />
+                <InputDate @bind-Value="presupuesto.FechaEmision" class="notion-input-modern" disabled="@(!EsEditable)" />
             </div>
 
             <div class="notion-input-group">
                 <label class="notion-label">Fecha validez</label>
-                <InputDate @bind-Value="presupuesto.FechaValidez" class="notion-input-modern" />
+                <InputDate @bind-Value="presupuesto.FechaValidez" class="notion-input-modern" disabled="@(!EsEditable)" />
             </div>
 
             <div class="notion-input-group">
                 <label class="notion-label">Retención (%)</label>
-                <InputNumber @bind-Value="presupuesto.PorcentajeRetencion" @bind-Value:event="oninput" class="notion-input-modern" step="0.01" min="0" max="100" />
+                <InputNumber TValue="decimal?"
+                             Value="presupuesto.PorcentajeRetencion"
+                             ValueChanged="@((decimal? v) => { presupuesto.PorcentajeRetencion = v; StateHasChanged(); })"
+                             ValueExpression="() => presupuesto.PorcentajeRetencion"
+                             class="notion-input-modern"
+                             step="1.00"
+                             min="0"
+                             max="100"
+                             disabled="@(!EsEditable)" />
             </div>
 
             <div class="notion-input-group" style="grid-column: span 3;">
                 <label class="notion-label">Observaciones</label>
-                <InputTextArea @bind-Value="presupuesto.Observaciones" class="notion-input-modern" rows="3" placeholder="Notas adicionales para el cliente" />
+                <InputTextArea @bind-Value="presupuesto.Observaciones" class="notion-input-modern" rows="3" placeholder="Notas adicionales para el cliente" disabled="@(!EsEditable)" />
             </div>
         </div>
 
@@ -77,10 +101,10 @@
                 </p>
             </div>
             <div class="lines-actions">
-                <button type="button" class="btn-modern-secondary" @onclick="AbrirModalProductos">
+                <button type="button" class="btn-modern-secondary" @onclick="AbrirModalProductosAsync" disabled="@(!EsEditable)">
                     <i class="bi bi-box-seam"></i> Añadir producto
                 </button>
-                <button type="button" class="btn-modern-secondary" @onclick="AgregarLineaManual">
+                <button type="button" class="btn-modern-secondary" @onclick="AgregarLineaManual" disabled="@(!EsEditable)">
                     <i class="bi bi-plus-circle"></i> Línea manual
                 </button>
             </div>
@@ -110,33 +134,70 @@
                     }
                     else
                     {
+                        var index = 0;
                         @foreach (var linea in presupuesto.Lineas)
                         {
-                            <tr>
+                            var lineaActual = linea;
+                            var lineaIndex = index++;
+                            <tr key="@lineaIndex">
                                 <td style="padding: 12px 10px;">
-                                    <InputText @bind-Value="linea.Descripcion" @bind-Value:event="oninput" class="notion-input-modern" placeholder="Descripción" />
-                                    @if (!string.IsNullOrWhiteSpace(linea.ArticuloCodigo))
+                                    <input type="text"
+                                           class="notion-input-modern"
+                                           placeholder="Descripción"
+                                           value="@lineaActual.Descripcion"
+                                           @onchange="@(e => { lineaActual.Descripcion = e.Value?.ToString() ?? string.Empty; })"
+                                           disabled="@(!EsEditable)" />
+                                    @if (!string.IsNullOrWhiteSpace(lineaActual.ArticuloCodigo))
                                     {
-                                        <div class="notion-cell-desc">@linea.ArticuloCodigo</div>
+                                        <div class="notion-cell-desc">@lineaActual.ArticuloCodigo</div>
                                     }
                                 </td>
                                 <td style="padding: 12px 10px; text-align: right;">
-                                    <InputNumber @bind-Value="linea.Cantidad" @bind-Value:event="oninput" class="notion-input-modern" step="0.01" min="0" />
+                                    <input type="number"
+                                           class="notion-input-modern"
+                                           step="1.00"
+                                           value="@lineaActual.Cantidad.ToString("0.##")"
+                                           @onchange="@(e => { if (decimal.TryParse(e.Value?.ToString(), out var v)) lineaActual.Cantidad = v; })"
+                                           disabled="@(!EsEditable)"
+                                           style="text-align: right;" />
                                 </td>
                                 <td style="padding: 12px 10px; text-align: right;">
-                                    <InputNumber @bind-Value="linea.PrecioUnitario" @bind-Value:event="oninput" class="notion-input-modern" step="0.01" min="0" />
+                                    <input type="number"
+                                           class="notion-input-modern"
+                                           step="1.00"
+                                           value="@lineaActual.PrecioUnitario.ToString("0.##")"
+                                           @onchange="@(e => { if (decimal.TryParse(e.Value?.ToString(), out var v)) lineaActual.PrecioUnitario = v; })"
+                                           disabled="@(!EsEditable)"
+                                           style="text-align: right;" />
                                 </td>
                                 <td style="padding: 12px 10px; text-align: right;">
-                                    <InputNumber @bind-Value="linea.PorcentajeDescuento" @bind-Value:event="oninput" class="notion-input-modern" step="0.01" min="0" max="100" />
+                                    <input type="number"
+                                           class="notion-input-modern"
+                                           step="1.00"
+                                           max="100"
+                                           value="@lineaActual.PorcentajeDescuento.ToString("0.##")"
+                                           @onchange="@(e => { if (decimal.TryParse(e.Value?.ToString(), out var v)) lineaActual.PorcentajeDescuento = v; })"
+                                           disabled="@(!EsEditable)"
+                                           style="text-align: right;" />
                                 </td>
                                 <td style="padding: 12px 10px; text-align: right;">
-                                    <InputNumber @bind-Value="linea.IVA" @bind-Value:event="oninput" class="notion-input-modern" step="0.01" min="0" max="100" />
+                                    <input type="number"
+                                           class="notion-input-modern"
+                                           step="1.00"
+                                           max="100"
+                                           value="@(lineaActual.IVA?.ToString("0.##") ?? "21")"
+                                           @onchange="@(e => { if (decimal.TryParse(e.Value?.ToString(), out var v)) { lineaActual.IVA = v; RecalcularRecargo(lineaActual); } })"
+                                           disabled="@(!EsEditable)"
+                                           style="text-align: right;" />
                                 </td>
                                 <td style="padding: 12px 10px; text-align: right;">
-                                    <span style="font-weight: 600;">@CalcularTotalLinea(linea).ToString("C")</span>
+                                    <span style="font-weight: 600;">@CalcularTotalLinea(lineaActual).ToString("C")</span>
                                 </td>
                                 <td style="padding: 12px 10px; text-align: right;">
-                                    <button type="button" class="notion-action-btn delete" @onclick="() => EliminarLinea(linea)">
+                                    <button type="button"
+                                            class="notion-action-btn delete"
+                                            disabled="@(!EsEditable)"
+                                            @onclick="@(() => EliminarLineaAsync(lineaActual))">
                                         <i class="bi bi-trash3"></i>
                                     </button>
                                 </td>
@@ -157,21 +218,21 @@
                 <strong>@TotalIVA.ToString("C")</strong>
             </div>
             <div class="totales-item">
-                <span>Total</span>
-                <strong>@TotalPresupuesto.ToString("C")</strong>
+                <span>Recargo</span>
+                <strong>@TotalRecargo.ToString("C")</strong>
             </div>
             <div class="totales-item">
                 <span>Retención</span>
                 <strong>-@TotalRetencion.ToString("C")</strong>
             </div>
             <div class="totales-item highlight">
-                <span>Total con retención</span>
+                <span>Total</span>
                 <strong>@TotalConRetencion.ToString("C")</strong>
             </div>
         </div>
 
         <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
-            <button type="submit" class="btn-modern" style="min-width: 140px;" disabled="@isSaving">
+            <button type="submit" class="btn-modern" style="min-width: 140px;" disabled="@(isSaving || !EsEditable)">
                 @if (isSaving)
                 {
                     <span class="spinner-border spinner-border-sm" role="status"></span>
@@ -188,26 +249,85 @@
         </div>
     </EditForm>
 
+    @if (Id > 0)
+    {
+     <div class="convertir-factura" style="margin-top: 24px;">
+            <h3>Cambiar estado del presupuesto</h3>
+            <p>Estado actual: <strong>@estadoPresupuesto</strong></p>
+
+            <div class="notion-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 16px;">
+                @if (estadoPresupuesto == "Borrador")
+                {
+                    <button class="btn-modern-secondary"
+                            @onclick='() => CambiarEstadoAsync("Enviado")'
+                            disabled="@isCambiandoEstado">
+                        <i class="bi bi-send"></i> Marcar como Enviado
+                    </button>
+                }
+
+                @if (estadoPresupuesto == "Enviado")
+                {
+                    <button class="btn-modern" 
+                            @onclick='() => CambiarEstadoAsync("Aceptado")' 
+                            disabled="@isCambiandoEstado"
+                            style="background-color: #28a745; border-color: #28a745;">
+                        <i class="bi bi-check-circle"></i> Marcar como Aceptado
+                    </button>
+                    <button class="btn-modern-secondary" 
+                            @onclick='() => CambiarEstadoAsync("Rechazado")' 
+                            disabled="@isCambiandoEstado"
+                            style="background-color: #dc3545; border-color: #dc3545; color: white;">
+                        <i class="bi bi-x-circle"></i> Marcar como Rechazado
+                    </button>
+                    <button class="btn-modern-secondary" 
+                            @onclick='() => CambiarEstadoAsync("Borrador")'
+                            disabled="@isCambiandoEstado">
+                        <i class="bi bi-arrow-counterclockwise"></i> Volver a Borrador
+                    </button>
+                }
+
+                @if (estadoPresupuesto == "Rechazado")
+                {
+                    <button class="btn-modern-secondary" 
+                            @onclick='() => CambiarEstadoAsync("Borrador")' 
+                            disabled="@isCambiandoEstado">
+                        <i class="bi bi-arrow-counterclockwise"></i> Volver a Borrador
+                    </button>
+                }
+            </div>
+
+            @if (isCambiandoEstado)
+            {
+                <div style="margin-top: 12px; color: #6c757d; font-size: 13px;">
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                    Cambiando estado...
+                </div>
+            }
+        </div>   
+    }
+
     @if (Id > 0 && estadoPresupuesto == "Aceptado")
     {
         <div class="convertir-factura">
             <h3>Convertir a factura</h3>
             <p>Genera la factura desde este presupuesto aceptado.</p>
 
-            <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
-                <div class="notion-input-group">
+            <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+               <div class="notion-input-group">
                     <label class="notion-label">Serie factura</label>
-                    <InputNumber @bind-Value="conversionFactura.SerieId" class="notion-input-modern" min="1" />
+                    <InputSelect @bind-Value="conversionFactura.SerieId" class="notion-input-modern">
+                        <option value="0">Selecciona una serie</option>
+                        @foreach (var serie in SeriesFacturas)
+                        {
+                            <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio</option>
+                        }
+                    </InputSelect>
                 </div>
                 <div class="notion-input-group">
                     <label class="notion-label">Fecha emisión</label>
                     <InputDate @bind-Value="conversionFactura.FechaEmision" class="notion-input-modern" />
                 </div>
-                <div class="notion-input-group">
-                    <label class="notion-label">Tipo VERIFACTU</label>
-                    <InputText @bind-Value="conversionFactura.TipoFacturaVERIFACTU" class="notion-input-modern" />
-                </div>
-                <div class="notion-input-group" style="grid-column: span 3;">
+                <div class="notion-input-group" style="grid-column: span 2;">
                     <label class="notion-label">Observaciones</label>
                     <InputTextArea @bind-Value="conversionFactura.Observaciones" class="notion-input-modern" rows="2" />
                 </div>
@@ -232,6 +352,61 @@
             }
         </div>
     }
+
+    @if (Id > 0 && estadoPresupuesto == "Aceptado")
+    {
+        <div class="convertir-factura" style="margin-top: 24px;">
+            <h3>Convertir a albarán</h3>
+            <p>Genera un albarán desde este presupuesto aceptado.</p>
+
+            <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                <div class="notion-input-group">
+                        <label class="notion-label">Serie albarán</label>
+                        <InputSelect @bind-Value="conversionAlbaran.SerieId" class="notion-input-modern">
+                            <option value="0">Selecciona una serie</option>
+                            @foreach (var serie in SeriesAlbaranes)
+                            {
+                                <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio</option>
+                            }
+                        </InputSelect>
+                    </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Fecha emisión</label>
+                    <InputDate @bind-Value="conversionAlbaran.FechaEmision" class="notion-input-modern" />
+                </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Fecha entrega</label>
+                    <InputDate @bind-Value="conversionAlbaran.FechaEntrega" class="notion-input-modern" />
+                </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Dirección entrega</label>
+                    <InputText @bind-Value="conversionAlbaran.DireccionEntrega" class="notion-input-modern" />
+                </div>
+                <div class="notion-input-group" style="grid-column: span 3;">
+                    <label class="notion-label">Observaciones</label>
+                    <InputTextArea @bind-Value="conversionAlbaran.Observaciones" class="notion-input-modern" rows="2" />
+                </div>
+            </div>
+
+            <button class="btn-modern" style="margin-top: 12px;" @onclick="ConvertirAAlbaranAsync" disabled="@isConvertingAlbaran">
+                @if (isConvertingAlbaran)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                }
+                else
+                {
+                    <span><i class="bi bi-truck"></i> Convertir a albarán</span>
+                }
+            </button>
+
+            @if (!string.IsNullOrEmpty(convertirAlbaranMensaje))
+            {
+                <div class="alert alert-info" style="margin-top: 12px; font-size: 13px; border-radius: 8px; border: none; background-color: #f0f7ff; color: #1b64b0; padding: 12px;">
+                    <i class="bi bi-info-circle"></i> @convertirAlbaranMensaje
+                </div>
+            }
+        </div>
+    }
 </div>
 
 @if (mostrarModalProductos)
@@ -247,7 +422,10 @@
         <div class="modal-body">
             <div class="notion-search-wrapper" style="max-width: 100%; border: 1px solid #edeceb;">
                 <i class="bi bi-search" style="font-size: 14px;"></i>
-                <input class="notion-search-input" placeholder="Buscar producto" @bind="busquedaProducto" @bind:event="oninput" @onkeyup="BuscarProductos" />
+                <input class="notion-search-input"
+                       placeholder="Buscar producto"
+                       value="@busquedaProducto"
+                       @oninput="@(async (ChangeEventArgs e) => { busquedaProducto = e?.Value?.ToString() ?? string.Empty; await BuscarProductosAsync(); })" />
             </div>
 
             @if (cargandoProductos)
@@ -296,44 +474,104 @@
 }
 
 @code {
+
     [Parameter] public int Id { get; set; }
+
+    private EditContext? editContext;
 
     private PresupuestoFormModel presupuesto = new();
     private List<ClienteDto> clientes = new();
     private List<ProductoDto> productos = new();
+
+    private List<SerieDto> SeriesPresupuestos = new();
+    private List<SerieDto> SeriesFacturas = new ();
+
+    private List<SerieDto> SeriesAlbaranes = new();
+
+    private string clienteFiltro = string.Empty;
     private string busquedaProducto = string.Empty;
     private bool mostrarModalProductos;
     private bool cargandoProductos;
     private bool isSaving;
     private bool isConverting;
+    private bool isConvertingAlbaran;
     private string errorMessage = string.Empty;
     private string convertirMensaje = string.Empty;
+    private string convertirAlbaranMensaje = string.Empty;
     private string numeroPresupuesto = "";
     private string estadoPresupuesto = "Borrador";
+    private bool isCambiandoEstado;
+    private string estadoNuevo = string.Empty;
+    private string motivoCambioEstado = string.Empty;
 
     private ConversionFacturaModel conversionFactura = new();
+    private ConversionAlbaranModel conversionAlbaran = new();
 
     [Inject] private IApiService ApiService { get; set; } = null!;
     [Inject] private NavigationManager NavManager { get; set; } = null!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+
+    private bool EsEditable => Id == 0 || estadoPresupuesto == "Borrador";
+    private IEnumerable<ClienteDto> ClientesFiltrados => string.IsNullOrWhiteSpace(clienteFiltro)
+        ? clientes
+        : clientes.Where(c =>
+            c.Nombre.Contains(clienteFiltro, StringComparison.OrdinalIgnoreCase)
+            || c.NIF.Contains(clienteFiltro, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
-        await CargarClientesAsync();
+        editContext ??= new EditContext(presupuesto);
 
-        if (Id > 0)
+        try
         {
-            await CargarPresupuestoAsync();
+
+            await Task.WhenAll(
+                CargarClientesAsync(), 
+                CargarSeriesPresupuestosAsync(),
+                CargarSeriesFacturasAsync(),
+                CargarSeriesAlbaranesAsync());
+
+            if (Id > 0)
+            {
+                await CargarPresupuestoAsync();
+            }
+            else
+            {
+                presupuesto.Lineas = new List<LineaPresupuestoViewModel>();
+            }
         }
-        else
+        catch (Exception ex)
         {
-            AgregarLineaManual();
+            errorMessage = $"Error inicializando componente: {ex.Message}";
+            StateHasChanged();
         }
     }
 
     private async Task CargarClientesAsync()
     {
-        var response = await ApiService.GetAsync<PaginatedResponseDto<ClienteDto>>("api/clientes?page=1&pageSize=100");
+        var response = await ApiService.GetAsync<PaginatedResponseDto<ClienteDto>>("api/clientes?page=1&pageSize=500");
         clientes = response?.Items ?? new List<ClienteDto>();
+    }
+
+    private async Task CargarSeriesPresupuestosAsync()
+    {
+        var response = await ApiService.GetAsync<PaginatedResponseDto<SerieDto>>(
+            "api/series?page=1&pageSize=100&tipoDocumento=PRESUPUESTO&soloActivas=true");
+        SeriesPresupuestos = response?.Items ?? new List<SerieDto>();
+    }
+
+    private async Task CargarSeriesFacturasAsync()
+    {
+        var response = await ApiService.GetAsync<PaginatedResponseDto<SerieDto>>(
+            "api/series?page=1&pageSize=100&tipoDocumento=FACTURA&soloActivas=true");
+        SeriesFacturas = response?.Items ?? new List<SerieDto>();
+    }
+
+    private async Task CargarSeriesAlbaranesAsync()
+    {
+        var response = await ApiService.GetAsync<PaginatedResponseDto<SerieDto>>(
+            "api/series?page=1&pageSize=100&tipoDocumento=ALBARAN&soloActivas=true");
+        SeriesAlbaranes = response?.Items ?? new List<SerieDto>();
     }
 
     private async Task CargarPresupuestoAsync()
@@ -366,24 +604,104 @@
                     PrecioUnitario = l.PrecioUnitario,
                     PorcentajeDescuento = l.PorcentajeDescuento,
                     IVA = l.IVA,
+                    RecargoEquivalencia = l.RecargoEquivalencia,
                     ArticuloId = l.ArticuloId,
                     ArticuloCodigo = l.ArticuloCodigo
                 })
                 .ToList()
         };
+
+        editContext = new EditContext(presupuesto);
+        AplicarConfiguracionCliente();
+    }
+
+    private Task OnClienteChanged(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var clienteId))
+        {
+            presupuesto.ClienteId = clienteId;
+            AplicarConfiguracionCliente();
+            StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void AplicarConfiguracionCliente()
+    {
+        var cliente = ObtenerClienteSeleccionado();
+        if (cliente == null)
+        {
+            return;
+        }
+
+        if (Id == 0 && (!presupuesto.PorcentajeRetencion.HasValue || presupuesto.PorcentajeRetencion == 0))
+        {
+            presupuesto.PorcentajeRetencion = cliente.PorcentajeRetencionDefecto;
+        }
+        ActualizarRecargoLineas();
+    }
+
+    private ClienteDto? ObtenerClienteSeleccionado()
+    {
+        return clientes.FirstOrDefault(c => c.ClienteId == presupuesto.ClienteId);
+    }
+
+    private void ActualizarRecargoLineas()
+    {
+        var cliente = ObtenerClienteSeleccionado();
+        if (cliente == null || !cliente.RegimenRecargoEquivalencia)
+        {
+            foreach (var linea in presupuesto.Lineas)
+            {
+                linea.RecargoEquivalencia = 0;
+            }
+
+            return;
+        }
+
+        foreach (var linea in presupuesto.Lineas)
+        {
+            if (linea.RecargoEquivalencia <= 0)
+            {
+                linea.RecargoEquivalencia = CalcularRecargoEquivalencia(linea.IVA ?? 0m);
+            }
+        }
+    }
+
+    private void RecalcularRecargo(LineaPresupuestoViewModel linea)
+    {
+        var cliente = ObtenerClienteSeleccionado();
+        if (cliente == null || !cliente.RegimenRecargoEquivalencia)
+        {
+            linea.RecargoEquivalencia = 0;
+            return;
+        }
+
+        linea.RecargoEquivalencia = CalcularRecargoEquivalencia(linea.IVA ?? 0m);
     }
 
     private async Task GuardarAsync()
     {
+        if (!EsEditable)
+        {
+            errorMessage = "Solo se pueden editar presupuestos en estado Borrador.";
+            return;
+        }
+
         if (presupuesto.ClienteId == 0 || presupuesto.SerieId == 0)
         {
             errorMessage = "Selecciona cliente y serie antes de guardar.";
             return;
         }
 
+        presupuesto.Lineas = presupuesto.Lineas
+            .Where(linea => !string.IsNullOrWhiteSpace(linea.Descripcion) && linea.Cantidad > 0)
+            .ToList();
+
         if (presupuesto.Lineas.Count == 0)
         {
-            errorMessage = "Añade al menos una línea al presupuesto.";
+            errorMessage = "Añade al menos una línea valida.";
             return;
         }
 
@@ -392,98 +710,238 @@
 
         var lineas = presupuesto.Lineas.Select(MapLineaRequest).ToList();
 
-        if (Id == 0)
+        try
         {
-            var request = new PresupuestoCreateDto
+            if (Id == 0)
             {
-                ClienteId = presupuesto.ClienteId,
-                SerieId = presupuesto.SerieId,
-                Fecha = ConvertirAUtc(presupuesto.FechaEmision),
-                FechaValidez = ConvertirAUtc(presupuesto.FechaValidez),
-                Observaciones = presupuesto.Observaciones,
-                PorcentajeRetencion = presupuesto.PorcentajeRetencion,
-                Lineas = lineas
-            };
+                var request = new PresupuestoCreateDto
+                {
+                    ClienteId = presupuesto.ClienteId,
+                    SerieId = presupuesto.SerieId,
+                    Fecha = ConvertirAUtc(presupuesto.FechaEmision),
+                    FechaValidez = ConvertirAUtc(presupuesto.FechaValidez),
+                    Observaciones = presupuesto.Observaciones,
+                    PorcentajeRetencion = presupuesto.PorcentajeRetencion,
+                    Lineas = lineas
+                };
 
-            var result = await ApiService.PostAsync<PresupuestoCreateDto, PresupuestoResponseDto>("api/presupuestos", request);
-            if (result == null)
-            {
-                errorMessage = "No se pudo crear el presupuesto.";
-                isSaving = false;
-                return;
+                var result = await ApiService.PostAsync<PresupuestoCreateDto, PresupuestoResponseDto>("api/presupuestos", request);
+                if (result == null)
+                {
+                    errorMessage = "No se pudo crear el presupuesto.";
+                    isSaving = false;
+                    return;
+                }
             }
+            else
+            {
+                var request = new PresupuestoUpdateDto
+                {
+                    ClienteId = presupuesto.ClienteId,
+                    FechaEmision = ConvertirAUtc(presupuesto.FechaEmision),
+                    FechaValidez = ConvertirAUtc(presupuesto.FechaValidez),
+                    Observaciones = presupuesto.Observaciones,
+                    PorcentajeRetencion = presupuesto.PorcentajeRetencion,
+                    Lineas = lineas
+                };
+
+                var result = await ApiService.PutAsync<PresupuestoUpdateDto, PresupuestoResponseDto>($"api/presupuestos/{Id}", request);
+                if (result == null)
+                {
+                    errorMessage = "No se pudo actualizar el presupuesto.";
+                    isSaving = false;
+                    return;
+                }
+            }
+
+            NavManager.NavigateTo("/presupuestos");
         }
-        else
+        catch (Exception ex)
         {
-            var request = new PresupuestoUpdateDto
-            {
-                ClienteId = presupuesto.ClienteId,
-                FechaEmision = ConvertirAUtc(presupuesto.FechaEmision),
-                FechaValidez = ConvertirAUtc(presupuesto.FechaValidez),
-                Observaciones = presupuesto.Observaciones,
-                PorcentajeRetencion = presupuesto.PorcentajeRetencion,
-                Lineas = lineas
-            };
-
-            var result = await ApiService.PutAsync<PresupuestoUpdateDto, PresupuestoResponseDto>($"api/presupuestos/{Id}", request);
-            if (result == null)
-            {
-                errorMessage = "No se pudo actualizar el presupuesto.";
-                isSaving = false;
-                return;
-            }
+            errorMessage = $"Error al guardar: {ex.Message}";
+            isSaving = false;
         }
+    }
 
-        NavManager.NavigateTo("/presupuestos");
+    private Task OnInvalidSubmit(EditContext context)
+    {
+        errorMessage = "Corrige los errores del formulario antes de guardar.";
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private async Task ConvertirAFacturaAsync()
     {
         if (Id == 0)
         {
+            convertirMensaje = "Selecciona una serie para la factura.";
             return;
         }
 
         isConverting = true;
         convertirMensaje = string.Empty;
 
-        var request = new ConvertirPresupuestoAFacturaDto
+        try
         {
-            SerieId = conversionFactura.SerieId,
-            FechaEmision = ConvertirAUtc(conversionFactura.FechaEmision),
-            Observaciones = conversionFactura.Observaciones,
-            TipoFacturaVERIFACTU = conversionFactura.TipoFacturaVERIFACTU
-        };
+            var request = new ConvertirPresupuestoAFacturaDto
+            {
+                SerieId = conversionFactura.SerieId,
+                FechaEmision = ConvertirAUtc(conversionFactura.FechaEmision),
+                Observaciones = conversionFactura.Observaciones
+            };
 
-        var result = await ApiService.PostAsync<ConvertirPresupuestoAFacturaDto, FacturaResponseDto>($"api/facturas/desde-presupuesto/{Id}", request);
-        if (result == null)
-        {
-            convertirMensaje = "No se pudo convertir el presupuesto a factura.";
+            var result = await ApiService.PostAsync<ConvertirPresupuestoAFacturaDto, FacturaResponseDto>($"api/facturas/desde-presupuesto/{Id}", request);
+            if (result == null)
+            {
+                convertirMensaje = "No se pudo convertir el presupuesto a factura.";
+            }
+            else
+            {
+                convertirMensaje = $"Factura generada correctamente: {result.Numero ?? "sin número"}.";
+                NavManager.NavigateTo($"/facturas/editar/{result.Id}");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            convertirMensaje = $"Factura generada correctamente: {result.Numero ?? "sin número"}.";
+            convertirMensaje = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isConverting = false;
+        }
+    }
+
+    private async Task ConvertirAAlbaranAsync()
+    {
+        if (Id == 0)
+        {
+            convertirAlbaranMensaje = "Selecciona una serie para el albarán.";
+            return;
         }
 
-        isConverting = false;
+        isConvertingAlbaran = true;
+        convertirAlbaranMensaje = string.Empty;
+
+        try
+        {
+            var request = new ConvertirPresupuestoAAlbaranDto
+            {
+                SerieId = conversionAlbaran.SerieId,
+                FechaEmision = ConvertirAUtc(conversionAlbaran.FechaEmision),
+                FechaEntrega = ConvertirAUtc(conversionAlbaran.FechaEntrega),
+                DireccionEntrega = conversionAlbaran.DireccionEntrega,
+                Observaciones = conversionAlbaran.Observaciones
+            };
+
+            var result = await ApiService.PostAsync<ConvertirPresupuestoAAlbaranDto, AlbaranResponseDto>(
+                $"api/albaranes/desde-prespuesto/{Id}", request);
+
+            if (result == null)
+            {
+                convertirAlbaranMensaje = "No se pudo convertir el presupuesto a albarán.";
+            }
+            else
+            {
+                convertirAlbaranMensaje = $"Albarán generado correctamente: {result.Numero ?? "sin número"}.";
+                NavManager.NavigateTo($"/albaranes/editar/{result.Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            convertirAlbaranMensaje = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isConvertingAlbaran = false;
+        }
     }
 
     private void Cancelar() => NavManager.NavigateTo("/presupuestos");
 
+    private async Task CambiarEstadoAsync(string nuevoEstado)
+    {
+        if (Id == 0)
+            return;
+
+        var mensaje = nuevoEstado switch
+        {
+            "Enviado" => "¿Marcar el presupuesto como enviado al cliente?",
+            "Aceptado" => "¿Marcar el presupuesto como aceptado?\n\nPodrás convertirlo a factura o albarán.",
+            "Rechazado" => "¿Marcar presupuesto como rechazado?",
+            "Borrador" => "¿Volver el presupuesto a estado Borrador?",
+            _ => $"¿Cambiar estado a {nuevoEstado}?"
+        };
+
+        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", mensaje);
+        if (!confirm)
+            return;
+
+        isCambiandoEstado = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var request = new CambiarEstadoPresupuestoDto
+            {
+                NuevoEstado = nuevoEstado,
+                Motivo = motivoCambioEstado
+            };
+
+            // Usar PATCH: el controlador expone [HttpPatch("{id}/estado")]
+            var result = await ApiService.PatchAsync<CambiarEstadoPresupuestoDto, PresupuestoResponseDto>($"api/presupuestos/{Id}/estado", request);
+
+            if (result == null)
+            {
+                errorMessage = "No se pudo cambiar el estado del presupuesto.";
+            }
+            else
+            {
+                estadoPresupuesto = result.Estado;
+                motivoCambioEstado = string.Empty;
+                // refrescar UI / recalcular permisos
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cambiar estado: {ex.Message}";
+        }
+        finally
+        {
+            isCambiandoEstado = false;
+            StateHasChanged();
+        }
+    }
+
     private void AgregarLineaManual()
     {
+        if (!EsEditable)
+            return;
+
         presupuesto.Lineas.Add(new LineaPresupuestoViewModel());
     }
 
-    private void EliminarLinea(LineaPresupuestoViewModel linea)
+    private async Task EliminarLineaAsync(LineaPresupuestoViewModel linea)
     {
+        if (!EsEditable)
+        {
+            return;
+        }
+
+        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", "¿Eliminar esta línea del presupuesto?");
+        if (!confirm)
+        {
+            return;
+        }
+
         presupuesto.Lineas.Remove(linea);
+        StateHasChanged();
     }
 
-    private void AbrirModalProductos()
+    private async Task AbrirModalProductosAsync()
     {
         mostrarModalProductos = true;
-        _ = CargarProductosAsync();
+        await CargarProductosAsync();
     }
 
     private void CerrarModalProductos()
@@ -494,23 +952,46 @@
     private async Task CargarProductosAsync(string? search = null)
     {
         cargandoProductos = true;
+        await InvokeAsync(StateHasChanged);
 
-        var endpoint = string.IsNullOrWhiteSpace(search)
-            ? "api/Productos?page=1&pageSize=100"
-            : $"api/Productos?page=1&pageSize=100&search={Uri.EscapeDataString(search)}";
+        try
+        {
+            var endpoint = string.IsNullOrWhiteSpace(search)
+                ? "api/Productos?page=1&pageSize=100"
+                : $"api/Productos?page=1&pageSize=100&search={Uri.EscapeDataString(search)}";
 
-        var response = await ApiService.GetAsync<PaginatedResponseDto<ProductoDto>>(endpoint);
-        productos = response?.Items ?? new List<ProductoDto>();
-        cargandoProductos = false;
+            var response = await ApiService.GetAsync<PaginatedResponseDto<ProductoDto>>(endpoint);
+            productos = response?.Items ?? new List<ProductoDto>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando productos: {ex.Message}");
+            productos = new List<ProductoDto>();
+        }
+        finally
+        {
+            cargandoProductos = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
-    private async Task BuscarProductos()
+    private async Task BuscarProductosAsync()
     {
         await CargarProductosAsync(busquedaProducto);
     }
 
     private void AgregarLineaDesdeProducto(ProductoDto producto)
     {
+        if (!EsEditable)
+        {
+            return;
+        }
+
+        var cliente = ObtenerClienteSeleccionado();
+        var recargo = cliente?.RegimenRecargoEquivalencia == true
+            ? producto.RecargoEquivalenciaDefecto ?? CalcularRecargoEquivalencia(producto.IVA)
+            : 0m;
+
         presupuesto.Lineas.Add(new LineaPresupuestoViewModel
         {
             Descripcion = producto.Descripcion,
@@ -518,11 +999,13 @@
             PrecioUnitario = producto.PrecioUnitario,
             PorcentajeDescuento = 0,
             IVA = producto.IVA,
+            RecargoEquivalencia = recargo,
             ArticuloId = producto.ProductoId,
             ArticuloCodigo = producto.Codigo
         });
 
         CerrarModalProductos();
+        StateHasChanged();
     }
 
     private LineaPresupuestoDto MapLineaRequest(LineaPresupuestoViewModel linea)
@@ -535,6 +1018,7 @@
             PrecioUnitario = linea.PrecioUnitario,
             PorcentajeDescuento = linea.PorcentajeDescuento,
             IVA = linea.IVA,
+            RecargoEquivalencia = linea.RecargoEquivalencia,
             ArticuloId = linea.ArticuloId
         };
     }
@@ -559,16 +1043,46 @@
         return CalcularBase(linea) * ((linea.IVA ?? 0m) / 100m);
     }
 
+    private decimal CalcularRecargo(LineaPresupuestoViewModel linea)
+    {
+        var cliente = ObtenerClienteSeleccionado();
+        if (cliente == null || !cliente.RegimenRecargoEquivalencia)
+        {
+            return 0m;
+        }
+
+        var recargo = linea.RecargoEquivalencia;
+        if (recargo <= 0)
+        {
+            recargo = CalcularRecargoEquivalencia(linea.IVA ?? 0m);
+        }
+
+        return CalcularBase(linea) * (recargo / 100m);
+    }
+
     private decimal CalcularTotalLinea(LineaPresupuestoViewModel linea)
     {
-        return CalcularBase(linea) + CalcularIVA(linea);
+        return CalcularBase(linea) + CalcularIVA(linea) + CalcularRecargo(linea);
     }
 
     private decimal TotalBaseImponible => presupuesto.Lineas.Sum(CalcularBase);
     private decimal TotalIVA => presupuesto.Lineas.Sum(CalcularIVA);
+    private decimal TotalRecargo => presupuesto.Lineas.Sum(CalcularRecargo);
     private decimal TotalPresupuesto => presupuesto.Lineas.Sum(CalcularTotalLinea);
     private decimal TotalRetencion => TotalBaseImponible * ((presupuesto.PorcentajeRetencion ?? 0m) / 100m);
     private decimal TotalConRetencion => TotalPresupuesto - TotalRetencion;
+
+    private static decimal CalcularRecargoEquivalencia(decimal iva)
+    {
+        return iva switch
+        {
+            21m => 5.2m,
+            10m => 1.4m,
+            4m => 0.5m,
+            0m => 0m,
+            _ => 0m
+        };
+    }
 
     private static DateTime? ConvertirAUtc(DateTime? value)
     {
@@ -637,6 +1151,8 @@
         [Range(0, 100)]
         public decimal? IVA { get; set; } = 21;
 
+        public decimal RecargoEquivalencia { get; set; }
+
         public int? ArticuloId { get; set; }
 
         public string? ArticuloCodigo { get; set; }
@@ -653,9 +1169,21 @@
         [MaxLength(500)]
         public string? Observaciones { get; set; }
 
+    }
+
+    private sealed class ConversionAlbaranModel
+    {
         [Required]
-        [MaxLength(2)]
-        public string TipoFacturaVERIFACTU { get; set; } = "F1";
+        public int SerieId { get; set; } = 1;
+
+        public DateTime? FechaEmision { get; set; } = DateTime.Today;
+
+        public DateTime? FechaEntrega { get; set; }
+
+        [MaxLength(200)]
+        public string? DireccionEntrega { get; set; }
+
+        [MaxLength(500)]
+        public string? Observaciones { get; set; }
     }
 }
-

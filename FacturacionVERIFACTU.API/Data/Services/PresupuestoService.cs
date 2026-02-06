@@ -1,9 +1,11 @@
-﻿using FacturacionVERIFACTU.API.DTOs;
+﻿using FacturacionVERIFACTU.API.Data;
 using FacturacionVERIFACTU.API.Data.Entities;
 using FacturacionVERIFACTU.API.Data.Interfaces;
-using FacturacionVERIFACTU.API.Data;
+using FacturacionVERIFACTU.API.DTOs;
+using FacturacionVERIFACTU.API.Models;
 using Microsoft.EntityFrameworkCore;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Storage.Internal.Mapping;
+using System.Xml.Linq;
+
 
 namespace FacturacionVERIFACTU.API.Data.Services
 {
@@ -54,7 +56,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
             // Obtener siguiente número
             var ejercicio = dto.Fecha?.Year ?? DateTime.UtcNow.Year;
             var (numeroCompleto, numero) = await _numeracionService
-                .ObtenerSiguienteNumeroAsync(tenantId, serie.Codigo, ejercicio, "PRESUPUESTO");
+                .ObtenerSiguienteNumeroAsync(tenantId, serie.Codigo, ejercicio, DocumentTypes.PRESUPUESTO);
 
             // ⭐ APLICAR RETENCIÓN DEL CLIENTE
             var porcentajeRetencion = dto.PorcentajeRetencion
@@ -108,11 +110,13 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     Descripcion = lineaDto.Descripcion,
                     Cantidad = lineaDto.Cantidad,
                     PrecioUnitario = lineaDto.PrecioUnitario,
+                    PorcentajeDescuento = lineaDto.PorcentajeDescuento,
                     IVA = iva,
                     RecargoEquivalencia = recargo ?? 0m, // ⭐ APLICADO
-                    ProductoId = lineaDto.ArticuloId,
-                    Importe = Math.Round(lineaDto.Cantidad * lineaDto.PrecioUnitario, 2)
+                    ProductoId = lineaDto.ArticuloId
                 };
+
+                CalcularLinea(linea);
 
                 presupuesto.Lineas.Add(linea);
             }
@@ -150,6 +154,9 @@ namespace FacturacionVERIFACTU.API.Data.Services
 
             if (presupuesto.Estado == "Rechazado")
                 throw new InvalidOperationException("No se puede modificar un presupuesto rechazado");
+
+            if (presupuesto.Estado == "Facturado")
+                throw new InvalidOperationException("No se puede modificar un presupuesto facturado");
 
             // ⭐ SI CAMBIÓ EL CLIENTE, RECARGAR CONFIGURACIÓN FISCAL
             Cliente clienteActual = presupuesto.Cliente;
@@ -198,9 +205,10 @@ namespace FacturacionVERIFACTU.API.Data.Services
             }
 
             // Actualizar datos básicos
-            presupuesto.FechaCreacion = dto.FechaEmision ?? presupuesto.FechaCreacion;
+            presupuesto.FechaCreacion = dto.FechaEmision ?? presupuesto.Fecha;
             presupuesto.FechaValidez = dto.FechaValidez ?? presupuesto.FechaValidez;
             presupuesto.Observaciones = dto.Observaciones;
+            presupuesto.FechaModificacion = DateTime.UtcNow;
 
             // Eliminar líneas antiguas
             var lineasDtoIds = dto.Lineas
@@ -258,10 +266,12 @@ namespace FacturacionVERIFACTU.API.Data.Services
                         lineaExistente.Descripcion = lineaDto.Descripcion;
                         lineaExistente.Cantidad = lineaDto.Cantidad;
                         lineaExistente.PrecioUnitario = lineaDto.PrecioUnitario;
+                        lineaExistente.PorcentajeDescuento = lineaDto.PorcentajeDescuento;
                         lineaExistente.IVA = iva;                          // ⭐ RECALCULADO
                         lineaExistente.RecargoEquivalencia = recargo ?? 0m;       // ⭐ RECALCULADO
                         lineaExistente.ProductoId = lineaDto.ArticuloId;
-                        lineaExistente.Importe = Math.Round(lineaDto.Cantidad * lineaDto.PrecioUnitario, 2);
+
+                        CalcularLinea(lineaExistente);
                     }
                 }
                 else
@@ -274,11 +284,13 @@ namespace FacturacionVERIFACTU.API.Data.Services
                         Descripcion = lineaDto.Descripcion,
                         Cantidad = lineaDto.Cantidad,
                         PrecioUnitario = lineaDto.PrecioUnitario,
+                        PorcentajeDescuento = lineaDto.PorcentajeDescuento,
                         IVA = iva,                                  // ⭐ CALCULADO
                         RecargoEquivalencia = recargo ??0m,              // ⭐ CALCULADO
-                        ProductoId = lineaDto.ArticuloId,
-                        Importe = Math.Round(lineaDto.Cantidad * lineaDto.PrecioUnitario, 2)
+                        ProductoId = lineaDto.ArticuloId
                     };
+
+                    CalcularLinea(lineaNueva);
 
                     presupuesto.Lineas.Add(lineaNueva);
                 }
@@ -396,19 +408,22 @@ namespace FacturacionVERIFACTU.API.Data.Services
         private void CalcularLinea(LineaPresupuesto linea)
         {
             //Subtotal = Cantidad + precio
-            var subTotal = linea.Cantidad * linea.PrecioUnitario;
+            var subTotal = Math.Round(linea.Cantidad * linea.PrecioUnitario, 2);
 
             //Descuento
-            linea.ImporteDescuento = subTotal * (linea.PorcentajeDescuento / 100);
+            linea.ImporteDescuento = Math.Round(subTotal * (linea.PorcentajeDescuento / 100), 2);
 
             //Base imponible = Subtotal - Descuento
-            linea.BaseImponible = subTotal - linea.ImporteDescuento;
+            linea.BaseImponible = Math.Round(subTotal - linea.ImporteDescuento, 2);
 
             //Iva
-            linea.ImporteIva = linea.BaseImponible * (linea.IVA / 100);
+            linea.ImporteIva = Math.Round(linea.BaseImponible * (linea.IVA / 100), 2);
+
+            //Recargo
+            linea.ImporteRecargo = Math.Round(linea.BaseImponible * (linea.RecargoEquivalencia / 100), 2);
 
             //Total linea
-            linea.Importe = linea.BaseImponible + linea.ImporteIva;
+            linea.Importe = Math.Round(linea.BaseImponible + linea.ImporteIva + linea.ImporteRecargo, 2);
         }
 
         ///<summary>
@@ -416,14 +431,17 @@ namespace FacturacionVERIFACTU.API.Data.Services
         /// </summary>
         private void CalcularTotalesPrespuesto(Presupuesto presupuesto)
         {
-            presupuesto.BaseImponible = presupuesto.Lineas.Sum(l => l.Importe);
-            presupuesto.TotalIva = Math.Round(presupuesto.Lineas.Sum(l => l.Importe * l.IVA / 100), 2);
-            presupuesto.TotalRecargo = Math.Round(presupuesto.Lineas.Sum(l => l.Importe * l.RecargoEquivalencia / 100), 2);
-            presupuesto.CuotaRetencion = Math.Round(presupuesto.BaseImponible * presupuesto.PorcentajeRetencion ?? 0 / 100, 2);
-            presupuesto.Total = presupuesto.BaseImponible
-                + presupuesto.TotalIva
-                + presupuesto.TotalRecargo ?? 0
-                - presupuesto.CuotaRetencion ?? 0;
+            presupuesto.BaseImponible = Math.Round(presupuesto.Lineas.Sum(l => l.BaseImponible), 2);
+            presupuesto.TotalIva = Math.Round(presupuesto.Lineas.Sum(l => l.ImporteIva), 2);
+            presupuesto.TotalRecargo = Math.Round(presupuesto.Lineas.Sum(l => l.ImporteRecargo), 2);
+
+            var porcentajeRetencion = presupuesto.PorcentajeRetencion ?? 0m;
+            presupuesto.CuotaRetencion = Math.Round(presupuesto.BaseImponible * porcentajeRetencion / 100, 2);
+
+            var totalRecargo = presupuesto.TotalRecargo ?? 0m;
+            var cuotaRetencion = presupuesto.CuotaRetencion ?? 0m;
+            presupuesto.Total = Math.Round(
+                presupuesto.BaseImponible + presupuesto.TotalIva + totalRecargo - cuotaRetencion, 2);
         }
 
         /// <summary>
@@ -434,9 +452,10 @@ namespace FacturacionVERIFACTU.API.Data.Services
             var transicionesPermitidas = new Dictionary<string, List<string>>
             {
                 { "Borrador", new List<string> { "Enviado" } },
-                { "Enviado", new List<string> { "Aceptado", "Rechazado" } },
+                { "Enviado", new List<string> { "Aceptado", "Rechazado", "Borrador" } },
                 { "Aceptado", new List<string>() }, // Estado final
-                { "Rechazado", new List<string>() }  // Estado final
+                { "Rechazado", new List<string> { "Borrador" } },  // Permite volver a Borrador
+                {"Facturado", new List<string>() }
             };
 
             if (!transicionesPermitidas.ContainsKey(estadoActual))
@@ -477,6 +496,10 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 Estado = presupuesto.Estado,
                 BaseImponible = presupuesto.BaseImponible,
                 TotalIVA = presupuesto.TotalIva,
+                TotalRecargo = presupuesto.TotalRecargo ?? 0m,
+                PorcentajeRetencion = presupuesto.PorcentajeRetencion ?? 0m,
+                CuotaRetencion = presupuesto.CuotaRetencion ?? 0m,
+                TotalConRetencion = presupuesto.TotalConRetencion ?? 0m,
                 Total = presupuesto.Total,
                 Observaciones = presupuesto.Observaciones,
                 Lineas = presupuesto.Lineas.Select(l => new LineaPresupuestoResponseDto
@@ -491,8 +514,11 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     BaseImponible = l.BaseImponible,
                     IVA = l.IVA,
                     ImporteIVA = l.ImporteIva,
+                    ImporteRecargo = l.ImporteRecargo,
+                    RecargoEquivalencia = l.RecargoEquivalencia,
                     Total = l.Importe,
-                    ArticuloId = l.ProductoId
+                    ArticuloId = l.ProductoId,
+                    ArticuloCodigo = l.Producto?.Codigo
                 }).ToList(),
                 FechaCreacion = presupuesto.FechaCreacion,
                 FechaModificacion = presupuesto.FechaModificacion

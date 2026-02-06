@@ -8,13 +8,14 @@
         public string Codigo { get; set; } = string.Empty;
         public string Descripcion { get; set; } = string.Empty;
         public decimal PrecioUnitario { get; set; }
-        public decimal IVA { get; set; } = 21; // Por defecto 21%
+        public decimal IVA { get; set; }
         public string? Unidad { get; set; } = "Ud"; // Unidad de medida
         public bool Activo { get; set; } = false;
 
         public decimal? IVADefecto { get; set; }
         public decimal? RecargoEquivalenciaDefecto { get; set; }
         public string? TipoIVA { get; set; }
+        public int? TipoImpuestoId { get; set; }
     }
 
     /// <summary>
@@ -24,10 +25,11 @@
     {
         public string Descripcion { get; set; } = string.Empty;
         public decimal PrecioUnitario { get; set; }
-        public decimal IVA { get; set; }
+        public decimal? IVA { get; set; }
         public string? Unidad { get; set; }
         public bool Activo { get; set; }
         public DateTime FechaCreacion {  get; set; }
+        public int? TipoImpuestoId { get; set; }
     }
 
     /// <summary>
@@ -45,8 +47,6 @@
         public DateTime FechaCreacion { get; set; }
         public DateTime FechaModificacion { get; set; }
 
-        public decimal IVADefecto { get; set; } = 21;
-        public decimal RecargoEquivalenciaDefecto { get; set; } = 5.2m;
-        public string TipoIVA { get; set; } = "General";
+        public int? TipoImpuestoId { get; set; }
     }
 }

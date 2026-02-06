@@ -49,7 +49,7 @@ namespace FacturacionVERIFACTU.API.Data.Entities
 
         [MaxLength(20)]
         [Column("estado")]
-        public string Estado { get; set; } = "Borrador"; // Borrador, Enviado, Aceptado, Rechazado
+        public string Estado { get; set; } = "Borrador"; // Borrador, Enviado, Aceptado, Rechazado, Facturado
 
         [MaxLength(500)]
         [Column("observaciones")]

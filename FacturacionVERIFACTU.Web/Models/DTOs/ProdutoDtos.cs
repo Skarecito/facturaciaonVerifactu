@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Runtime.InteropServices;
 
 namespace FacturacionVERIFACTU.Web.Models.DTOs;
 
@@ -19,6 +20,7 @@ public class ProductoDto
 
     [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
     public decimal IVA { get; set; } = 21;
+    public decimal? RecargoEquivalenciaDefecto { get; set; }
 
     public string? Unidad { get; set; } = "Ud";
     public bool Activo { get; set; }
@@ -40,6 +42,7 @@ public class CrearProductoDto
     [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
     public decimal IVA { get; set; } = 21;
 
+    public decimal? RecargoEquivalenciaDefecto { get; set; }
     public string? Unidad { get; set; } = "Ud";
     public bool Activo { get; set; }
 }
@@ -56,6 +59,7 @@ public class ActualizarProductoDto
     [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
     public decimal IVA { get; set; }
 
+    public decimal? RecargoEquivalenciaDefecto { get; set; }
     public string? Unidad { get; set; }
     public bool Activo { get; set; }
 }

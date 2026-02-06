@@ -113,5 +113,6 @@ namespace FacturacionVERIFACTU.API.Data.Entities
         public ICollection<Cliente> Clientes { get; set; } = new List<Cliente>();
         public ICollection<Producto> Productos { get; set; } = new List<Producto>();
         public ICollection<SerieNumeracion> Series { get; set; } = new List<SerieNumeracion>();
+        public ICollection<TipoImpuesto> TipoImpuestos { get; set; } = new List<TipoImpuesto>();
     }
 }

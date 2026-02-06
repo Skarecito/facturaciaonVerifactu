@@ -17,6 +17,9 @@ namespace FacturacionVERIFACTU.API.Data.Entities
         [Column("producto_id")]
         public int? ProductoId { get; set; }
 
+        [Column("tipo_impuesto_id")]
+        public int? TipoImpuestoId { get; set; }
+
         [Column("orden")]
         public int Orden { get; set; }
 
@@ -49,31 +52,45 @@ namespace FacturacionVERIFACTU.API.Data.Entities
         [Column("recargo_equivalencia", TypeName = "decimal(5,2)")]
         public decimal RecargoEquivalencia { get; set; } = 0;
 
+        [Column("iva_percent_snapshot", TypeName = "decimal(5,2)")]
+        public decimal IvaPercentSnapshot { get; set; }
+
+        [Column("re_percent_snapshot", TypeName = "decimal(5,2)")]
+        public decimal RePercentSnapshot { get; set; }
+
         // IMPORTE IVA (calculado)
         [Column("importe_iva", TypeName = "decimal(18,2)")]
         public decimal ImporteIva { get; set; } = 0;
+
+        [Column("importe_recargo", TypeName = "decimal(18,2)")]
+        public decimal ImporteRecargo { get; set; } = 0;
 
         // IMPORTE TOTAL (ya lo tenías - base + IVA)
         [Column("importe", TypeName = "decimal(18,2)")]
         public decimal Importe { get; set; }
 
+        [Column("total_linea", TypeName = "decimal(18,2)")]
+        public decimal TotalLineaSnapshot { get; set; }
+
         // Propiedades calculadas
         [NotMapped]
-        public decimal CuotaIVA => Math.Round(Importe * IVA / 100, 2);
+        public decimal CuotaIVA => Math.Round(BaseImponible * IvaPercentSnapshot / 100, 2);
 
         [NotMapped]
-        public decimal CuotaRecargo => Math.Round(Importe * RecargoEquivalencia / 100, 2);
+        public decimal CuotaRecargo => Math.Round(BaseImponible * RePercentSnapshot / 100, 2);
 
         [NotMapped]
-        public decimal TotalLinea => Importe + CuotaIVA + CuotaRecargo;
+        public decimal TotalLinea => BaseImponible + CuotaIVA + CuotaRecargo;
 
         //Relaciones
         [ForeignKey("PresupuestoId")]
-        public Presupuesto Presupuesto { get; set; } = null;
+        public Presupuesto Presupuesto { get; set; } = null!;
 
         [ForeignKey("ProductoId")]
-        public Producto Producto { get; set; } 
+        public Producto? Producto { get; set; } 
 
+        [ForeignKey("TipoImpuestoId")]
+        public TipoImpuesto? TipoImpuesto { get; set; }
 
     }
 }

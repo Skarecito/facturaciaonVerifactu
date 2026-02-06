@@ -3,6 +3,7 @@ using FacturacionVERIFACTU.API.Data;
 using FacturacionVERIFACTU.API.Data.Services;
 using Microsoft.EntityFrameworkCore;
 using QRCoder;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -60,7 +61,12 @@ namespace FacturacionVERIFACTU.API.Services
                 await CalcularHuellaFactura(factura);
 
                 // 2. Determinar tipo de factura
-                factura.TipoFacturaVERIFACTU = DeterminarTipoFactura(factura);
+                if (string.IsNullOrWhiteSpace(factura.TipoFacturaVERIFACTU))
+                {
+                    factura.TipoFacturaVERIFACTU = DeterminarTipoFactura(factura);
+                }
+
+                ValidarTipoFacturaVerifactu(factura.TipoFacturaVERIFACTU);
 
                 // 3. Generar código QR
                 GenerarQRFactura(factura);
@@ -226,7 +232,12 @@ namespace FacturacionVERIFACTU.API.Services
                 throw new ArgumentNullException(nameof(factura));
 
             // 1. Determinar y guardar tipo de factura
-            factura.TipoFacturaVERIFACTU = DeterminarTipoFactura(factura);
+            if (string.IsNullOrWhiteSpace(factura.TipoFacturaVERIFACTU))
+            {
+                factura.TipoFacturaVERIFACTU = DeterminarTipoFactura(factura);
+            }
+
+            ValidarTipoFacturaVerifactu(factura.TipoFacturaVERIFACTU);
 
             // 2. Generar y guardar huella anterior
             if (string.IsNullOrEmpty(factura.HuellaAnterior))
@@ -299,21 +310,39 @@ namespace FacturacionVERIFACTU.API.Services
         private string DeterminarTipoFactura(Factura factura)
         {
             // Verificar si es rectificativa
-            if (!string.IsNullOrEmpty(factura.NumeroFacturaRectificada) ||
-                !string.IsNullOrEmpty(factura.TipoRectificacion))
-            {
-                return "F3";
-            }
-
-            // Verificar si es simplificada (< 400€)
-            if (factura.Total < 400)
+            if(factura.Cliente == null)
             {
                 return "F2";
             }
 
-            // Por defecto es normal
-            return "F1";
+            // Verificar si es simplificada (< 400€)
+            var cliente = factura.Cliente;
+            var tieneIdentificacion = !string.IsNullOrWhiteSpace(cliente.NIF)
+                || !string.Equals(cliente.TipoCliente, "B2C", StringComparison.OrdinalIgnoreCase);
+
+            return tieneIdentificacion ? "F1" : "F2";
         }
+
+        private static readonly HashSet<string> TiposFacturaVerifactuPermitidos = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "F1",
+            "F2",
+            "F3",
+            "R1",
+            "R2",
+            "R3",
+            "R4"
+        };
+
+        private static void ValidarTipoFacturaVerifactu(string? tipoFactura)
+        {
+            if (string.IsNullOrWhiteSpace(tipoFactura) || !TiposFacturaVerifactuPermitidos.Contains(tipoFactura))
+            {
+                throw new InvalidOperationException(
+                    $"TipoFacturaVERIFACTU inválido: {tipoFactura ?? "<vacío>"}.");
+            }
+        }
+        
 
         /// <summary>
         /// Valida que una huella calculada coincida con la esperada.

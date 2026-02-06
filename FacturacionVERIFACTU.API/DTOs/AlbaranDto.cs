@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Security.Cryptography.Pkcs;
 
 namespace FacturacionVERIFACTU.API.DTOs
 {
@@ -112,6 +113,8 @@ namespace FacturacionVERIFACTU.API.DTOs
         public decimal? RecargoEquivalencia { get; set; } // ⭐ NUEVO (opcional)
 
         public int? ProductoId { get; set; }
+
+        public int? TipoImpuestoId {  get; set; }
     }
 
     /// <summary>
@@ -129,9 +132,14 @@ namespace FacturacionVERIFACTU.API.DTOs
         public decimal BaseImponible { get; set; }
         public decimal IVA { get; set; }
         public decimal ImporteIva { get; set; }
+        public decimal ImporteRecargo {  get; set; }
         public decimal Importe { get; set; }
         public int? ProductoId { get; set; }
         public string? ProductoCodigo { get; set; }
+        public decimal RecargoEquivalencia { get; set; }
+        public decimal TotalLinea {  get; set; }
+        public int? TipoImpuestoId { get; set; }º
+
     }
 
     /// <summary>
@@ -152,6 +160,8 @@ namespace FacturacionVERIFACTU.API.DTOs
     /// </summary>
     public class ConvertirPresupuestoDto
     {
+        [Required]
+        public int SerieId {  get; set; }
         public DateTime? FechaEmision { get; set; }
 
         public DateTime? FechaEntrega { get; set; }

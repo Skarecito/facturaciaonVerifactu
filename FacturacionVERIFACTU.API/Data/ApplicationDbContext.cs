@@ -18,7 +18,7 @@ namespace FacturacionVERIFACTU.API.Data
         public DbSet<Usuario> Usuarios => Set<Usuario>();
         public DbSet<Cliente> Clientes => Set<Cliente>();
         public DbSet<Producto> Productos => Set<Producto>();
-        public DbSet<SerieNumeracion> SeriesNumeraciones => Set<SerieNumeracion>();
+        public DbSet<SerieNumeracion> SeriesNumeracion => Set<SerieNumeracion>();
         public DbSet<CierreEjercicio> CierreEjercicios => Set<CierreEjercicio>();
         public DbSet<Presupuesto> Presupuestos => Set<Presupuesto>();
         public DbSet<LineaPresupuesto> LineasPresupuesto => Set<LineaPresupuesto>();
@@ -26,8 +26,8 @@ namespace FacturacionVERIFACTU.API.Data
         public DbSet<LineaAlbaran> LineasAlbaranes => Set<LineaAlbaran>();
         public DbSet<Factura> Facturas => Set<Factura>();
         public DbSet<LineaFactura> LineasFacturas => Set<LineaFactura>();
+        public DbSet<TipoImpuesto> TiposImpuesto => Set<TipoImpuesto>();
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
-        public DbSet<SerieNumeracion> SeriesNumeracion => Set<SerieNumeracion>();
 
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -114,7 +114,11 @@ namespace FacturacionVERIFACTU.API.Data
                 .IsUnique();
 
             modelBuilder.Entity<SerieNumeracion>()
-                .HasIndex(s => new { s.TenantId, s.Codigo, s.Ejercicio })
+                .HasIndex(s => new { s.TenantId, s.Codigo, s.Ejercicio, s.TipoDocumento })
+                .IsUnique();
+
+            modelBuilder.Entity<TipoImpuesto>()
+                .HasIndex(t => new { t.TenantId, t.Nombre })
                 .IsUnique();
 
             modelBuilder.Entity<Presupuesto>()
@@ -152,6 +156,13 @@ namespace FacturacionVERIFACTU.API.Data
                 .HasOne(p => p.Tenant)
                 .WithMany(t => t.Productos)
                 .HasForeignKey(p => p.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            //Tenant -> TiposImpuesto
+            modelBuilder.Entity<TipoImpuesto>()
+                .HasOne(t => t.Tenant)
+                .WithMany(tenant => tenant.TiposImpuesto)
+                .HasForeignKey(t => t.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Tenant -> Series
@@ -250,6 +261,13 @@ namespace FacturacionVERIFACTU.API.Data
                 .HasForeignKey(l => l.ProductoId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            modelBuilder.Entity<LineaPresupuesto>()
+                .HasOne(l => l.TipoImpuesto)
+                .WithMany(t => t.LineasPresupuesto)
+                .HasForeignKey(l => l.TipoImpuestoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
             // Producto -> LineasAlbaran
             modelBuilder.Entity<LineaAlbaran>()
                 .HasOne(l => l.Producto)
@@ -257,12 +275,30 @@ namespace FacturacionVERIFACTU.API.Data
                 .HasForeignKey(l => l.ProductoId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            modelBuilder.Entity<LineaAlbaran>()
+                .HasOne(l => l.TipoImpuesto)
+                .WithMany(t => t.LineasAlbaran)
+                .HasForeignKey(l => l.TipoImpuestoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Producto -> LineasFactura
             modelBuilder.Entity<LineaFactura>()
                 .HasOne(l => l.Producto)
                 .WithMany(p => p.LineasFactura)
                 .HasForeignKey(l => l.ProductoId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<LineaFactura>()
+                .HasOne(l => l.TipoImpuesto)
+                .WithMany(t => t.LineasFactura)
+                .HasForeignKey(l => l.TipoImpuestoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Producto>()
+                .HasOne(p => p.TipoImpuesto)
+                .WithMany(t => t.Productos)
+                .HasForeignKey(p => p.TipoImpuestoId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<RefreshToken>(entity =>
             {

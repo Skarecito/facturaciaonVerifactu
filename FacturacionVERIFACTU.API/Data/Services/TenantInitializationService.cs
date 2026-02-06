@@ -1,7 +1,9 @@
 ﻿using FacturacionVERIFACTU.API.Data;
 using FacturacionVERIFACTU.API.Data.Entities;
 using FacturacionVERIFACTU.API.Data.Interfaces;
+using FacturacionVERIFACTU.API.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Xml.Linq;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace FacturacionVERIFACTU.API.Data.Services;
@@ -30,7 +32,10 @@ public class TenantInitializationService : ITenantInitializationService
             // 1. Crear Series de Numeración
             await CrearSeriesNumeracionAsync(tenantId);
 
-            // 2. Crear Cierre de Ejercicio Actual (abierto)
+            // 2. Crear Tipos de Impuesto
+            await CrearTiposImpuestoAsync(tenantId);
+
+            // 3. Crear Cierre de Ejercicio Actual (abierto)
             await CrearCierreEjercicioInicialAsync(tenantId);
 
             await _context.SaveChangesAsync();
@@ -54,12 +59,12 @@ public class TenantInitializationService : ITenantInitializationService
             new SerieNumeracion
             {
                 TenantId = tenantId,
-                Codigo = "A",
-                TipoDocumento = "Factura",
+                Codigo = "F",
+                TipoDocumento =DocumentTypes.FACTURA,
                 Ejercicio = anoActual,
                 ProximoNumero = 1,
                 Formato = "{SERIE}-{NUMERO}/{EJERCICIO}",
-                Descripcion = "Serie A de facturas",
+                Descripcion = "Serie F de facturas",
                 Activo = true
             },
 
@@ -68,7 +73,7 @@ public class TenantInitializationService : ITenantInitializationService
             {
                 TenantId = tenantId,
                 Codigo = "A",
-                TipoDocumento = "Albaran",
+                TipoDocumento = DocumentTypes.ALBARAN,
                 Ejercicio = anoActual,
                 ProximoNumero = 1,
                 Formato = "{SERIE}-{NUMERO}/{EJERCICIO}",
@@ -80,8 +85,8 @@ public class TenantInitializationService : ITenantInitializationService
             new SerieNumeracion
             {
                 TenantId = tenantId,
-                Codigo = "A",
-                TipoDocumento = "Presupuesto",
+                Codigo = "P",
+                TipoDocumento = DocumentTypes.PRESUPUESTO,
                 Ejercicio = anoActual,
                 ProximoNumero = 1,
                 Formato = "{SERIE}-{NUMERO}/{EJERCICIO}",
@@ -94,7 +99,7 @@ public class TenantInitializationService : ITenantInitializationService
             {
                 TenantId = tenantId,
                 Codigo = "R",
-                TipoDocumento = "Factura",
+                TipoDocumento = DocumentTypes.FACTURA,
                 Ejercicio = anoActual,
                 ProximoNumero = 1,
                 Formato = "{SERIE}-{NUMERO}/{EJERCICIO}",
@@ -103,10 +108,32 @@ public class TenantInitializationService : ITenantInitializationService
             }
         };
 
-        await _context.SeriesNumeraciones.AddRangeAsync(series);
+        await _context.SeriesNumeracion.AddRangeAsync(series);
+        var seriesExistentes = await _context.SeriesNumeracion
+            .Where(s => s.TenantId == tenantId && s.Ejercicio == anoActual)
+            .Select(s => new { s.Codigo, s.TipoDocumento })
+            .ToListAsync();
+
+        var existentes = new HashSet<string>(
+            seriesExistentes.Select(s => $"{s.Codigo}|{s.TipoDocumento.ToUpperInvariant()}"));
+
+        var seriesNuevas = series
+            .Where(s => !existentes.Contains($"{s.Codigo}|{s.TipoDocumento.ToUpperInvariant()}"))
+            .ToList();
+
+        if (seriesNuevas.Count == 0)
+        {
+            _logger.LogInformation(
+                "Series de numeración ya existentes para tenant {TenantId} y ejercicio {Ano}",
+                tenantId,
+                anoActual);
+            return;
+        }
+
+        await _context.SeriesNumeracion.AddRangeAsync(seriesNuevas);
 
         _logger.LogInformation("Creadas {Count} series de numeración para tenant {TenantId}",
-            series.Count, tenantId);
+            seriesNuevas.Count, tenantId);
     }
 
     private async Task CrearCierreEjercicioInicialAsync(int tenantId)
@@ -154,5 +181,67 @@ public class TenantInitializationService : ITenantInitializationService
 
         _logger.LogInformation("Creado cierre de ejercicio {Ano} (abierto) para tenant {TenantId}",
             anoActual, tenantId);
+    }
+
+    private async Task CrearTiposImpuestoAsync(int tenantId)
+    {
+        var tiposExistentes = await _context.TiposImpuesto
+            .Where(t => t.TenantId == tenantId)
+            .Select(t => t.Nombre)
+            .ToListAsync();
+
+        var tiposPorDefecto = new List<TipoImpuesto>
+        {
+            new TipoImpuesto
+            {
+                TenantId = tenantId,
+                Nombre = "General",
+                PorcentajeIva = 21m,
+                PorcentajeRecargo = 5.2m,
+                Activo = true,
+                Orden = 1
+            },
+            new TipoImpuesto
+            {
+                TenantId = tenantId,
+                Nombre = "Reducido",
+                PorcentajeIva = 10m,
+                PorcentajeRecargo = 1.4m,
+                Activo = true,
+                Orden = 2
+            },
+            new TipoImpuesto
+            {
+                TenantId = tenantId,
+                Nombre = "Superreducido",
+                PorcentajeIva = 4m,
+                PorcentajeRecargo = 0.5m,
+                Activo = true,
+                Orden = 3
+            },
+            new TipoImpuesto
+            {
+                TenantId = tenantId,
+                Nombre = "Exento",
+                PorcentajeIva = 0m,
+                PorcentajeRecargo = 0m,
+                Activo = true,
+                Orden = 4
+            }
+        };
+
+        var nuevosTipos = tiposPorDefecto
+            .Where(t => !tiposExistentes.Contains(t.Nombre))
+            .ToList();
+
+        if (!nuevosTipos.Any())
+        {
+            _logger.LogInformation("Tipos de impuesto ya inicializados para tenant {TenantId}", tenantId);
+            return;
+        }
+
+        await _context.TiposImpuesto.AddRangeAsync(nuevosTipos);
+
+        _logger.LogInformation("Creados {Count} tipos de impuesto para tenant {TenantId}", nuevosTipos.Count, tenantId);
     }
 }

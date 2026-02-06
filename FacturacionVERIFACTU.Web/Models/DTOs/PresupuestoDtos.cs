@@ -92,7 +92,10 @@ public class LineaPresupuestoDto
     public decimal? RecargoEquivalencia { get; set; }
 
     public int? ArticuloId { get; set; }
+
+    public string? ArticuloCodigo { get; set; }
 }
+
 
 public class LineaPresupuestoResponseDto
 {
@@ -106,6 +109,8 @@ public class LineaPresupuestoResponseDto
     public decimal BaseImponible { get; set; }
     public decimal IVA { get; set; }
     public decimal ImporteIVA { get; set; }
+    public decimal RecargoEquivalencia { get; set; }
+    public decimal ImporteRecargo {  get; set; }
     public decimal Total { get; set; }
     public int? ArticuloId { get; set; }
     public string? ArticuloCodigo { get; set; }
@@ -131,9 +136,6 @@ public class ConvertirPresupuestoAFacturaDto
     [MaxLength(500)]
     public string? Observaciones { get; set; }
 
-    [Required]
-    [MaxLength(2)]
-    public string TipoFacturaVERIFACTU { get; set; } = "F1";
 
     public List<int>? LineasSeleccionadas { get; set; }
 
@@ -159,5 +161,20 @@ public class FacturaResponseDto
     public string? Numero { get; set; }
     public string? Estado { get; set; }
     public decimal Total { get; set; }
+}
+
+public class ConvertirPresupuestosAFacturaDto
+{
+    [Required]
+    [MinLength(1)]
+    public List<int> PresupuestosIds { get; set; } = new();
+    [Required]
+    public int SerieId {  get; set; }
+    public DateTime? FechaEmision { get; set; }
+    [MaxLength(500)]
+    public string? Observaciones { get; set; }
+
+    [Range(0,100)]
+    public decimal? PorcentajeRetencion { get; set; }
 }
 

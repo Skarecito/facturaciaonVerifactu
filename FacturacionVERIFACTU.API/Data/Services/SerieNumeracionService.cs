@@ -1,7 +1,10 @@
-﻿using FacturacionVERIFACTU.API.Data.Entities;
+﻿using FacturacionVERIFACTU.API.Data;
+using FacturacionVERIFACTU.API.Data.Entities;
 using FacturacionVERIFACTU.API.Data.Interfaces;
-using FacturacionVERIFACTU.API.Data;
+using FacturacionVERIFACTU.API.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Xml.Linq;
 
 namespace FacturacionVERIFACTU.API.Data.Services
 {
@@ -14,14 +17,14 @@ namespace FacturacionVERIFACTU.API.Data.Services
             int tenantId,
             string serie,
             int ejercicio,
-            string tipoDocumento = "PRESUPUESTO");
+            string tipoDocumento = DocumentTypes.PRESUPUESTO);
     }
 
     public class SerieNumeracionService : ISerieNumeracionService
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<SerieNumeracionService> _logger;
-        private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+
 
         public SerieNumeracionService(ApplicationDbContext context, ILogger<SerieNumeracionService> logger)
         {
@@ -36,35 +39,35 @@ namespace FacturacionVERIFACTU.API.Data.Services
             int tenantId,
             string codigoSerie,  // Código como "P", "A", etc.
             int ejercicio,
-            string tipoDocumento = "PRESUPUESTO")
+            string tipoDocumento = DocumentTypes.PRESUPUESTO)
         {
             // Lock para evitar condiciones de carrera
-            await _semaphore.WaitAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
                 // Buscar configuración de serie
                 var serieNumeracion = await _context.SeriesNumeracion
-                    .FirstOrDefaultAsync(cs =>
-                        cs.TenantId == tenantId &&
-                        cs.Codigo == codigoSerie &&
-                        cs.Ejercicio == ejercicio &&
-                        cs.TipoDocumento == tipoDocumento);
+                    .FromSqlInterpolated($@"
+                        SELECT * FROM series_facturacion
+                        WHERE tenant_id = {tenantId}
+                          AND codigo = {codigoSerie}
+                          AND ejercicio = {ejercicio}
+                          AND tipo_documento = {tipoDocumento}
+                        FOR UPDATE")
+                    .FirstOrDefaultAsync();
 
                 if (serieNumeracion == null)
                 {
-                    // Crear nueva configuración de serie
-                    serieNumeracion = new SerieNumeracion
-                    {
-                        TenantId = tenantId,
-                        Codigo = codigoSerie,
-                        Descripcion = $"Serie {codigoSerie} {tipoDocumento}",
-                        TipoDocumento = tipoDocumento,
-                        ProximoNumero = 1,
-                        Ejercicio = ejercicio,
-                        Activo = true
-                    };
-                    _context.SeriesNumeracion.Add(serieNumeracion);
+                    var descripcion = $"Serir {codigoSerie} {tipoDocumento}";
+                    const string formatoPorDefecto = "{SERIE}-{NUMERO}/{EJERCICIO}";
+
+                    await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                        INSERT INTO series_facturacion
+                            (tenant_id, codigo, descripcion, tipo_documento, proximo_numero, ejercicio, formato, activo, bloqueada)
+                        VALUES
+                            ({tenantId}, {codigoSerie}, {descripcion}, {tipoDocumento}, 1, {ejercicio}, {formatoPorDefecto}, true, false)
+                        ON CONFLICT (tenant_id, codigo, ejercicio, tipo_documento) DO NOTHING;");
                 }
 
                 // Obtener número actual
@@ -75,6 +78,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
 
                 // Guardar cambios
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 // Formatear número completo: P2024-001
                 var numeroCompleto = $"{serieNumeracion.Codigo}{ejercicio}-{numeroActual:D3}";
@@ -87,15 +91,12 @@ namespace FacturacionVERIFACTU.API.Data.Services
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 _logger.LogError(ex,
                     "Error al obtener siguiente número para tenant {TenantId}, serie {Codigo}, ejercicio {Ejercicio}",
                     tenantId, codigoSerie, ejercicio);
                 throw;
             }
-            finally
-            {
-                _semaphore.Release();
-            }
         }
     }
-    }
+}

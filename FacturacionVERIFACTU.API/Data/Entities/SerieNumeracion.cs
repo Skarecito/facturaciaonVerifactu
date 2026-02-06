@@ -39,7 +39,7 @@ namespace FacturacionVERIFACTU.API.Data.Entities
 
         [MaxLength(50)]
         [Column("formato")]
-        public string Formato { get; set; } = "{SERIRE}-{NUMERO}/{EJERCICIO}";
+        public string Formato { get; set; } = "{SERIE}-{NUMERO}/{EJERCICIO}";
 
         [Column("activo")]
         public bool Activo { get; set; } = true;

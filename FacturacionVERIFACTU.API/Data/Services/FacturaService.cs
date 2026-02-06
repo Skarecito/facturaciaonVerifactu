@@ -2,8 +2,12 @@
 using API.Data.Entities;
 using FacturacionVERIFACTU.API.Data.Entities;
 using FacturacionVERIFACTU.API.DTOs;
+using FacturacionVERIFACTU.API.Models;
 using FacturacionVERIFACTU.API.Services;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Drawing.Text;
+using System.Xml.Linq;
 
 namespace FacturacionVERIFACTU.API.Data.Services
 {
@@ -17,6 +21,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
         Task<List<FacturaResponseDto>> ObtenerTodosAsync(int tenantId, int? id, string? estado, DateTime? fechaDesde, DateTime? fechaHasta);
         Task<bool> EliminarAsync(int tenantId, int id);
         Task<FacturaResponseDto> ConvertirDesdePresupuestoAsync(int tenantId, int id, ConvertirPresupuestoAFacturaDto dto);
+        Task<FacturaResponseDto> ConvertirDesdePresupuestosAsync(int tenantId, ConvertirPresupuestosAFacturaDto dto);
         Task<FacturaResponseDto> ConvertirDesdeAlbaranAsync(int tenantId, int id, ConvertirAlbaranesAFacturaDto dto);
     }
 
@@ -96,7 +101,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
             // Obtener siguiente número
             var ejercicio = dto.FechaEmision?.Year ?? DateTime.UtcNow.Year;
             var (numeroCompleto, numero) = await _numeracionService
-                .ObtenerSiguienteNumeroAsync(tenantId, serie.Codigo, ejercicio, "FACTURA");
+                .ObtenerSiguienteNumeroAsync(tenantId, serie.Codigo, ejercicio, DocumentTypes.FACTURA);
 
             // ⭐ APLICAR CONFIGURACIÓN FISCAL DEL CLIENTE
             var porcentajeRetencion = dto.PorcentajeRetencion
@@ -113,7 +118,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 FechaEmision = (dto.FechaEmision ?? DateTime.UtcNow).ToUniversalTime(),
                 Estado = "Emitida",
                 Observaciones = dto.Observaciones,
-                TipoFacturaVERIFACTU = dto.TipoFacturaVERIFACTU,
+                TipoFacturaVERIFACTU = DeterminarTipoFacturaVerifactu(cliente),
                 NumeroFacturaRectificada = dto.NumeroFacturaRectificada,
                 TipoRectificacion = dto.TipoRectificacion,
 
@@ -181,6 +186,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
 
             // Calcular totales
             CalcularTotalesFactura(factura);
+            ValidarTipoFacturaVerifactu(factura.TipoFacturaVERIFACTU);
 
             // Log de configuración fiscal aplicada
             if (cliente.RegimenRecargoEquivalencia)
@@ -656,7 +662,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
             // Obtener siguiente número
             var ejercicio = dto.FechaEmision?.Year ?? DateTime.UtcNow.Year;
             var (numeroCompleto, numero) = await _numeracionService
-                .ObtenerSiguienteNumeroAsync(tenantId, serie.Codigo, ejercicio, "FACTURA");
+                .ObtenerSiguienteNumeroAsync(tenantId, serie.Codigo, ejercicio, DocumentTypes.FACTURA);
 
             // Crear factura
             var factura = new Factura
@@ -669,7 +675,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 FechaEmision = (dto.FechaEmision ?? DateTime.UtcNow).ToUniversalTime(),
                 Estado = "Emitida",
                 Observaciones = dto.Observaciones ?? presupuesto.Observaciones,
-                TipoFacturaVERIFACTU = dto.TipoFacturaVERIFACTU,
+                TipoFacturaVERIFACTU = DeterminarTipoFacturaVerifactu(cliente),
                 // ⭐ MANTENER O APLICAR RETENCIÓN
                 PorcentajeRetencion = dto.PorcentajeRetencion
                      ?? presupuesto.PorcentajeRetencion  // Del presupuesto
@@ -754,7 +760,9 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     IVA = iva,
                     RecargoEquivalencia = recargo, // ⭐ MANTENIDO DEL PRESUPUESTO
                     ProductoId = lineaPresupuesto.ProductoId,
-                    Importe = Math.Round(cantidad * precioUnitario, 2)
+                    Importe = Math.Round(
+                        (cantidad * precioUnitario)
+                        - ((cantidad * precioUnitario) * (lineaPresupuesto.PorcentajeDescuento / 100m)), 2)
                 };
 
                 factura.Lineas.Add(lineaFactura);
@@ -762,6 +770,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
 
             // Calcular totales
             CalcularTotalesFactura(factura);
+            ValidarTipoFacturaVerifactu(factura.TipoFacturaVERIFACTU);
 
             _logger.LogInformation(
                 "Factura desde presupuesto {Presupuesto}. Recargo: {Recargo}€, Retención: {Retencion}€",
@@ -791,6 +800,149 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 numeroCompleto, presupuesto.Numero);
 
             // Enviar a AEAT en background
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await EnviarFacturaAEATAsync(factura.Id, tenantId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al enviar factura {FacturaId} a AEAT", factura.Id);
+                }
+            });
+
+            return await MapearAResponseDto(factura);
+        }
+
+        // ====================================================================
+        // CONVERTIR DESDE PRESUPUESTOS (AGRUPADA)
+        // ====================================================================
+        public async Task<FacturaResponseDto> ConvertirDesdePresupuestosAsync(
+            int tenantId, ConvertirPresupuestosAFacturaDto dto)
+        {
+            var presupuestos = await _context.Presupuestos
+                .Include(p => p.Lineas)
+                .Include(p => p.Cliente)
+                .Where(p => dto.PresupuestosIds.Contains(p.Id) && p.TenantId == tenantId)
+                .ToListAsync();
+
+            if (presupuestos.Count != dto.PresupuestosIds.Count)
+                throw new InvalidOperationException("Algunos presupuestos no fuero encontrados");
+
+            var clienteId = presupuestos.First().ClienteId;
+            if (presupuestos.Any(p => p.ClienteId != clienteId))
+                throw new InvalidOperationException("Todos los presupuestos deben de ser del mismo cliente");
+
+            if (presupuestos.Any(p => p.Estado != "Aceptado"))
+                throw new InvalidOperationException("Solo se pueden convertir presupuestos en estado aceptado");
+
+            if (presupuestos.Any(p => p.FacturaId != null))
+                throw new InvalidOperationException("Algurnos presupuestos ya estan facturados");
+
+            var cliente = presupuestos.First().Cliente;
+
+            var serie = await _context.SeriesNumeracion
+                .FirstOrDefaultAsync(s => s.Id == dto.SerieId && s.TenantId == tenantId);
+
+            if (serie == null)
+                throw new InvalidOperationException($"Serie {dto.SerieId} no encontrada");
+
+            if (serie.Bloqueada)
+                throw new InvalidOperationException("La serie esta bloqueada");
+
+            var ejercicio = dto.FechaEmision?.Year ?? DateTime.UtcNow.Year;
+            var (numeroCompleto, numero) = await _numeracionService
+                .ObtenerSiguienteNumeroAsync(tenantId, serie.Codigo, ejercicio, DocumentTypes.FACTURA);
+
+            var factura = new Factura
+            {
+                TenantId = tenantId,
+                ClienteId = clienteId,
+                SerieId = serie.Id,
+                Numero = numeroCompleto,
+                Ejercicio = ejercicio,
+                FechaEmision = (dto.FechaEmision ?? DateTime.UtcNow).ToUniversalTime(),
+                Estado = "Emitida",
+                Observaciones = dto.Observaciones,
+                TipoFacturaVERIFACTU = DeterminarTipoFacturaVerifactu(cliente),
+                PorcentajeRetencion = dto.PorcentajeRetencion ?? presupuestos.First().PorcentajeRetencion ?? cliente.PorcentajeRetencionDefecto,
+                Bloqueada = false,
+                ActualizadoEn = DateTime.UtcNow
+            };
+
+            var productosIds = presupuestos
+                .SelectMany(p => p.Lineas)
+                .Where(l => l.ProductoId.HasValue)
+                .Select(l => l.ProductoId.Value)
+                .Distinct()
+                .ToList();
+
+            Dictionary<int, Producto> productosDict = new();
+
+            if (productosIds.Any())
+            {
+                var productos = await _context.Productos
+                    .Where(p => productosIds.Contains(p.Id))
+                    .ToListAsync();
+
+                productosDict = productos.ToDictionary(p => p.Id);
+            }
+
+            var orden = 1;
+            foreach(var lineaPresupuesto in presupuestos.SelectMany(p => p.Lineas).OrderBy(l => l.Orden))
+            {
+                decimal iva = lineaPresupuesto.IVA;
+                decimal recargo = lineaPresupuesto.RecargoEquivalencia;
+
+                if (lineaPresupuesto.ProductoId.HasValue &&
+                    productosDict.TryGetValue(lineaPresupuesto.ProductoId.Value, out var producto))
+                {
+                    if(cliente.RegimenRecargoEquivalencia && lineaPresupuesto.RecargoEquivalencia == 0)
+                    {
+                        recargo = producto.RecargoEquivalenciaDefecto ?? 0m;
+                    }
+                }
+
+                var lineaFactura = new LineaFactura
+                {
+                    Orden = orden++,
+                    Descripcion = lineaPresupuesto.Descripcion,
+                    Cantidad = lineaPresupuesto.Cantidad,
+                    PrecioUnitario = lineaPresupuesto.PrecioUnitario,
+                    IVA = iva,
+                    RecargoEquivalencia = recargo,
+                    ProductoId = lineaPresupuesto.ProductoId,
+                    Importe = Math.Round(lineaPresupuesto.Cantidad * lineaPresupuesto.PrecioUnitario, 2)
+                };
+
+                factura.Lineas.Add(lineaFactura);
+            }
+
+            CalcularTotalesFactura(factura);
+            ValidarTipoFacturaVerifactu(factura.TipoFacturaVERIFACTU);
+
+            var facturaAnterior = await _context.Facturas
+                .Where(f => f.SerieId == dto.SerieId && f.TenantId == tenantId)
+                .OrderByDescending(f => f.FechaEmision)
+                .ThenByDescending(f => f.Id)
+                .FirstOrDefaultAsync();
+
+            factura.HuellaAnterior = facturaAnterior?.Huella;
+
+            await AplicarVERIFACTUAsync(factura);
+
+            _context.Facturas.Add(factura);
+            await _context.SaveChangesAsync();
+
+            foreach(var presupuesto in presupuestos)
+            {
+                presupuesto.FacturaId = factura.Id;
+                presupuesto.Estado = "Facturado";
+            }
+
+            await _context.SaveChangesAsync();
+
             _ = Task.Run(async () =>
             {
                 try
@@ -863,7 +1015,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 Estado = "Emitida",
                 Observaciones = dto.Observaciones ??
                     $"Factura generada desde albaranes: {string.Join(", ", albaranes.Select(a => a.Numero))}",
-                TipoFacturaVERIFACTU = dto.TipoFacturaVERIFACTU,
+                TipoFacturaVERIFACTU = DeterminarTipoFacturaVerifactu(cliente),
 
                 // ⭐ APLICAR RETENCIÓN DEL CLIENTE
                 PorcentajeRetencion = dto.PorcentajeRetencion
@@ -937,6 +1089,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
 
             // Calcular totales
             CalcularTotalesFactura(factura);
+            ValidarTipoFacturaVerifactu(factura.TipoFacturaVERIFACTU);
 
             _logger.LogInformation(
                 "Factura desde albaranes. Recargo: {Recargo}€, Retención: {Retencion}€",
@@ -1014,6 +1167,38 @@ namespace FacturacionVERIFACTU.API.Data.Services
                           - factura.CuotaRetencion ??0m;
         }
 
+        private static readonly HashSet<string> TiposFacturaVerifactuPermitidos = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "F1",
+            "F2",
+            "F3",
+            "R1",
+            "R2",
+            "R3",
+            "R4"
+        };
+
+        private static string DeterminarTipoFacturaVerifactu(Cliente cliente)
+        {
+            if(cliente == null)
+            {
+                return "F2";
+            }
+
+            var tieneIdentificacion = !string.IsNullOrWhiteSpace(cliente.NIF)
+                || !string.Equals(cliente.TipoCliente, "B2C", StringComparison.OrdinalIgnoreCase);
+
+            return tieneIdentificacion ? "F1" : "F2";
+        }
+
+        private static void ValidarTipoFacturaVerifactu(string? tipoFactura)
+        {
+            if(!string.IsNullOrWhiteSpace(tipoFactura) || !TiposFacturaVerifactuPermitidos.Contains(tipoFactura))
+            {
+                throw new InvalidOperationException(
+                   $"TipoFacturaVERIFACTU inválido: {tipoFactura ?? "<vacío>"}.");
+            }
+        }
 
         // ====================================================================
         // APLICAR VERIFACTU

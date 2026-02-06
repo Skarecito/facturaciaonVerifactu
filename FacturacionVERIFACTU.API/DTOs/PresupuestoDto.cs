@@ -104,6 +104,7 @@ namespace FacturacionVERIFACTU.API.DTOs
         public decimal? RecargoEquivalencia { get; set; } // ⭐ NUEVO (opcional)
 
         public int? ArticuloId { get; set; }
+        public int? TipoImpuestoId { get; set; }
     }
 
     /// <summary>
@@ -121,9 +122,12 @@ namespace FacturacionVERIFACTU.API.DTOs
         public decimal BaseImponible { get; set; }
         public decimal IVA { get; set; }
         public decimal ImporteIVA { get; set; }
+        public decimal RecargoEquivalencia { get; set; }
+        public decimal ImporteRecargo { get; set; }
         public decimal Total { get; set; }
         public int? ArticuloId { get; set; }
         public string? ArticuloCodigo { get; set; }
+        public int? TipoImpuestoId { get; set; }
     }
 
     /// <summary>

@@ -84,7 +84,8 @@ namespace FacturacionVERIFACTU.API.Controllers
                     Unidad = p.Unidad,
                     Activo = p.Activo,
                     FechaCreacion = p.FechaCreacion,
-                    FechaModificacion = p.FechaModificacion
+                    FechaModificacion = p.FechaModificacion,
+                    TipoImpuestoId = p.TipoImpuestoId
                 })
                 .ToListAsync();
 
@@ -121,7 +122,8 @@ namespace FacturacionVERIFACTU.API.Controllers
                     Unidad = p.Unidad,
                     Activo = p.Activo,
                     FechaCreacion = p.FechaCreacion,
-                    FechaModificacion = p.FechaModificacion
+                    FechaModificacion = p.FechaModificacion,
+                    TipoImpuestoId = p.TipoImpuestoId
                 })
                 .FirstOrDefaultAsync();
 
@@ -152,13 +154,25 @@ namespace FacturacionVERIFACTU.API.Controllers
             if (existeCodigo)
                 return Conflict(new { message = "Ya existe un porducto con ese codigo" });
 
+            if (dto.TipoImpuestoId.HasValue)
+            {
+                var tipoImpuesto = await _context.TiposImpuesto
+                    .FirstOrDefaultAsync(t => t.Id == dto.TipoImpuestoId.Value
+                        && t.TenantId == tenantId.Value
+                        && t.Activo);
+
+                if (tipoImpuesto == null)
+                    return BadRequest(new { message = "Tipo de impuesto no válido o inactivo" });
+            }
+
             var producto = new Producto
             {
                 TenantId = tenantId.Value,
                 Codigo = dto.Codigo,
                 Descripcion = dto.Descripcion,
                 Precio = dto.PrecioUnitario,
-                IVA = dto.IVA,
+                IVA = dto.IVA ?? 0m,
+                TipoImpuestoId = dto.TipoImpuestoId,
                 Unidad = dto.Unidad,
                 Activo = dto.Activo,
                 FechaCreacion = DateTime.UtcNow,
@@ -178,7 +192,8 @@ namespace FacturacionVERIFACTU.API.Controllers
                 Unidad = producto.Unidad,
                 Activo = producto.Activo,
                 FechaCreacion = producto.FechaCreacion,
-                FechaModificacion = producto.FechaModificacion
+                FechaModificacion = producto.FechaModificacion,
+                TipoImpuestoId = dto.TipoImpuestoId,
             };
 
             return CreatedAtAction(nameof(GetProducto), new {id= producto.Id}, response);
@@ -205,9 +220,23 @@ namespace FacturacionVERIFACTU.API.Controllers
             if (producto == null)
                 return NotFound(new { message = "Producto no encontrado" });
 
+            if (dto.TipoImpuestoId.HasValue)
+            {
+                var tipoImpuesto = await _context.TiposImpuesto
+                    .FirstOrDefaultAsync(t => t.Id == dto.TipoImpuestoId.Value
+                        && t.TenantId == tenantId.Value
+                        && t.Activo);
+
+                if (tipoImpuesto == null)
+                    return BadRequest(new { message = "Tipo de impuesto no válido o inactivo" });
+            }
+
             producto.Descripcion = dto.Descripcion;
             producto.Precio = dto.PrecioUnitario;
-            producto.IVA = dto.IVA;
+            if (dto.IVA.HasValue)
+            {
+                producto.IVA = dto.IVA.Value;
+            }
             producto.Unidad = dto.Unidad;
             producto.Activo = dto.Activo;
             producto.FechaModificacion = DateTime.UtcNow;
@@ -220,11 +249,12 @@ namespace FacturacionVERIFACTU.API.Controllers
                 Codigo = producto.Codigo,
                 Descripcion = dto.Descripcion,
                 PrecioUnitario = dto.PrecioUnitario,
-                IVA = dto.IVA,
+                IVA = producto.IVA,
                 Unidad = dto.Unidad,
                 Activo = dto.Activo,
                 FechaCreacion = dto.FechaCreacion,
-                FechaModificacion = producto.FechaModificacion
+                FechaModificacion = producto.FechaModificacion,
+                TipoImpuestoId = producto.TipoImpuestoId
             };
 
             return Ok(response);

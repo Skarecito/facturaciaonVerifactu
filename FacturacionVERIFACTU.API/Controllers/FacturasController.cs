@@ -12,7 +12,7 @@ namespace FacturacionVERIFACTU.API.Controllers
 {
     [Authorize]
     [ApiController]
-    [Route("api/controller")]
+    [Route("api/[controller]")]
     public class FacturasController : ControllerBase
     {
         private readonly IFacturaService _facturaService;
@@ -333,6 +333,48 @@ namespace FacturacionVERIFACTU.API.Controllers
             {
                 _logger.LogError(ex, "Error al convertir presupuesto {PresupuestoId} a factura", presupuestoId);
                 return StatusCode(500, new { mensaje = "Error al convertir presupuesto a facturra" });
+            }
+        }
+
+
+        ///<sumari>
+        /// Convierte varios presupuestos en una factura
+        /// </sumari>
+        [HttpPost("desde-presupuestos")]
+        [ProducesResponseType(typeof(FacturaResponseDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<FacturaResponseDto>> ConvertirDesdePresupuestos(
+            [FromBody] ConvertirPresupuestosAFacturaDto dto)
+        {
+            try
+            {
+                var tenantId = _tenantContext.GetTenantId();
+                if (tenantId == null || tenantId == 0)
+                {
+                    return Unauthorized(new { mensaje = "Tenant no identificado" });
+                }
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                // Llamada corregida: nombre correcto y pasar tenantId.Value (int)
+                var factura = await _facturaService.ConvertirDesdePresupuestosAsync(tenantId.Value, dto);
+
+                return CreatedAtAction(
+                    nameof(ObtenerPorId),
+                    new { id = factura.Id },
+                    factura);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Error al convertir prespuestos a factura agrupada");
+                return BadRequest(new { mensaje = ex.Message });
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Error al convertir presupuestos a factura agrupada");
+                return StatusCode(500, new { mensaja = "Eror al convertir presupuestos a factura" });
             }
         }
 

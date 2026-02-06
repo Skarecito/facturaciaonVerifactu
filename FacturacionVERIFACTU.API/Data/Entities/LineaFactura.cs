@@ -18,6 +18,9 @@ namespace API.Data.Entities
         [Column("producto_id")]
         public int? ProductoId { get; set; }
 
+        [Column("tipo_impuesto_id")]
+        public int? TipoImpuestoId { get; set; }
+
         [Column("orden")]
         public int Orden { get; set; }
 
@@ -38,18 +41,36 @@ namespace API.Data.Entities
         [Column("recargo_equivalencia", TypeName = ("decimal(5,2)"))]
         public decimal RecargoEquivalencia { get; set; } = 0;
 
+        [Column("iva_percent_snapshot", TypeName = "decimal(5,2)")]
+        public decimal IvaPercentSnapshot { get; set; }
+
+        [Column("re_percent_snapshot", TypeName = "decimal(5,2)")]
+        public decimal RePercentSnapshot { get; set; }
+
+        [Column("base_imponible", TypeName = "decimal(18,2)")]
+        public decimal BaseImponible { get; set; }
+
+        [Column("importe_iva", TypeName = "decimal(18,2)")]
+        public decimal ImporteIva { get; set; }
+
+        [Column("importe_recargo", TypeName = "decimal(18,2)")]
+        public decimal ImporteRecargo { get; set; }
+
+        [Column("total_linea", TypeName = "decimal(18,2)")]
+        public decimal TotalLineaSnapshot { get; set; }
+
         [Column("importe", TypeName = "decimal(18,2)")]
         public decimal Importe { get; set; }
 
         // Propiedades calculadas (no se guardan en BD)
         [NotMapped]
-        public decimal CuotaIVA => Math.Round(Importe * IVA / 100, 2);
+        public decimal CuotaIVA => Math.Round(BaseImponible * IvaPercentSnapshot / 100, 2);
 
         [NotMapped]
-        public decimal CuotaRecargo => Math.Round(Importe * RecargoEquivalencia / 100, 2);
+        public decimal CuotaRecargo => Math.Round(BaseImponible * RePercentSnapshot / 100, 2);
 
         [NotMapped]
-        public decimal TotalLinea => Importe + CuotaIVA + CuotaRecargo;
+        public decimal TotalLinea => BaseImponible + CuotaIVA + CuotaRecargo;
 
         // Relaciones
         [ForeignKey("FacturaId")]
@@ -57,5 +78,8 @@ namespace API.Data.Entities
 
         [ForeignKey("ProductoId")]
         public Producto? Producto { get; set; }
+
+        [ForeignKey("TipoImpuestoId")]
+        public TipoImpuesto? TipoImpuesto { get; set; }
     }
 }

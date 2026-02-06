@@ -26,9 +26,8 @@ namespace FacturacionVERIFACTU.API.DTOs
         public List<LineaFacturaDto> Lineas { get; set; } = new();
 
         //VERIFACTU
-        [Required]
         [MaxLength(2)]
-        public string TipoFacturaVERIFACTU { get; set; } = "F1"; //F1,F2,F3
+        public string? TipoFacturaVERIFACTU { get; set; }  //F1,F2,F3 calculada desde backend
 
         //Solo si es rectificativa
         [MaxLength(50)]
@@ -140,6 +139,7 @@ namespace FacturacionVERIFACTU.API.DTOs
 
         [Range(0, 100)]
         public decimal? RecargoEquivalencia { get; set; }
+        public int? TipoImpuestoId { get; set; }
     }
 
     /// <summary>
@@ -162,6 +162,8 @@ namespace FacturacionVERIFACTU.API.DTOs
         public decimal ImporteIva { get; set; }
         public decimal ImporteRecargo { get; set; }
         public decimal Importe { get; set; }
+        public decimal TotalLinea {  get; set; }
+        public int? TipoImpuestoId { get;set; }
     }
 
     /// <summary>
@@ -221,10 +223,7 @@ namespace FacturacionVERIFACTU.API.DTOs
         [MaxLength(500)]
         public string? Observaciones { get; set; }
 
-        // VERIFACTU
-        [Required]
-        [MaxLength(2)]
-        public string TipoFacturaVERIFACTU { get; set; } = "F1";
+       
 
         /// <summary>
         /// IDs de líneas del presupuesto a incluir (si null, todas)
@@ -235,6 +234,31 @@ namespace FacturacionVERIFACTU.API.DTOs
         /// Permite modificar cantidades/precios de líneas específicas
         /// </summary>
         public List<ModificarLineaDto>? LineasModificadas { get; set; }
+
+        [Range(0, 100)]
+        public decimal? PorcentajeRetencion { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para convertir varios presupuestos en factura agrupada
+    /// </summary>
+    public class ConvertirPresupuestosAFacturaDto
+    {
+        [Required(ErrorMessage = "Debe seleccionar al menos un presupuesto")]
+        [MinLength(1, ErrorMessage = "Debe seleccionar al menos un presupuesto")]
+        public List<int> PresupuestosIds { get; set; } = new();
+
+        [Required(ErrorMessage = "La serie es obligatoria")]
+        public int SerieId { get; set; }
+
+        public DateTime? FechaEmision { get; set; }
+
+        [MaxLength(500)]
+        public string? Observaciones { get; set; }
+
+        [Required]
+        [MaxLength(2)]
+        public string TipoFacturaVERIFACTU { get; set; } = "F1";
 
         [Range(0, 100)]
         public decimal? PorcentajeRetencion { get; set; }
@@ -270,10 +294,7 @@ namespace FacturacionVERIFACTU.API.DTOs
         [MaxLength(500)]
         public string? Observaciones { get; set; }
 
-        // VERIFACTU
-        [Required]
-        [MaxLength(2)]
-        public string TipoFacturaVERIFACTU { get; set; } = "F1";
+       
 
         [Range(0, 100)]
         public decimal? PorcentajeRetencion { get; set; }
