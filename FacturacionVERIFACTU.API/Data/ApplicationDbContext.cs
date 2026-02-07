@@ -161,7 +161,7 @@ namespace FacturacionVERIFACTU.API.Data
             //Tenant -> TiposImpuesto
             modelBuilder.Entity<TipoImpuesto>()
                 .HasOne(t => t.Tenant)
-                .WithMany(tenant => tenant.TiposImpuesto)
+                .WithMany(tenant => tenant.TipoImpuestos)
                 .HasForeignKey(t => t.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
 

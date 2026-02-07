@@ -128,45 +128,25 @@ namespace FacturacionVERIFACTU.API.Data.Services
             };
 
             // ⭐ AGREGAR LÍNEAS CON CONFIGURACIÓN FISCAL AUTOMÁTICA
+            var tiposImpuestoActivos = await ObtenerTiposImpuestoActivosAsync(tenantId);
             int orden = 1;
             foreach (var lineaDto in dto.Lineas)
             {
-                decimal iva = lineaDto.IVA ?? 0;
-                decimal recargo = 0;
-
-                // Si la línea tiene producto, obtener su configuración fiscal
+                Producto? producto = null;
                 if (lineaDto.ProductoId.HasValue && productosDict.ContainsKey(lineaDto.ProductoId.Value))
                 {
-                    var producto = productosDict[lineaDto.ProductoId.Value];
-
-                    // ⭐ APLICAR IVA DEL PRODUCTO si no se especificó
-                    if (lineaDto.IVA == 0 || !lineaDto.IVA.HasValue)
-                    {
-                        iva = producto.IVADefecto;
-                    }
-
-                    // ⭐ APLICAR RECARGO SOLO SI EL CLIENTE LO REQUIERE
-                    if (cliente.RegimenRecargoEquivalencia)
-                    {
-                        // Si se especificó recargo en DTO, usarlo; sino usar el del producto
-                        recargo = lineaDto.RecargoEquivalencia
-                            ?? producto.RecargoEquivalenciaDefecto ?? 0M;
-
-                        _logger.LogInformation(
-                            "Aplicado recargo equivalencia {Recargo}% a producto {Producto} para cliente {Cliente}",
-                            recargo, producto.Descripcion, cliente.Nombre);
-                    }
+                    producto = productosDict[lineaDto.ProductoId.Value];
                 }
-                else
-                {
-                    // Línea sin producto: usar valores del DTO o calcular
-                    iva = lineaDto.IVA ?? 21m;
 
-                    if (cliente.RegimenRecargoEquivalencia)
-                    {
-                        recargo = lineaDto.RecargoEquivalencia
-                            ?? FiscalConfiguracionService.CalcularRecargoEquivalencia(iva);
-                    }
+                var (tipoImpuesto, iva, recargo) = ResolverTipoImpuesto(
+                    tiposImpuestoActivos,
+                    lineaDto.TipoImpuestoId,
+                    producto,
+                    lineaDto.IVA);
+
+                if (!cliente.RegimenRecargoEquivalencia)
+                {
+                    recargo = 0m;
                 }
 
                 var linea = new LineaFactura
@@ -177,10 +157,14 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     PrecioUnitario = lineaDto.PrecioUnitario,
                     IVA = iva,                              // ⭐ APLICADO AUTOMÁTICAMENTE
                     RecargoEquivalencia = recargo,          // ⭐ APLICADO AUTOMÁTICAMENTE
+                    IvaPercentSnapshot = iva,
+                    RePercentSnapshot = recargo,
+                    TipoImpuestoId = tipoImpuesto?.Id,
                     ProductoId = lineaDto.ProductoId,
                     Importe = Math.Round(lineaDto.Cantidad * lineaDto.PrecioUnitario, 2)
                 };
 
+                CalcularLineaFactura(linea);
                 factura.Lineas.Add(linea);
             }
 
@@ -343,41 +327,25 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 _context.LineasFacturas.Remove(lineaAEliminar);
             }
 
+            var tiposImpuestoActivos = await ObtenerTiposImpuestoActivosAsync(tenantId);
             int orden = 1;
             foreach (var lineaDto in dto.Lineas)
             {
-                // ⭐ CALCULAR IVA Y RECARGO AUTOMÁTICAMENTE
-                decimal iva = lineaDto.IVA ?? 21m;
-                decimal recargo = 0;
-
-                // Si tiene producto, usar su configuración
+                Producto? producto = null;
                 if (lineaDto.ProductoId.HasValue && productosDict.ContainsKey(lineaDto.ProductoId.Value))
                 {
-                    var producto = productosDict[lineaDto.ProductoId.Value];
-
-                    // Si no se especificó IVA, usar el del producto
-                    if (!lineaDto.IVA.HasValue || lineaDto.IVA == 0)
-                    {
-                        iva = producto.IVADefecto;
-                    }
-
-                    // ⭐ APLICAR RECARGO SEGÚN CONFIGURACIÓN DEL CLIENTE
-                    if (clienteActual.RegimenRecargoEquivalencia)
-                    {
-                        recargo = lineaDto.RecargoEquivalencia
-                            ?? producto.RecargoEquivalenciaDefecto ?? 0m;
-                    }
+                    producto = productosDict[lineaDto.ProductoId.Value];
                 }
-                else
-                {
-                    // Sin producto: usar valores del DTO o calcular
-                    iva = lineaDto.IVA ?? 21m;
 
-                    if (clienteActual.RegimenRecargoEquivalencia)
-                    {
-                        recargo = lineaDto.RecargoEquivalencia
-                            ?? FiscalConfiguracionService.CalcularRecargoEquivalencia(iva);
-                    }
+                var (tipoImpuesto, iva, recargo) = ResolverTipoImpuesto(
+                    tiposImpuestoActivos,
+                    lineaDto.TipoImpuestoId,
+                    producto,
+                    lineaDto.IVA);
+
+                if (!clienteActual.RegimenRecargoEquivalencia)
+                {
+                    recargo = 0m;
                 }
 
                 if (lineaDto.Id.HasValue && lineaDto.Id.Value > 0)
@@ -394,8 +362,12 @@ namespace FacturacionVERIFACTU.API.Data.Services
                         lineaExistente.PrecioUnitario = lineaDto.PrecioUnitario;
                         lineaExistente.IVA = iva;                          // ⭐ RECALCULADO
                         lineaExistente.RecargoEquivalencia = recargo;       // ⭐ RECALCULADO
+                        lineaExistente.IvaPercentSnapshot = iva;
+                        lineaExistente.RePercentSnapshot = recargo;
+                        lineaExistente.TipoImpuestoId = tipoImpuesto?.Id;
                         lineaExistente.ProductoId = lineaDto.ProductoId;
                         lineaExistente.Importe = Math.Round(lineaDto.Cantidad * lineaDto.PrecioUnitario, 2);
+                        CalcularLineaFactura(lineaExistente);
                     }
                 }
                 else
@@ -410,10 +382,14 @@ namespace FacturacionVERIFACTU.API.Data.Services
                         PrecioUnitario = lineaDto.PrecioUnitario,
                         IVA = iva,                                  // ⭐ CALCULADO
                         RecargoEquivalencia = recargo,              // ⭐ CALCULADO
+                        IvaPercentSnapshot = iva,
+                        RePercentSnapshot = recargo,
+                        TipoImpuestoId = tipoImpuesto?.Id,
                         ProductoId = lineaDto.ProductoId,
                         Importe = Math.Round(lineaDto.Cantidad * lineaDto.PrecioUnitario, 2)
                     };
 
+                    CalcularLineaFactura(lineaNueva);
                     factura.Lineas.Add(lineaNueva);
                 }
             }
@@ -703,7 +679,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
             if (productosIds.Any())
             {
                 var productos = await _context.Productos
-                    .Where(p => productosIds.Contains(p.Id))
+                    .Where(p => productosIds.Contains(p.Id) && p.TenantId == tenantId)
                     .ToListAsync();
 
                 productosDict = productos.ToDictionary(p => p.Id);
@@ -729,27 +705,10 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 }
 
                 // ⭐ MANTENER CONFIGURACIÓN FISCAL DEL PRESUPUESTO
-                // (El presupuesto ya tenía la configuración correcta)
-                decimal iva = lineaPresupuesto.IVA;
-                decimal recargo = lineaPresupuesto.RecargoEquivalencia;
-
-                // ⭐ PERO SI EL CLIENTE CAMBIÓ SU RÉGIMEN, RECALCULAR
-                // (Esto puede pasar si el cliente actualizó su configuración entre presupuesto y factura)
-                if (lineaPresupuesto.ProductoId.HasValue &&
-                    productosDict.ContainsKey(lineaPresupuesto.ProductoId.Value))
-                {
-                    var producto = productosDict[lineaPresupuesto.ProductoId.Value];
-
-                    // Solo recalcular recargo si el cliente AHORA está en régimen y antes NO lo estaba
-                    if (cliente.RegimenRecargoEquivalencia && lineaPresupuesto.RecargoEquivalencia == 0)
-                    {
-                        recargo = producto.RecargoEquivalenciaDefecto ?? 0m;
-
-                        _logger.LogInformation(
-                            "Cliente {Cliente} ahora en régimen recargo. Aplicando {Recargo}% a línea",
-                            cliente.Nombre, recargo);
-                    }
-                }
+                decimal iva = lineaPresupuesto.IvaPercentSnapshot;
+                decimal recargo = cliente.RegimenRecargoEquivalencia
+                    ? lineaPresupuesto.RePercentSnapshot
+                    : 0m;
 
                 var lineaFactura = new LineaFactura
                 {
@@ -759,12 +718,14 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     PrecioUnitario = precioUnitario,
                     IVA = iva,
                     RecargoEquivalencia = recargo, // ⭐ MANTENIDO DEL PRESUPUESTO
+                    IvaPercentSnapshot = iva,
+                    RePercentSnapshot = recargo,
+                    TipoImpuestoId = lineaPresupuesto.TipoImpuestoId,
                     ProductoId = lineaPresupuesto.ProductoId,
-                    Importe = Math.Round(
-                        (cantidad * precioUnitario)
-                        - ((cantidad * precioUnitario) * (lineaPresupuesto.PorcentajeDescuento / 100m)), 2)
+                    Importe = Math.Round(cantidad * precioUnitario, 2)
                 };
 
+                CalcularLineaFactura(lineaFactura);
                 factura.Lineas.Add(lineaFactura);
             }
 
@@ -890,19 +851,12 @@ namespace FacturacionVERIFACTU.API.Data.Services
             }
 
             var orden = 1;
-            foreach(var lineaPresupuesto in presupuestos.SelectMany(p => p.Lineas).OrderBy(l => l.Orden))
+            foreach (var lineaPresupuesto in presupuestos.SelectMany(p => p.Lineas).OrderBy(l => l.Orden))
             {
-                decimal iva = lineaPresupuesto.IVA;
+                decimal iva = lineaPresupuesto.IvaPercentSnapshot;
                 decimal recargo = lineaPresupuesto.RecargoEquivalencia;
 
-                if (lineaPresupuesto.ProductoId.HasValue &&
-                    productosDict.TryGetValue(lineaPresupuesto.ProductoId.Value, out var producto))
-                {
-                    if(cliente.RegimenRecargoEquivalencia && lineaPresupuesto.RecargoEquivalencia == 0)
-                    {
-                        recargo = producto.RecargoEquivalenciaDefecto ?? 0m;
-                    }
-                }
+             
 
                 var lineaFactura = new LineaFactura
                 {
@@ -911,7 +865,8 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     Cantidad = lineaPresupuesto.Cantidad,
                     PrecioUnitario = lineaPresupuesto.PrecioUnitario,
                     IVA = iva,
-                    RecargoEquivalencia = recargo,
+                    RePercentSnapshot = recargo,
+                    TipoImpuestoId = lineaPresupuesto.TipoImpuestoId,
                     ProductoId = lineaPresupuesto.ProductoId,
                     Importe = Math.Round(lineaPresupuesto.Cantidad * lineaPresupuesto.PrecioUnitario, 2)
                 };
@@ -935,7 +890,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
             _context.Facturas.Add(factura);
             await _context.SaveChangesAsync();
 
-            foreach(var presupuesto in presupuestos)
+            foreach (var presupuesto in presupuestos)
             {
                 presupuesto.FacturaId = factura.Id;
                 presupuesto.Estado = "Facturado";
@@ -1038,7 +993,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
             if (productosIds.Any())
             {
                 var productos = await _context.Productos
-                    .Where(p => productosIds.Contains(p.Id))
+                    .Where(p => productosIds.Contains(p.Id) && p.TenantId == tenantId)
                     .ToListAsync();
 
                 productosDict = productos.ToDictionary(p => p.Id);
@@ -1051,25 +1006,10 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 foreach (var lineaAlbaran in albaran.Lineas.OrderBy(l => l.Orden))
                 {
                     // ⭐ MANTENER CONFIGURACIÓN FISCAL DEL ALBARÁN
-                    decimal iva = lineaAlbaran.IVA;
-                    decimal recargo = lineaAlbaran.RecargoEquivalencia;
-
-                    // ⭐ VERIFICAR SI EL CLIENTE CAMBIÓ SU RÉGIMEN
-                    if (lineaAlbaran.ProductoId.HasValue &&
-                        productosDict.ContainsKey(lineaAlbaran.ProductoId.Value))
-                    {
-                        var producto = productosDict[lineaAlbaran.ProductoId.Value];
-
-                        // Si cliente ahora en recargo y albaran no lo tenía
-                        if (cliente.RegimenRecargoEquivalencia && lineaAlbaran.RecargoEquivalencia == 0)
-                        {
-                            recargo = producto.RecargoEquivalenciaDefecto ?? 0m;
-
-                            _logger.LogInformation(
-                                "Cliente {Cliente} ahora en régimen recargo. Aplicando {Recargo}%",
-                                cliente.Nombre, recargo);
-                        }
-                    }
+                    decimal iva = lineaAlbaran.IvaPercentSnapshot;
+                    decimal recargo = cliente.RegimenRecargoEquivalencia
+                        ? lineaAlbaran.RePercentSnapshot
+                        : 0m;
 
                     var lineaFactura = new LineaFactura
                     {
@@ -1079,10 +1019,14 @@ namespace FacturacionVERIFACTU.API.Data.Services
                         PrecioUnitario = lineaAlbaran.PrecioUnitario,
                         IVA = iva,
                         RecargoEquivalencia = recargo, // ⭐ MANTENIDO DEL ALBARÁN
+                        IvaPercentSnapshot = iva,
+                        RePercentSnapshot = recargo,
+                        TipoImpuestoId = lineaAlbaran.TipoImpuestoId,
                         ProductoId = lineaAlbaran.ProductoId,
                         Importe = Math.Round(lineaAlbaran.Cantidad * lineaAlbaran.PrecioUnitario, 2)
                     };
 
+                    CalcularLineaFactura(lineaFactura);
                     factura.Lineas.Add(lineaFactura);
                 }
             }
@@ -1146,25 +1090,83 @@ namespace FacturacionVERIFACTU.API.Data.Services
         private void CalcularTotalesFactura(Factura factura)
         {
             // Base Imponible = Σ(Cantidad × Precio) de todas las líneas
-            factura.BaseImponible = factura.Lineas.Sum(l => l.Importe);
+            factura.BaseImponible = factura.Lineas.Sum(l => l.BaseImponible);
 
             // Total IVA = Σ(Base línea × IVA% línea)
             factura.TotalIVA = Math.Round(
-                factura.Lineas.Sum(l => l.Importe * l.IVA / 100), 2);
+                factura.Lineas.Sum(l => l.ImporteIva), 2);
 
             // Total Recargo = Σ(Base línea × Recargo% línea)
             factura.TotalRecargo = Math.Round(
-                factura.Lineas.Sum(l => l.Importe * l.RecargoEquivalencia / 100), 2);
+                factura.Lineas.Sum(l => l.ImporteRecargo), 2);
 
             // Cuota Retención = Base Imponible Total × Retención%
             factura.CuotaRetencion = Math.Round(
-                factura.BaseImponible * (factura.PorcentajeRetencion ??0m) / 100, 2);
+                factura.BaseImponible * (factura.PorcentajeRetencion ?? 0m) / 100, 2);
 
             // TOTAL FACTURA = Base + IVA + Recargo - Retención
             factura.Total = factura.BaseImponible
                           + factura.TotalIVA
                           + factura.TotalRecargo
-                          - factura.CuotaRetencion ??0m;
+                          - factura.CuotaRetencion ?? 0m;
+        }
+
+        private void CalcularLineaFactura(LineaFactura linea)
+        {
+            var subtotal = linea.Cantidad * linea.PrecioUnitario;
+            linea.BaseImponible = subtotal;
+            linea.ImporteIva = subtotal * (linea.IvaPercentSnapshot / 100);
+            linea.ImporteRecargo = subtotal * (linea.RePercentSnapshot / 100);
+            linea.TotalLineaSnapshot = subtotal + linea.ImporteIva + linea.ImporteRecargo;
+            linea.Importe = subtotal;
+        }
+
+        private async Task<List<TipoImpuesto>> ObtenerTiposImpuestoActivosAsync(int tenantId)
+        {
+            return await _context.TiposImpuesto
+                .Where(t => t.TenantId == tenantId && t.Activo)
+                .ToListAsync();
+        }
+
+        private (TipoImpuesto? TipoImpuesto, decimal Iva, decimal Recargo) ResolverTipoImpuesto(
+            List<TipoImpuesto> tiposImpuestoActivos,
+            int? tipoImpuestoId,
+            Producto? producto,
+            decimal? ivaOverride)
+        {
+            TipoImpuesto? tipoImpuesto = null;
+
+            if (tipoImpuestoId.HasValue)
+            {
+                tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.Id == tipoImpuestoId.Value);
+                if (tipoImpuesto == null)
+                    throw new InvalidOperationException("Tipo de impuesto no válido o inactivo");
+            }
+            else if (producto?.TipoImpuestoId.HasValue == true)
+            {
+                tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.Id == producto.TipoImpuestoId.Value);
+                if (tipoImpuesto == null)
+                    throw new InvalidOperationException("Tipo de impuesto del producto no válido o inactivo");
+            }
+            else if (ivaOverride.HasValue)
+            {
+                tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.PorcentajeIva == ivaOverride.Value);
+            }
+            else if (producto?.IVA > 0)
+            {
+                tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.PorcentajeIva == producto.IVA);
+            }
+
+            tipoImpuesto ??= tiposImpuestoActivos.FirstOrDefault(t => t.Nombre == "General");
+
+            var iva = tipoImpuesto?.PorcentajeIva
+                ?? ivaOverride
+                ?? producto?.IVA
+                ?? 0m;
+
+            var recargo = tipoImpuesto?.PorcentajeRecargo ?? 0m;
+
+            return (tipoImpuesto, iva, recargo);
         }
 
         private static readonly HashSet<string> TiposFacturaVerifactuPermitidos = new(StringComparer.OrdinalIgnoreCase)
@@ -1180,7 +1182,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
 
         private static string DeterminarTipoFacturaVerifactu(Cliente cliente)
         {
-            if(cliente == null)
+            if (cliente == null)
             {
                 return "F2";
             }
@@ -1193,7 +1195,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
 
         private static void ValidarTipoFacturaVerifactu(string? tipoFactura)
         {
-            if(!string.IsNullOrWhiteSpace(tipoFactura) || !TiposFacturaVerifactuPermitidos.Contains(tipoFactura))
+            if (!string.IsNullOrWhiteSpace(tipoFactura) || !TiposFacturaVerifactuPermitidos.Contains(tipoFactura))
             {
                 throw new InvalidOperationException(
                    $"TipoFacturaVERIFACTU inválido: {tipoFactura ?? "<vacío>"}.");
@@ -1338,12 +1340,14 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     PrecioUnitario = l.PrecioUnitario,
                     PorcentajeDescuento = 0,
                     ImporteDescuento = 0,
-                    BaseImponible = l.Importe,
-                    IVA = l.IVA,
-                    RecargoEquivalencia = l.RecargoEquivalencia, // ⭐ NUEVO
-                    ImporteIva = Math.Round(l.Importe * l.IVA / 100, 2),
-                    ImporteRecargo = Math.Round(l.Importe * l.RecargoEquivalencia / 100, 2), // ⭐ NUEVO
-                    Importe = l.Importe
+                    BaseImponible = l.BaseImponible,
+                    IVA = l.IvaPercentSnapshot,
+                    RecargoEquivalencia = l.RePercentSnapshot, // ⭐ NUEVO
+                    ImporteIva = l.ImporteIva,
+                    ImporteRecargo = l.ImporteRecargo, // ⭐ NUEVO
+                    Importe = l.Importe,
+                    TotalLinea = l.TotalLineaSnapshot,
+                    TipoImpuestoId = l.TipoImpuestoId
                 }).OrderBy(l => l.Orden).ToList(),
 
                 FechaCreaccion = DateTime.UtcNow,

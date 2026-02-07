@@ -138,7 +138,7 @@ namespace FacturacionVERIFACTU.API.DTOs
         public string? ProductoCodigo { get; set; }
         public decimal RecargoEquivalencia { get; set; }
         public decimal TotalLinea {  get; set; }
-        public int? TipoImpuestoId { get; set; }º
+        public int? TipoImpuestoId { get; set; }
 
     }
 

@@ -8,7 +8,7 @@
         public string Codigo { get; set; } = string.Empty;
         public string Descripcion { get; set; } = string.Empty;
         public decimal PrecioUnitario { get; set; }
-        public decimal IVA { get; set; }
+        public decimal? IVA { get; set; }
         public string? Unidad { get; set; } = "Ud"; // Unidad de medida
         public bool Activo { get; set; } = false;
 

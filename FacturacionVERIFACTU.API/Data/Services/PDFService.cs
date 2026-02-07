@@ -244,9 +244,9 @@ namespace FacturacionVERIFACTU.API.Data.Services
                         table.Cell().Background(bgColor).BorderBottom(0.5f).BorderColor("#e2e8f0").Padding(5).AlignRight()
                             .Text(linea.PrecioUnitario.ToString()).FontSize(9);
                         table.Cell().Background(bgColor).BorderBottom(0.5f).BorderColor("#e2e8f0").Padding(5).AlignRight()
-                            .Text($"{linea.IVA:N2}%").FontSize(9);
+                            .Text($"{linea.IvaPercentSnapshot:N2}%").FontSize(9);
                         table.Cell().Background(bgColor).BorderBottom(0.5f).BorderColor("#e2e8f0").Padding(5).AlignRight()
-                            .Text($"{linea.RecargoEquivalencia:N2}%").FontSize(9);
+                            .Text($"{linea.RePercentSnapshot:N2}%").FontSize(9);
                         table.Cell().Background(bgColor).BorderBottom(0.5f).BorderColor("#e2e8f0").Padding(5).AlignRight()
                             .Text(linea.TotalLinea.ToString("C")).FontSize(9);
 
@@ -609,9 +609,9 @@ namespace FacturacionVERIFACTU.API.Data.Services
                         table.Cell().Background(bgColor).BorderBottom(0.5f).BorderColor("#fecaca").Padding(5).AlignRight()
                             .Text(linea.PrecioUnitario.ToString()).FontSize(9);
                         table.Cell().Background(bgColor).BorderBottom(0.5f).BorderColor("#fecaca").Padding(5).AlignRight()
-                            .Text($"{linea.IVA:N2}%").FontSize(9);
+                            .Text($"{linea.IvaPercentSnapshot:N2}%").FontSize(9);
                         table.Cell().Background(bgColor).BorderBottom(0.5f).BorderColor("#fecaca").Padding(5).AlignRight()
-                            .Text($"{linea.RecargoEquivalencia:N2}%").FontSize(9);
+                            .Text($"{linea.RePercentSnapshot:N2}%").FontSize(9);
                         table.Cell().Background(bgColor).BorderBottom(0.5f).BorderColor("#fecaca").Padding(5).AlignRight()
                             .Text(linea.TotalLinea.ToString("C")).FontSize(9);
 

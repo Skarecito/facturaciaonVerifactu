@@ -52,6 +52,9 @@ namespace FacturacionVERIFACTU.API.Data.Entities
         [ForeignKey("TenantId")]
         public Tenant Tenant { get; set; } = null;
 
+        [ForeignKey("TipoImpuestoId")]
+        public TipoImpuesto? TipoImpuesto { get; set; }
+
         public ICollection<LineaPresupuesto> LineasPresupuesto { get; set; } = new List<LineaPresupuesto>();
         public ICollection<LineaAlbaran> LineasAlbaran { get; set; } = new List<LineaAlbaran>();
         public ICollection<LineaFactura> LineasFactura { get; set; } = new List<LineaFactura>();

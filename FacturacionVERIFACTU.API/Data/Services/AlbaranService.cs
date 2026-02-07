@@ -14,10 +14,10 @@ namespace FacturacionVERIFACTU.API.Data.Services
     {
         Task<AlbaranResponseDto> CrearAlbaranAsync(int tenantId, AlbaranCreateDto dto);
         Task<AlbaranResponseDto> ActualizarAlbaranAsync(int tenantId, int id, AlbaranUpdateDto dto);
-        Task<AlbaranResponseDto>CambiarEstadoAsync(int tenantId, int id, CambiarEstadoAlbaranDto dto);
+        Task<AlbaranResponseDto> CambiarEstadoAsync(int tenantId, int id, CambiarEstadoAlbaranDto dto);
         Task<AlbaranResponseDto> ObtenerPorIdAsync(int tenantId, int id);
         Task<List<AlbaranResponseDto>> ObtenerTodosAsync(int tenantId, string? estado = null);
-        Task<bool>EliminarAsync (int tenantId, int id);
+        Task<bool> EliminarAsync(int tenantId, int id);
         Task<AlbaranResponseDto> ConvertirDesdePresupuesto(int tenantId, int presupuestoId, ConvertirPresupuestoDto dto);
     }
 
@@ -36,16 +36,16 @@ namespace FacturacionVERIFACTU.API.Data.Services
 
         public async Task<AlbaranResponseDto> CrearAlbaranAsync(int tenantId, AlbaranCreateDto dto)
         {
-            //Validar si el cliente exite
+            //Validar si el cliente existe
             var cliente = await _context.Clientes
-        .FirstOrDefaultAsync(c => c.Id == dto.ClienteId && c.TenantId == tenantId);
+                .FirstOrDefaultAsync(c => c.Id == dto.ClienteId && c.TenantId == tenantId);
 
             if (cliente == null)
                 throw new InvalidOperationException($"Cliente {dto.ClienteId} no encontrado");
 
             //Validar serie
             var serie = await _context.SeriesNumeracion
-                .FirstOrDefaultAsync(s=> s.Id == dto.SerieId && s.TenantId == tenantId);
+                .FirstOrDefaultAsync(s => s.Id == dto.SerieId && s.TenantId == tenantId);
             if (serie == null)
                 throw new InvalidOperationException($"Serie {dto.SerieId} no encontrada");
 
@@ -71,14 +71,31 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 FechaCreacion = DateTime.UtcNow
             };
 
-            //Agregar lineas
-            var productos = await ObtenerProductosAsync(dto.Lineas.Select(l => l.ProductoId));
+            //Agregar lineas con sistema de tipos de impuesto
+            var productosDict = await ObtenerProductosAsync(
+                dto.Lineas.Where(l => l.ProductoId.HasValue).Select(l => l.ProductoId!.Value),
+                tenantId);
+            var tiposImpuestoActivos = await ObtenerTiposImpuestoActivosAsync(tenantId);
+
             int orden = 1;
             foreach (var lineaDto in dto.Lineas)
             {
-                productos.TryGetValue(lineaDto.ProductoId ?? 0, out var producto);
-                decimal iva = lineaDto.IVA ?? producto?.IVADefecto ?? 21m;
-                decimal recargo = CalcularRecargoEquivalencia(cliente, iva, lineaDto.RecargoEquivalencia, producto);
+                Producto? producto = null;
+                if (lineaDto.ProductoId.HasValue && productosDict.ContainsKey(lineaDto.ProductoId.Value))
+                {
+                    producto = productosDict[lineaDto.ProductoId.Value];
+                }
+
+                var (tipoImpuesto, iva, recargo) = ResolverTipoImpuesto(
+                    tiposImpuestoActivos,
+                    lineaDto.TipoImpuestoId,
+                    producto,
+                    lineaDto.IVA);
+
+                if (!cliente.RegimenRecargoEquivalencia)
+                {
+                    recargo = 0m;
+                }
 
                 var linea = new LineaAlbaran
                 {
@@ -88,9 +105,11 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     PrecioUnitario = lineaDto.PrecioUnitario,
                     PorcentajeDescuento = lineaDto.PorcentajeDescuento,
                     IVA = iva,
-                    RecargoEquivalencia = recargo, // ⭐ APLICADO
+                    RecargoEquivalencia = recargo,
+                    IvaPercentSnapshot = iva,
+                    RePercentSnapshot = recargo,
+                    TipoImpuestoId = tipoImpuesto?.Id,
                     ProductoId = lineaDto.ProductoId,
-               
                 };
 
                 CalcularLinea(linea);
@@ -106,32 +125,41 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 numeroCompleto, tenantId);
 
             return await MapearAResponseDto(albaran);
-            
-
         }
 
-        public async Task<AlbaranResponseDto> ActualizarAlbaranAsync( int tenantId, int id, AlbaranUpdateDto dto)
+        public async Task<AlbaranResponseDto> ActualizarAlbaranAsync(int tenantId, int id, AlbaranUpdateDto dto)
         {
             var albaran = await _context.Albaranes
-                .Include(a=> a.Lineas)
-                .FirstOrDefaultAsync(a=> a.Id == id && a.TenantId == tenantId);
+                .Include(a => a.Lineas)
+                .Include(a => a.Cliente)
+                .FirstOrDefaultAsync(a => a.Id == id && a.TenantId == tenantId);
 
             if (albaran == null)
                 throw new InvalidOperationException($"Albaran {id} no encontrado");
 
             //Solo se pueden editar albaranes en estado pendiente
             if (albaran.Estado != "Pendiente")
-                throw new InvalidOperationException($"No se puede modificar un albarana en estado {albaran.Estado}");
+                throw new InvalidOperationException($"No se puede modificar un albaran en estado {albaran.Estado}");
 
-            //Validar cliente
-            var cliente = await _context.Clientes
-                .FirstOrDefaultAsync(c => c.Id == dto.ClienteId && c.TenantId == tenantId);
+            // ⭐ SI SE CAMBIÓ EL CLIENTE, RECARGAR
+            Cliente clienteActual = albaran.Cliente;
 
-            if (cliente == null)
-                throw new InvalidOperationException($"Cliente {dto.ClienteId} no encontrado");
+            if (dto.ClienteId != albaran.ClienteId)
+            {
+                clienteActual = await _context.Clientes
+                    .FirstOrDefaultAsync(c => c.Id == dto.ClienteId && c.TenantId == tenantId);
+
+                if (clienteActual == null)
+                    throw new InvalidOperationException($"Cliente {dto.ClienteId} no encontrado");
+
+                albaran.ClienteId = dto.ClienteId;
+
+                _logger.LogInformation(
+                    "Albaran {Id}: Cliente cambiado a {Cliente}",
+                    id, clienteActual.Nombre);
+            }
 
             //Actualizar datos
-            albaran.ClienteId = dto.ClienteId;
             albaran.FechaEmision = (dto.FechaEmision ?? albaran.FechaEmision).ToUniversalTime();
             albaran.FechaEntrega = dto.FechaEntrega?.ToUniversalTime();
             albaran.DireccionEntrega = dto.DireccionEntrega;
@@ -148,34 +176,55 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 .Where(l => !lineasDtoIds.Contains(l.Id))
                 .ToList();
 
-            foreach(var lineaAEliminar in lineasAEliminar)
+            foreach (var lineaAEliminar in lineasAEliminar)
             {
                 albaran.Lineas.Remove(lineaAEliminar);
                 _context.LineasAlbaranes.Remove(lineaAEliminar);
             }
 
-            var productos = await ObtenerProductosAsync(dto.Lineas.Select(l => l.ProductoId));
+            var productosDict = await ObtenerProductosAsync(
+                dto.Lineas.Where(l => l.ProductoId.HasValue).Select(l => l.ProductoId!.Value),
+                tenantId);
+            var tiposImpuestoActivos = await ObtenerTiposImpuestoActivosAsync(tenantId);
+
             int orden = 1;
-            foreach(var lineaDto in dto.Lineas)
+            foreach (var lineaDto in dto.Lineas)
             {
-                if(lineaDto.Id.HasValue && lineaDto.Id.Value > 0)
+                Producto? producto = null;
+                if (lineaDto.ProductoId.HasValue && productosDict.ContainsKey(lineaDto.ProductoId.Value))
                 {
-                    //Actualizar linea existene
+                    producto = productosDict[lineaDto.ProductoId.Value];
+                }
+
+                var (tipoImpuesto, iva, recargo) = ResolverTipoImpuesto(
+                    tiposImpuestoActivos,
+                    lineaDto.TipoImpuestoId,
+                    producto,
+                    lineaDto.IVA);
+
+                if (!clienteActual.RegimenRecargoEquivalencia)
+                {
+                    recargo = 0m;
+                }
+
+                if (lineaDto.Id.HasValue && lineaDto.Id.Value > 0)
+                {
+                    //Actualizar linea existente
                     var lineaExistente = albaran.Lineas
                         .FirstOrDefault(l => l.Id == lineaDto.Id.Value);
 
-                    if(lineaExistente!= null)
+                    if (lineaExistente != null)
                     {
-                        productos.TryGetValue(lineaDto.ProductoId ?? 0, out var producto);
-                        decimal iva = lineaDto.IVA ?? producto?.IVADefecto ?? lineaExistente.IVA;
-                        decimal recargo = CalcularRecargoEquivalencia(cliente, iva, lineaDto.RecargoEquivalencia, producto);
-
                         lineaExistente.Orden = orden++;
                         lineaExistente.Descripcion = lineaDto.Descripcion;
                         lineaExistente.Cantidad = lineaDto.Cantidad;
                         lineaExistente.PrecioUnitario = lineaDto.PrecioUnitario;
                         lineaExistente.PorcentajeDescuento = lineaDto.PorcentajeDescuento;
                         lineaExistente.IVA = iva;
+                        lineaExistente.RecargoEquivalencia = recargo;
+                        lineaExistente.IvaPercentSnapshot = iva;
+                        lineaExistente.RePercentSnapshot = recargo;
+                        lineaExistente.TipoImpuestoId = tipoImpuesto?.Id;
                         lineaExistente.ProductoId = lineaDto.ProductoId;
 
                         CalcularLinea(lineaExistente);
@@ -183,10 +232,6 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 }
                 else
                 {
-                    productos.TryGetValue(lineaDto.ProductoId ?? 0, out var producto);
-                    decimal iva = lineaDto.IVA ?? producto?.IVADefecto ?? 21m;
-                    decimal recargo = CalcularRecargoEquivalencia(cliente, iva, lineaDto.RecargoEquivalencia, producto);
-
                     //Crear linea nueva
                     var lineaNueva = new LineaAlbaran
                     {
@@ -195,10 +240,13 @@ namespace FacturacionVERIFACTU.API.Data.Services
                         Descripcion = lineaDto.Descripcion,
                         Cantidad = lineaDto.Cantidad,
                         PrecioUnitario = lineaDto.PrecioUnitario,
-                        PorcentajeDescuento=lineaDto.PorcentajeDescuento,
+                        PorcentajeDescuento = lineaDto.PorcentajeDescuento,
                         IVA = iva,
                         RecargoEquivalencia = recargo,
-                        ProductoId= lineaDto.ProductoId
+                        IvaPercentSnapshot = iva,
+                        RePercentSnapshot = recargo,
+                        TipoImpuestoId = tipoImpuesto?.Id,
+                        ProductoId = lineaDto.ProductoId
                     };
 
                     CalcularLinea(lineaNueva);
@@ -220,14 +268,14 @@ namespace FacturacionVERIFACTU.API.Data.Services
         public async Task<AlbaranResponseDto> CambiarEstadoAsync(int tenantId, int id, CambiarEstadoAlbaranDto dto)
         {
             var albaran = await _context.Albaranes
-                .Include(a=> a.Lineas)
-                .FirstOrDefaultAsync( a=> a.Id == id && a.TenantId == tenantId);
+                .Include(a => a.Lineas)
+                .FirstOrDefaultAsync(a => a.Id == id && a.TenantId == tenantId);
 
             if (albaran == null)
                 throw new InvalidOperationException($"Albaran {id} no encontrado");
 
             //Validar transicion de estado
-            ValidarTransicionEstado(albaran.Estado,dto.NuevoEstado);
+            ValidarTransicionEstado(albaran.Estado, dto.NuevoEstado);
 
             var estadoAnterior = albaran.Estado;
             albaran.Estado = dto.NuevoEstado;
@@ -245,14 +293,14 @@ namespace FacturacionVERIFACTU.API.Data.Services
         public async Task<AlbaranResponseDto> ObtenerPorIdAsync(int tenantId, int id)
         {
             var albaran = await _context.Albaranes
-                .Include(a=> a.Lineas)
-                .Include(a=>a.Cliente)
-                .Include(a=>a.Presupuesto)
-                .FirstOrDefaultAsync(a=>a.Id == id && a.TenantId==tenantId);
+                .Include(a => a.Lineas)
+                .Include(a => a.Cliente)
+                .Include(a => a.Presupuesto)
+                .FirstOrDefaultAsync(a => a.Id == id && a.TenantId == tenantId);
 
             if (albaran == null) return null;
 
-            return await MapearAResponseDto (albaran);
+            return await MapearAResponseDto(albaran);
         }
 
         public async Task<List<AlbaranResponseDto>> ObtenerTodosAsync(int tenantId, string? estado = null)
@@ -268,12 +316,12 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 query = query.Where(a => a.Estado == estado);
             }
 
-            var albaranes =await query
+            var albaranes = await query
             .OrderByDescending(a => a.FechaEmision)
             .ToListAsync();
 
-            var result = new List<AlbaranResponseDto> ();
-            foreach(var albaran in albaranes)
+            var result = new List<AlbaranResponseDto>();
+            foreach (var albaran in albaranes)
             {
                 result.Add(await MapearAResponseDto(albaran));
             }
@@ -300,25 +348,25 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 albaran.Id, tenantId);
 
             return true;
-                
+
         }
 
-        public async Task<AlbaranResponseDto> ConvertirDesdePresupuesto(int tenantId, int prespuestoId, ConvertirPresupuestoDto dto)
+        public async Task<AlbaranResponseDto> ConvertirDesdePresupuesto(int tenantId, int presupuestoId, ConvertirPresupuestoDto dto)
         {
-            //Obtener presupuesto
+            //Obtener presupuesto CON CLIENTE
             var presupuesto = await _context.Presupuestos
                 .Include(p => p.Lineas)
                 .Include(p => p.Cliente)
-                .FirstOrDefaultAsync(p=> p.Id == prespuestoId && p.TenantId== tenantId);
+                .FirstOrDefaultAsync(p => p.Id == presupuestoId && p.TenantId == tenantId);
 
             if (presupuesto == null)
-                throw new InvalidOperationException($"Prespuesto {prespuestoId} no encontrado");
+                throw new InvalidOperationException($"Presupuesto {presupuestoId} no encontrado");
 
-            //Prespuesto debe estar aceptado
+            //Presupuesto debe estar aceptado
             if (presupuesto.Estado != "Aceptado")
                 throw new InvalidOperationException($"Solo se pueden convertir presupuestos en estado Aceptado. Estado actual: {presupuesto.Estado}");
 
-            //Ontener serie para albaranes
+            //Obtener serie para albaranes
             var serieAlbaran = await _context.SeriesNumeracion
                 .FirstOrDefaultAsync(s =>
                 s.TenantId == tenantId &&
@@ -327,6 +375,9 @@ namespace FacturacionVERIFACTU.API.Data.Services
 
             if (serieAlbaran == null)
                 throw new InvalidOperationException("No hay series activas para albaranes");
+
+            // ⭐ CARGAR CONFIGURACIÓN FISCAL DEL CLIENTE
+            var cliente = presupuesto.Cliente;
 
             //Obtener siguiente numero
             var ejercicio = dto.FechaEmision?.Year ?? DateTime.UtcNow.Year;
@@ -350,7 +401,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 FechaCreacion = DateTime.UtcNow
             };
 
-            //Copiar lineas del prespuesto
+            //Copiar lineas del presupuesto
             var lineasACopiar = presupuesto.Lineas.AsEnumerable();
 
             //Filtrar lineas seleccionadas si se especifican
@@ -362,6 +413,12 @@ namespace FacturacionVERIFACTU.API.Data.Services
             int orden = 1;
             foreach (var lineaPresupuesto in lineasACopiar.OrderBy(l => l.Orden))
             {
+                // ⭐ MANTENER CONFIGURACIÓN FISCAL DEL PRESUPUESTO usando snapshots
+                decimal iva = lineaPresupuesto.IvaPercentSnapshot;
+                decimal recargo = cliente.RegimenRecargoEquivalencia
+                    ? lineaPresupuesto.RePercentSnapshot
+                    : 0m;
+
                 var lineaAlbaran = new LineaAlbaran
                 {
                     Orden = orden++,
@@ -369,17 +426,15 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     Cantidad = lineaPresupuesto.Cantidad,
                     PrecioUnitario = lineaPresupuesto.PrecioUnitario,
                     PorcentajeDescuento = lineaPresupuesto.PorcentajeDescuento,
-                    ImporteDescuento = lineaPresupuesto.ImporteDescuento,
-                    BaseImponible = lineaPresupuesto.BaseImponible,
-                    IVA = lineaPresupuesto.IVA,
-                    ImporteIva = lineaPresupuesto.ImporteIva,
-                    Importe = lineaPresupuesto.Importe,
-                    RecargoEquivalencia = lineaPresupuesto.RecargoEquivalencia,
+                    IVA = iva,
+                    RecargoEquivalencia = recargo,
+                    IvaPercentSnapshot = iva,
+                    RePercentSnapshot = recargo,
+                    TipoImpuestoId = lineaPresupuesto.TipoImpuestoId,
                     ProductoId = lineaPresupuesto.ProductoId
                 };
 
                 CalcularLinea(lineaAlbaran);
-
                 albaran.Lineas.Add(lineaAlbaran);
             }
 
@@ -403,8 +458,8 @@ namespace FacturacionVERIFACTU.API.Data.Services
             var subtotal = Math.Round(linea.Cantidad * linea.PrecioUnitario, 2);
             linea.ImporteDescuento = Math.Round(subtotal * (linea.PorcentajeDescuento / 100), 2);
             linea.BaseImponible = Math.Round(subtotal - linea.ImporteDescuento, 2);
-            linea.ImporteIva = Math.Round(linea.BaseImponible * (linea.IVA / 100), 2);
-            linea.ImporteRecargo = Math.Round(linea.BaseImponible * (linea.RecargoEquivalencia / 100), 2);
+            linea.ImporteIva = Math.Round(linea.BaseImponible * (linea.IvaPercentSnapshot / 100), 2);
+            linea.ImporteRecargo = Math.Round(linea.BaseImponible * (linea.RePercentSnapshot / 100), 2);
             linea.Importe = Math.Round(linea.BaseImponible + linea.ImporteIva + linea.ImporteRecargo, 2);
         }
 
@@ -415,7 +470,55 @@ namespace FacturacionVERIFACTU.API.Data.Services
             albaran.TotalRecargo = Math.Round(albaran.Lineas.Sum(l => l.ImporteRecargo), 2);
 
             // Los albaranes NO tienen retención
-            albaran.Total = Math.Round(albaran.BaseImponible + albaran.TotalIVA+ albaran.TotalRecargo, 2);
+            albaran.Total = Math.Round(albaran.BaseImponible + albaran.TotalIVA + albaran.TotalRecargo, 2);
+        }
+
+        private async Task<List<TipoImpuesto>> ObtenerTiposImpuestoActivosAsync(int tenantId)
+        {
+            return await _context.TiposImpuesto
+                .Where(t => t.TenantId == tenantId && t.Activo)
+                .ToListAsync();
+        }
+
+        private (TipoImpuesto? TipoImpuesto, decimal Iva, decimal Recargo) ResolverTipoImpuesto(
+            List<TipoImpuesto> tiposImpuestoActivos,
+            int? tipoImpuestoId,
+            Producto? producto,
+            decimal? ivaOverride)
+        {
+            TipoImpuesto? tipoImpuesto = null;
+
+            if (tipoImpuestoId.HasValue)
+            {
+                tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.Id == tipoImpuestoId.Value);
+                if (tipoImpuesto == null)
+                    throw new InvalidOperationException("Tipo de impuesto no válido o inactivo");
+            }
+            else if (producto?.TipoImpuestoId.HasValue == true)
+            {
+                tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.Id == producto.TipoImpuestoId.Value);
+                if (tipoImpuesto == null)
+                    throw new InvalidOperationException("Tipo de impuesto del producto no válido o inactivo");
+            }
+            else if (ivaOverride.HasValue)
+            {
+                tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.PorcentajeIva == ivaOverride.Value);
+            }
+            else if (producto?.IVA > 0)
+            {
+                tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.PorcentajeIva == producto.IVA);
+            }
+
+            tipoImpuesto ??= tiposImpuestoActivos.FirstOrDefault(t => t.Nombre == "General");
+
+            var iva = tipoImpuesto?.PorcentajeIva
+                ?? ivaOverride
+                ?? producto?.IVA
+                ?? 0m;
+
+            var recargo = tipoImpuesto?.PorcentajeRecargo ?? 0m;
+
+            return (tipoImpuesto, iva, recargo);
         }
 
         private void ValidarTransicionEstado(string estadoActual, string nuevoEstado)
@@ -438,7 +541,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
 
         private async Task<AlbaranResponseDto> MapearAResponseDto(Albaran albaran)
         {
-            if(albaran.Cliente == null)
+            if (albaran.Cliente == null)
             {
                 albaran.Cliente = await _context.Clientes
                     .FirstOrDefaultAsync(c => c.Id == albaran.ClienteId);
@@ -480,10 +583,12 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     PorcentajeDescuento = l.PorcentajeDescuento,
                     ImporteDescuento = l.ImporteDescuento,
                     BaseImponible = l.BaseImponible,
-                    IVA = l.IVA,
+                    IVA = l.IvaPercentSnapshot,
                     ImporteIva = l.ImporteIva,
+                    RecargoEquivalencia = l.RePercentSnapshot,
                     ImporteRecargo = l.ImporteRecargo,
                     Importe = l.Importe,
+                    TipoImpuestoId = l.TipoImpuestoId,
                     ProductoId = l.ProductoId
                 }).OrderBy(l => l.Orden).ToList(),
                 FechaCreacion = albaran.FechaCreacion,
@@ -491,28 +596,17 @@ namespace FacturacionVERIFACTU.API.Data.Services
             };
         }
 
-        private async Task<Dictionary<int, Producto>> ObtenerProductosAsync(IEnumerable<int?> productosIds)
+        private async Task<Dictionary<int, Producto>> ObtenerProductosAsync(IEnumerable<int> productosIds, int tenantId)
         {
-            var ids = productosIds.Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+            var ids = productosIds.Distinct().ToList();
             if (!ids.Any())
             {
                 return new Dictionary<int, Producto>();
             }
 
             return await _context.Productos
-                .Where(p => ids.Contains(p.Id))
+                .Where(p => ids.Contains(p.Id) && p.TenantId == tenantId)
                 .ToDictionaryAsync(p => p.Id);
-        }
-
-        private decimal CalcularRecargoEquivalencia(Cliente cliente, decimal iva, decimal? recargoSolicitado, Producto? producto)
-        {
-            if (!cliente.RegimenRecargoEquivalencia)
-            {
-                return 0m;
-            }
-
-            var recargo = recargoSolicitado ?? producto?.RecargoEquivalenciaDefecto;
-            return recargo ?? FiscalConfiguracionService.CalcularRecargoEquivalencia(iva);
         }
 
         #endregion
