@@ -7,6 +7,9 @@ public class ProductoDto
 {
     public int ProductoId { get; set; }
 
+    public int? TipoImpuestoId { get; set; }
+    public string? TipoImpuestoNombre {  get; set; }
+
     [Required(ErrorMessage = "El código es obligatorio.")]
     [StringLength(50, ErrorMessage = "El código no puede superar 50 caracteres.")]
     public string Codigo { get; set; } = string.Empty;
@@ -19,7 +22,7 @@ public class ProductoDto
     public decimal PrecioUnitario { get; set; }
 
     [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
-    public decimal IVA { get; set; } = 21;
+    public decimal? IVA { get; set; } = 21;
     public decimal? RecargoEquivalenciaDefecto { get; set; }
 
     public string? Unidad { get; set; } = "Ud";
@@ -28,6 +31,9 @@ public class ProductoDto
 
 public class CrearProductoDto
 {
+    [Required(ErrorMessage = "Selecciona un tipo de impuesto.")]
+    public int? TipoImpuestoId { get; set; }
+
     [Required(ErrorMessage = "El código es obligatorio.")]
     [StringLength(50, ErrorMessage = "El código no puede superar 50 caracteres.")]
     public string Codigo { get; set; } = string.Empty;
@@ -40,7 +46,7 @@ public class CrearProductoDto
     public decimal PrecioUnitario { get; set; }
 
     [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
-    public decimal IVA { get; set; } = 21;
+    public decimal? IVA { get; set; } = 21;
 
     public decimal? RecargoEquivalenciaDefecto { get; set; }
     public string? Unidad { get; set; } = "Ud";
@@ -49,6 +55,9 @@ public class CrearProductoDto
 
 public class ActualizarProductoDto
 {
+    [Required(ErrorMessage = "Selecciona un tipo de impuesto.")]
+    public int? TipoImpuestoId { get; set; }
+
     [Required(ErrorMessage = "La descripción es obligatoria.")]
     [StringLength(500, ErrorMessage = "La descripción no puede superar 500 caracteres.")]
     public string Descripcion { get; set; } = string.Empty;
@@ -57,7 +66,7 @@ public class ActualizarProductoDto
     public decimal PrecioUnitario { get; set; }
 
     [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
-    public decimal IVA { get; set; }
+    public decimal? IVA { get; set; }
 
     public decimal? RecargoEquivalenciaDefecto { get; set; }
     public string? Unidad { get; set; }

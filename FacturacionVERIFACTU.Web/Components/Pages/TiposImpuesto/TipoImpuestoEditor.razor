@@ -1,0 +1,156 @@
+﻿@page "/tipos-impuesto/nuevo"
+@page "/tipos-impuesto/editar/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<div class="notion-content">
+    <div class="notion-breadcrumb">
+        <a href="/tipos-impuesto">Tipos de impuesto</a> / @(Id == 0 ? "Nuevo" : "Editar")
+    </div>
+
+    <div class="notion-page-header">
+        <div class="header-main">
+            <span class="header-icon">
+                <i class="bi bi-percent"></i>
+            </span>
+            <div>
+                <h1>@(Id == 0 ? "Nuevo tipo de impuesto" : "Editar tipo de impuesto")</h1>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
+            <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
+        </div>
+    }
+
+    @if (tipoImpuesto.EnUso)
+    {
+        <div class="alert alert-warning" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff8e6; color: #8a6d3b; margin-bottom: 20px; padding: 12px;">
+            <i class="bi bi-exclamation-triangle-fill"></i> Este tipo está en uso: crea un nuevo tipo para cambiar los porcentajes.
+        </div>
+    }
+
+    <EditForm Model="tipoImpuesto" OnValidSubmit="GuardarAsync" class="notion-form-container">
+        <DataAnnotationsValidator />
+
+        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="notion-input-group" style="grid-column: span 2;">
+                <label class="notion-label">Nombre</label>
+                <InputText @bind-Value="tipoImpuesto.Nombre" class="notion-input-modern" placeholder="Ej: General 21%" />
+                <ValidationMessage For="() => tipoImpuesto.Nombre" class="notion-error" />
+            </div>
+
+            <div class="notion-input-group">
+                <label class="notion-label">IVA (%)</label>
+                <InputNumber @bind-Value="tipoImpuesto.PorcentajeIVA" class="notion-input-modern" step="0.01" min="0" max="100" disabled="@(tipoImpuesto.EnUso)" />
+                <ValidationMessage For="() => tipoImpuesto.PorcentajeIVA" class="notion-error" />
+            </div>
+
+            <div class="notion-input-group">
+                <label class="notion-label">Recargo equivalencia (%)</label>
+                <InputNumber @bind-Value="tipoImpuesto.PorcentajeRecargoEquivalencia" class="notion-input-modern" step="0.01" min="0" max="100" disabled="@(tipoImpuesto.EnUso)" />
+                <ValidationMessage For="() => tipoImpuesto.PorcentajeRecargoEquivalencia" class="notion-error" />
+            </div>
+
+            <div class="notion-input-group" style="grid-column: span 2; display: flex; align-items: center; gap: 10px; padding: 10px 0;">
+                <InputCheckbox @bind-Value="tipoImpuesto.Activo" id="chkActivo" style="width: 18px; height: 18px; accent-color: #000; cursor: pointer;" />
+                <label for="chkActivo" style="font-size: 14px; font-weight: 500; cursor: pointer; margin-bottom: 0;">Tipo activo</label>
+            </div>
+        </div>
+
+        <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
+            <button type="submit" class="btn-modern" style="min-width: 140px;" disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                }
+                else
+                {
+                    <span>Guardar tipo</span>
+                }
+            </button>
+
+            <button type="button" class="btn-modern-secondary" style="min-width: 140px;" @onclick="Cancelar">
+                Cancelar
+            </button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private TipoImpuestoDto tipoImpuesto = new() { Activo = true };
+    private bool isSaving;
+    private string errorMessage = string.Empty;
+
+    [Inject] private IApiService ApiService { get; set; } = null!;
+    [Inject] private NavigationManager NavManager { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id <= 0)
+        {
+            return;
+        }
+
+        var response = await ApiService.GetAsync<TipoImpuestoDto>($"api/tiposimpuesto/{Id}");
+        if (response == null)
+        {
+            errorMessage = "No se pudo cargar el tipo de impuesto.";
+            return;
+        }
+
+        tipoImpuesto = response;
+    }
+
+    private async Task GuardarAsync()
+    {
+        isSaving = true;
+        errorMessage = string.Empty;
+
+        if (Id == 0)
+        {
+            var request = new CrearTipoImpuestoDto
+            {
+                Nombre = tipoImpuesto.Nombre,
+                PorcentajeIVA = tipoImpuesto.PorcentajeIVA,
+                PorcentajeRecargoEquivalencia = tipoImpuesto.PorcentajeRecargoEquivalencia,
+                Activo = tipoImpuesto.Activo
+            };
+
+            var result = await ApiService.PostAsync<CrearTipoImpuestoDto, TipoImpuestoDto>("api/tiposimpuesto", request);
+            if (result == null)
+            {
+                errorMessage = "No se pudo crear el tipo de impuesto.";
+                isSaving = false;
+                return;
+            }
+        }
+        else
+        {
+            var request = new ActualizarTipoImpuestoDto
+            {
+                Nombre = tipoImpuesto.Nombre,
+                PorcentajeIVA = tipoImpuesto.PorcentajeIVA,
+                PorcentajeRecargoEquivalencia = tipoImpuesto.PorcentajeRecargoEquivalencia,
+                Activo = tipoImpuesto.Activo
+            };
+
+            var result = await ApiService.PutAsync<ActualizarTipoImpuestoDto, TipoImpuestoDto>($"api/tiposimpuesto/{Id}", request);
+            if (result == null)
+            {
+                errorMessage = "No se pudo actualizar el tipo de impuesto.";
+                isSaving = false;
+                return;
+            }
+        }
+
+        NavManager.NavigateTo("/tipos-impuesto");
+    }
+
+    private void Cancelar() => NavManager.NavigateTo("/tipos-impuesto");
+}

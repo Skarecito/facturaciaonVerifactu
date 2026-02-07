@@ -71,6 +71,8 @@ public class LineaPresupuestoDto
 {
     public int? Id { get; set; }
 
+    public int? TipoImpuestoId { get; set; }
+
     [Required]
     [StringLength(500)]
     public string Descripcion { get; set; } = string.Empty;
@@ -101,6 +103,7 @@ public class LineaPresupuestoResponseDto
 {
     public int Id { get; set; }
     public int Orden { get; set; }
+    public int? TipoImpuestoId { get; set; }
     public string Descripcion { get; set; } = string.Empty;
     public decimal Cantidad { get; set; }
     public decimal PrecioUnitario { get; set; }

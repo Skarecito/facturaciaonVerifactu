@@ -1,0 +1,153 @@
+﻿@page "/tipos-impuesto"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<PageTitle>Tipos de impuesto - FacturaVERIFACTU</PageTitle>
+
+<div class="notion-content">
+    <div class="notion-header">
+        <div class="header-main">
+            <span class="header-icon">
+                <i class="bi bi-percent"></i>
+            </span>
+            <div>
+                <h1>Tipos de impuesto</h1>
+            </div>
+        </div>
+        <button class="btn-modern-secondary" @onclick="NuevoTipo">
+            <i class="bi bi-plus-lg"></i> Nuevo tipo
+        </button>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="notion-loading" style="padding: 50px; text-align: center;">
+        <span class="spinner-border spinner-border-sm" role="status"></span>
+        <span style="margin-left: 10px; color: #787774;">Cargando tipos...</span>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage) || !tiposImpuesto.Any())
+{
+    <div class="notion-empty-state" style="padding: 80px 0; text-align: center;">
+        <i class="bi bi-percent" style="font-size: 48px; color: #edeceb; margin-bottom: 16px; display: block;"></i>
+        <h4 style="font-weight: 600; margin-bottom: 8px;">No hay tipos de impuesto</h4>
+        <p style="color: #787774; font-size: 14px; margin-bottom: 24px;">Crea tipos para aplicar IVA y recargo por tenant.</p>
+        <button class="btn-modern-secondary" @onclick="NuevoTipo">Añadir tipo</button>
+    </div>
+}
+else
+{
+    <div class="notion-table-wrapper">
+        <table class="notion-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 1px solid var(--notion-border);">
+                    <th style="padding: 12px 16px; width: 30%; text-align: left;">NOMBRE</th>
+                    <th style="padding: 12px 16px; width: 20%; text-align: right;">IVA</th>
+                    <th style="padding: 12px 16px; width: 20%; text-align: right;">RE</th>
+                    <th style="padding: 12px 16px; width: 15%; text-align: center;">ESTADO</th>
+                    <th style="padding: 12px 16px; width: 15%; text-align: right;">ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var tipo in tiposImpuesto)
+                {
+                    <tr class="@(tipo.Activo ? "" : "notion-row-inactive")">
+                        <td style="padding: 16px">
+                            <div class="notion-cell-title">@tipo.Nombre</div>
+                            @if (tipo.EnUso)
+                            {
+                                <div class="notion-cell-desc">En uso</div>
+                            }
+                        </td>
+                        <td style="padding: 16px; text-align: right;">@tipo.PorcentajeIVA.ToString("N2")%</td>
+                        <td style="padding: 16px; text-align: right;">@(tipo.PorcentajeRecargoEquivalencia.HasValue ? $"{tipo.PorcentajeRecargoEquivalencia.Value.ToString("N2")}%" : "-")</td>
+                        <td style="padding: 16px; text-align: center">
+                            <span class="notion-badge @(tipo.Activo ? "active" : "inactive")">
+                                @(tipo.Activo ? "Activo" : "Inactivo")
+                            </span>
+                        </td>
+                        <td style="padding: 16px; text-align: right;">
+                            <div class="notion-actions" style="justify-content: flex-end; gap: 4px;">
+                                <button class="notion-action-btn" @onclick="() => EditarTipo(tipo)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="notion-action-btn delete" @onclick="() => CambiarEstado(tipo)">
+                                    <i class="bi bi-power"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="notion-table-footer" style="margin-top: 20px; border-top: 1px solid #edeceb; padding-top: 12px; color: rgba(55, 53, 47, 0.4); font-size: 12px;">
+        <span>Total: @tiposImpuesto.Count tipos configurados</span>
+    </div>
+}
+
+@code {
+    private List<TipoImpuestoDto> tiposImpuesto = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    [Inject] private IApiService ApiService { get; set; } = null!;
+    [Inject] private NavigationManager NavManager { get; set; } = null!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarTiposAsync();
+    }
+
+    private async Task CargarTiposAsync()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        var response = await ApiService.GetAsync<PaginatedResponseDto<TipoImpuestoDto>>("api/tiposimpuesto?page=1&pageSize=200");
+        if (response == null)
+        {
+            errorMessage = "No se pudieron cargar los tipos de impuesto.";
+            tiposImpuesto = new List<TipoImpuestoDto>();
+        }
+        else
+        {
+            tiposImpuesto = response.Items;
+        }
+
+        isLoading = false;
+    }
+
+    private void NuevoTipo() => NavManager.NavigateTo("/tipos-impuesto/nuevo");
+
+    private void EditarTipo(TipoImpuestoDto tipo) => NavManager.NavigateTo($"/tipos-impuesto/editar/{tipo.TipoImpuestoId}");
+
+    private async Task CambiarEstado(TipoImpuestoDto tipo)
+    {
+        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"¿{(tipo.Activo ? "Desactivar" : "Activar")} el tipo {tipo.Nombre}?");
+        if (!confirm)
+        {
+            return;
+        }
+
+        var request = new ActualizarTipoImpuestoDto
+        {
+            Nombre = tipo.Nombre,
+            PorcentajeIVA = tipo.PorcentajeIVA,
+            PorcentajeRecargoEquivalencia = tipo.PorcentajeRecargoEquivalencia,
+            Activo = !tipo.Activo
+        };
+
+        var result = await ApiService.PutAsync<ActualizarTipoImpuestoDto, TipoImpuestoDto>($"api/tiposimpuesto/{tipo.TipoImpuestoId}", request);
+        if (result == null)
+        {
+            errorMessage = "No se pudo actualizar el estado del tipo.";
+            return;
+        }
+
+        await CargarTiposAsync();
+    }
+}

@@ -33,6 +33,13 @@
             </div>
         }
 
+        @if (!string.IsNullOrEmpty(avisoImpuestos))
+        {
+            <div class="alert alert-warning" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff8e6; color: #8a6d3b; margin-bottom: 20px; padding: 12px;">
+                <i class="bi bi-exclamation-triangle-fill"></i> @avisoImpuestos
+            </div>
+        }
+
         @if (!EsEditable && Id > 0)
         {
             <div class="alert alert-warning" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff9e6; color: #8a6d1f; margin-bottom: 20px; padding: 12px;">
@@ -51,18 +58,24 @@
                         <option value="@cliente.ClienteId">@cliente.Nombre (@cliente.NIF)</option>
                     }
                 </InputSelect>
+                @if (aplicaRecargoEquivalencia)
+                {
+                    <div class="notion-hint" style="margin-top: 6px; font-size: 12px; color: #8b8b8b;">
+                        Cliente en régimen de recargo de equivalencia.
+                    </div>
+                }
             </div>
 
             <div class="notion-input-group">
-        <label class="notion-label">Serie</label>
-        <InputSelect @bind-Value="presupuesto.SerieId" class="notion-input-modern" disabled="@(Id > 0)">
-            <option value="0">Selecciona una serie</option>
-            @foreach (var serie in SeriesPresupuestos)
-            {
-                <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio)</option>
-            }
-        </InputSelect>
-    </div>
+                <label class="notion-label">Serie</label>
+                <InputSelect @bind-Value="presupuesto.SerieId" class="notion-input-modern" disabled="@(Id > 0)">
+                    <option value="0">Selecciona una serie</option>
+                    @foreach (var serie in SeriesPresupuestos)
+                    {
+                        <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio)</option>
+                    }
+                </InputSelect>
+            </div>
 
             <div class="notion-input-group">
                 <label class="notion-label">Fecha emisión</label>
@@ -118,7 +131,7 @@
                         <th style="padding: 12px 10px; width: 10%; text-align: right;">CANTIDAD</th>
                         <th style="padding: 12px 10px; width: 12%; text-align: right;">PRECIO</th>
                         <th style="padding: 12px 10px; width: 10%; text-align: right;">DTO %</th>
-                        <th style="padding: 12px 10px; width: 10%; text-align: right;">IVA %</th>
+                        <th style="padding: 12px 10px; width: 16%; text-align: right;">IMPUESTO</th>
                         <th style="padding: 12px 10px; width: 12%; text-align: right;">TOTAL</th>
                         <th style="padding: 12px 10px; width: 8%; text-align: right;">ACC.</th>
                     </tr>
@@ -181,14 +194,27 @@
                                            style="text-align: right;" />
                                 </td>
                                 <td style="padding: 12px 10px; text-align: right;">
-                                    <input type="number"
-                                           class="notion-input-modern"
-                                           step="1.00"
-                                           max="100"
-                                           value="@(lineaActual.IVA?.ToString("0.##") ?? "21")"
-                                           @onchange="@(e => { if (decimal.TryParse(e.Value?.ToString(), out var v)) { lineaActual.IVA = v; RecalcularRecargo(lineaActual); } })"
-                                           disabled="@(!EsEditable)"
-                                           style="text-align: right;" />
+                                    <select class="notion-input-modern"
+                                            value="@lineaActual.TipoImpuestoId"
+                                            @onchange="@(e => { if (int.TryParse(e.Value?.ToString(), out var v)) { lineaActual.TipoImpuestoId = v; ActualizarImpuestoLinea(lineaActual); } })"
+                                            disabled="@(!EsEditable)"
+                                            style="text-align: right;">
+                                        <option value="">Selecciona</option>
+                                        @foreach (var tipo in tiposImpuesto.Where(tipo => tipo.Activo))
+                                        {
+                                            <option value="@tipo.TipoImpuestoId">@tipo.Nombre</option>
+                                        }
+                                    </select>
+                                    <div class="notion-cell-desc" style="text-align: right;">
+                                        @if (lineaActual.IVA.HasValue)
+                                        {
+                                            <span>IVA @lineaActual.IVA.Value.ToString("N2")%</span>
+                                        }
+                                        @if (aplicaRecargoEquivalencia && lineaActual.RecargoEquivalencia.HasValue && lineaActual.RecargoEquivalencia.Value > 0)
+                                        {
+                                            <span> · RE @lineaActual.RecargoEquivalencia.Value.ToString("N2")%</span>
+                                        }
+                                    </div>
                                 </td>
                                 <td style="padding: 12px 10px; text-align: right;">
                                     <span style="font-weight: 600;">@CalcularTotalLinea(lineaActual).ToString("C")</span>
@@ -217,10 +243,13 @@
                 <span>IVA</span>
                 <strong>@TotalIVA.ToString("C")</strong>
             </div>
-            <div class="totales-item">
-                <span>Recargo</span>
-                <strong>@TotalRecargo.ToString("C")</strong>
-            </div>
+            @if (aplicaRecargoEquivalencia)
+            {
+                <div class="totales-item">
+                    <span>Recargo equivalencia</span>
+                    <strong>@TotalRecargo.ToString("C")</strong>
+                </div>
+            }
             <div class="totales-item">
                 <span>Retención</span>
                 <strong>-@TotalRetencion.ToString("C")</strong>
@@ -251,7 +280,7 @@
 
     @if (Id > 0)
     {
-     <div class="convertir-factura" style="margin-top: 24px;">
+        <div class="convertir-factura" style="margin-top: 24px;">
             <h3>Cambiar estado del presupuesto</h3>
             <p>Estado actual: <strong>@estadoPresupuesto</strong></p>
 
@@ -267,19 +296,19 @@
 
                 @if (estadoPresupuesto == "Enviado")
                 {
-                    <button class="btn-modern" 
-                            @onclick='() => CambiarEstadoAsync("Aceptado")' 
+                    <button class="btn-modern"
+                            @onclick='() => CambiarEstadoAsync("Aceptado")'
                             disabled="@isCambiandoEstado"
                             style="background-color: #28a745; border-color: #28a745;">
                         <i class="bi bi-check-circle"></i> Marcar como Aceptado
                     </button>
-                    <button class="btn-modern-secondary" 
-                            @onclick='() => CambiarEstadoAsync("Rechazado")' 
+                    <button class="btn-modern-secondary"
+                            @onclick='() => CambiarEstadoAsync("Rechazado")'
                             disabled="@isCambiandoEstado"
                             style="background-color: #dc3545; border-color: #dc3545; color: white;">
                         <i class="bi bi-x-circle"></i> Marcar como Rechazado
                     </button>
-                    <button class="btn-modern-secondary" 
+                    <button class="btn-modern-secondary"
                             @onclick='() => CambiarEstadoAsync("Borrador")'
                             disabled="@isCambiandoEstado">
                         <i class="bi bi-arrow-counterclockwise"></i> Volver a Borrador
@@ -288,8 +317,8 @@
 
                 @if (estadoPresupuesto == "Rechazado")
                 {
-                    <button class="btn-modern-secondary" 
-                            @onclick='() => CambiarEstadoAsync("Borrador")' 
+                    <button class="btn-modern-secondary"
+                            @onclick='() => CambiarEstadoAsync("Borrador")'
                             disabled="@isCambiandoEstado">
                         <i class="bi bi-arrow-counterclockwise"></i> Volver a Borrador
                     </button>
@@ -303,7 +332,7 @@
                     Cambiando estado...
                 </div>
             }
-        </div>   
+        </div>
     }
 
     @if (Id > 0 && estadoPresupuesto == "Aceptado")
@@ -313,7 +342,7 @@
             <p>Genera la factura desde este presupuesto aceptado.</p>
 
             <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-               <div class="notion-input-group">
+                <div class="notion-input-group">
                     <label class="notion-label">Serie factura</label>
                     <InputSelect @bind-Value="conversionFactura.SerieId" class="notion-input-modern">
                         <option value="0">Selecciona una serie</option>
@@ -361,15 +390,15 @@
 
             <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
                 <div class="notion-input-group">
-                        <label class="notion-label">Serie albarán</label>
-                        <InputSelect @bind-Value="conversionAlbaran.SerieId" class="notion-input-modern">
-                            <option value="0">Selecciona una serie</option>
-                            @foreach (var serie in SeriesAlbaranes)
-                            {
-                                <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio</option>
-                            }
-                        </InputSelect>
-                    </div>
+                    <label class="notion-label">Serie albarán</label>
+                    <InputSelect @bind-Value="conversionAlbaran.SerieId" class="notion-input-modern">
+                        <option value="0">Selecciona una serie</option>
+                        @foreach (var serie in SeriesAlbaranes)
+                        {
+                            <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio</option>
+                        }
+                    </InputSelect>
+                </div>
                 <div class="notion-input-group">
                     <label class="notion-label">Fecha emisión</label>
                     <InputDate @bind-Value="conversionAlbaran.FechaEmision" class="notion-input-modern" />
@@ -448,7 +477,7 @@
                                 <th style="padding: 10px; text-align: left;">CÓDIGO</th>
                                 <th style="padding: 10px; text-align: left;">DESCRIPCIÓN</th>
                                 <th style="padding: 10px; text-align: right;">PRECIO</th>
-                                <th style="padding: 10px; text-align: right;">IVA</th>
+                                <th style="padding: 10px; text-align: right;">IMPUESTO</th>
                                 <th style="padding: 10px; text-align: right;">ACC.</th>
                             </tr>
                         </thead>
@@ -459,7 +488,7 @@
                                     <td style="padding: 10px;">@producto.Codigo</td>
                                     <td style="padding: 10px;">@producto.Descripcion</td>
                                     <td style="padding: 10px; text-align: right;">@producto.PrecioUnitario.ToString("C")</td>
-                                    <td style="padding: 10px; text-align: right;">@producto.IVA.ToString("N0")%</td>
+                                    <td style="padding: 10px; text-align: right;">@ObtenerDescripcionImpuesto(producto)</td>
                                     <td style="padding: 10px; text-align: right;">
                                         <button class="btn-modern-secondary" @onclick="() => AgregarLineaDesdeProducto(producto)">Añadir</button>
                                     </td>
@@ -482,9 +511,10 @@
     private PresupuestoFormModel presupuesto = new();
     private List<ClienteDto> clientes = new();
     private List<ProductoDto> productos = new();
+    private List<TipoImpuestoDto> tiposImpuesto = new();
 
     private List<SerieDto> SeriesPresupuestos = new();
-    private List<SerieDto> SeriesFacturas = new ();
+    private List<SerieDto> SeriesFacturas = new();
 
     private List<SerieDto> SeriesAlbaranes = new();
 
@@ -496,6 +526,7 @@
     private bool isConverting;
     private bool isConvertingAlbaran;
     private string errorMessage = string.Empty;
+    private string? avisoImpuestos;
     private string convertirMensaje = string.Empty;
     private string convertirAlbaranMensaje = string.Empty;
     private string numeroPresupuesto = "";
@@ -503,6 +534,7 @@
     private bool isCambiandoEstado;
     private string estadoNuevo = string.Empty;
     private string motivoCambioEstado = string.Empty;
+    private bool aplicaRecargoEquivalencia;
 
     private ConversionFacturaModel conversionFactura = new();
     private ConversionAlbaranModel conversionAlbaran = new();
@@ -526,7 +558,8 @@
         {
 
             await Task.WhenAll(
-                CargarClientesAsync(), 
+                CargarTiposImpuestoAsync(),
+                CargarClientesAsync(),
                 CargarSeriesPresupuestosAsync(),
                 CargarSeriesFacturasAsync(),
                 CargarSeriesAlbaranesAsync());
@@ -534,6 +567,7 @@
             if (Id > 0)
             {
                 await CargarPresupuestoAsync();
+                ActualizarClienteRecargo();
             }
             else
             {
@@ -551,6 +585,12 @@
     {
         var response = await ApiService.GetAsync<PaginatedResponseDto<ClienteDto>>("api/clientes?page=1&pageSize=500");
         clientes = response?.Items ?? new List<ClienteDto>();
+    }
+
+    private async Task CargarTiposImpuestoAsync()
+    {
+        var response = await ApiService.GetAsync<PaginatedResponseDto<TipoImpuestoDto>>("api/tiposimpuesto?page=1&pageSize=200");
+        tiposImpuesto = response?.Items ?? new List<TipoImpuestoDto>();
     }
 
     private async Task CargarSeriesPresupuestosAsync()
@@ -605,6 +645,7 @@
                     PorcentajeDescuento = l.PorcentajeDescuento,
                     IVA = l.IVA,
                     RecargoEquivalencia = l.RecargoEquivalencia,
+                    TipoImpuestoId = l.TipoImpuestoId,
                     ArticuloId = l.ArticuloId,
                     ArticuloCodigo = l.ArticuloCodigo
                 })
@@ -621,6 +662,7 @@
         {
             presupuesto.ClienteId = clienteId;
             AplicarConfiguracionCliente();
+            ActualizarClienteRecargo();
             StateHasChanged();
         }
 
@@ -918,7 +960,7 @@
         if (!EsEditable)
             return;
 
-        presupuesto.Lineas.Add(new LineaPresupuestoViewModel());
+        presupuesto.Lineas.Add(CrearLineaConTipoPorDefecto());
     }
 
     private async Task EliminarLineaAsync(LineaPresupuestoViewModel linea)
@@ -987,22 +1029,38 @@
             return;
         }
 
-        var cliente = ObtenerClienteSeleccionado();
-        var recargo = cliente?.RegimenRecargoEquivalencia == true
-            ? producto.RecargoEquivalenciaDefecto ?? CalcularRecargoEquivalencia(producto.IVA)
-            : 0m;
-
-        presupuesto.Lineas.Add(new LineaPresupuestoViewModel
+        var linea = new LineaPresupuestoViewModel
         {
             Descripcion = producto.Descripcion,
             Cantidad = 1,
             PrecioUnitario = producto.PrecioUnitario,
             PorcentajeDescuento = 0,
             IVA = producto.IVA,
-            RecargoEquivalencia = recargo,
             ArticuloId = producto.ProductoId,
             ArticuloCodigo = producto.Codigo
-        });
+        };
+
+        if (producto.TipoImpuestoId.HasValue)
+        {
+            linea.TipoImpuestoId = producto.TipoImpuestoId;
+            AplicarTipoImpuesto(linea);
+        }
+        else
+        {
+            var tipoDefault = ObtenerTipoImpuestoPorDefecto();
+            if (tipoDefault != null)
+            {
+                linea.TipoImpuestoId = tipoDefault.TipoImpuestoId;
+                AplicarTipoImpuesto(linea);
+                avisoImpuestos = $"El producto {producto.Codigo} no tiene tipo de impuesto asignado. Se aplicó {tipoDefault.Nombre} por defecto.";
+            }
+            else
+            {
+                avisoImpuestos = $"El producto {producto.Codigo} no tiene tipo de impuesto asignado.";
+            }
+        }
+
+        presupuesto.Lineas.Add(linea);
 
         CerrarModalProductos();
         StateHasChanged();
@@ -1013,6 +1071,7 @@
         return new LineaPresupuestoDto
         {
             Id = linea.Id,
+            TipoImpuestoId = linea.TipoImpuestoId,
             Descripcion = linea.Descripcion,
             Cantidad = linea.Cantidad,
             PrecioUnitario = linea.PrecioUnitario,
@@ -1045,19 +1104,12 @@
 
     private decimal CalcularRecargo(LineaPresupuestoViewModel linea)
     {
-        var cliente = ObtenerClienteSeleccionado();
-        if (cliente == null || !cliente.RegimenRecargoEquivalencia)
+        if (!aplicaRecargoEquivalencia)
         {
             return 0m;
         }
 
-        var recargo = linea.RecargoEquivalencia;
-        if (recargo <= 0)
-        {
-            recargo = CalcularRecargoEquivalencia(linea.IVA ?? 0m);
-        }
-
-        return CalcularBase(linea) * (recargo / 100m);
+        return CalcularBase(linea) * ((linea.RecargoEquivalencia ?? 0m) / 100m);
     }
 
     private decimal CalcularTotalLinea(LineaPresupuestoViewModel linea)
@@ -1071,6 +1123,79 @@
     private decimal TotalPresupuesto => presupuesto.Lineas.Sum(CalcularTotalLinea);
     private decimal TotalRetencion => TotalBaseImponible * ((presupuesto.PorcentajeRetencion ?? 0m) / 100m);
     private decimal TotalConRetencion => TotalPresupuesto - TotalRetencion;
+
+    private void ActualizarClienteRecargo()
+    {
+        var cliente = clientes.FirstOrDefault(c => c.ClienteId == presupuesto.ClienteId);
+        aplicaRecargoEquivalencia = cliente?.RegimenRecargoEquivalencia ?? false;
+        if (!aplicaRecargoEquivalencia)
+        {
+            return;
+        }
+
+        foreach (var linea in presupuesto.Lineas.Where(l => l.TipoImpuestoId.HasValue && !l.RecargoEquivalencia.HasValue))
+        {
+            AplicarTipoImpuesto(linea);
+        }
+    }
+
+    private LineaPresupuestoViewModel CrearLineaConTipoPorDefecto()
+    {
+        var linea = new LineaPresupuestoViewModel();
+        var tipoDefault = ObtenerTipoImpuestoPorDefecto();
+        if (tipoDefault != null)
+        {
+            linea.TipoImpuestoId = tipoDefault.TipoImpuestoId;
+            AplicarTipoImpuesto(linea);
+        }
+
+        return linea;
+    }
+
+    private TipoImpuestoDto? ObtenerTipoImpuestoPorDefecto()
+    {
+        return tiposImpuesto.FirstOrDefault(tipo =>
+                tipo.Activo && tipo.Nombre.Equals("General", StringComparison.OrdinalIgnoreCase))
+            ?? tiposImpuesto.FirstOrDefault(tipo => tipo.Activo);
+    }
+
+    private void ActualizarImpuestoLinea(LineaPresupuestoViewModel linea)
+    {
+        AplicarTipoImpuesto(linea);
+    }
+
+    private void AplicarTipoImpuesto(LineaPresupuestoViewModel linea)
+    {
+        if (!linea.TipoImpuestoId.HasValue)
+        {
+            return;
+        }
+
+        var tipo = tiposImpuesto.FirstOrDefault(t => t.TipoImpuestoId == linea.TipoImpuestoId);
+        if (tipo == null)
+        {
+            return;
+        }
+
+        linea.IVA = tipo.PorcentajeIVA;
+        linea.RecargoEquivalencia = aplicaRecargoEquivalencia
+            ? tipo.PorcentajeRecargoEquivalencia ?? 0m
+            : 0m;
+    }
+
+    private string ObtenerDescripcionImpuesto(ProductoDto producto)
+    {
+        if (producto.TipoImpuestoId.HasValue)
+        {
+            var tipo = tiposImpuesto.FirstOrDefault(t => t.TipoImpuestoId == producto.TipoImpuestoId);
+            if (tipo != null)
+            {
+                return $"{tipo.Nombre} ({tipo.PorcentajeIVA:N2}% IVA)";
+            }
+        }
+
+        return producto.IVA.HasValue ? $"IVA legado {producto.IVA.Value:N2}%" : "Sin asignar";
+    }
 
     private static decimal CalcularRecargoEquivalencia(decimal iva)
     {
@@ -1136,6 +1261,8 @@
     {
         public int? Id { get; set; }
 
+        public int? TipoImpuestoId { get; set; }
+
         [Required]
         public string Descripcion { get; set; } = string.Empty;
 
@@ -1151,7 +1278,7 @@
         [Range(0, 100)]
         public decimal? IVA { get; set; } = 21;
 
-        public decimal RecargoEquivalencia { get; set; }
+        public decimal? RecargoEquivalencia { get; set; }
 
         public int? ArticuloId { get; set; }
 

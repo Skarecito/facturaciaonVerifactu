@@ -59,9 +59,27 @@
             </div>
 
             <div class="notion-input-group">
-                <label class="notion-label">IVA (%)</label>
-                <InputNumber @bind-Value="producto.IVA" class="notion-input-modern" />
-                <ValidationMessage For="() => producto.IVA" class="notion-error" />
+                <label class="notion-label">Tipo de impuesto</label>
+                <InputSelect @bind-Value="producto.TipoImpuestoId" class="notion-input-modern">
+                    <option value="">Selecciona un tipo</option>
+                    @foreach (var tipo in tiposImpuesto.Where(tipo => tipo.Activo))
+                    {
+                        <option value="@tipo.TipoImpuestoId">@tipo.Nombre (@tipo.PorcentajeIVA.ToString("N2")% IVA@(tipo.PorcentajeRecargoEquivalencia.HasValue ? $" + {tipo.PorcentajeRecargoEquivalencia.Value.ToString("N2")}% RE" : string.Empty))</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => producto.TipoImpuestoId" class="notion-error" />
+                @if (!string.IsNullOrWhiteSpace(avisoTipoImpuesto))
+                {
+                    <div class="notion-hint" style="margin-top: 6px; font-size: 12px; color: #8b8b8b;">
+                        <i class="bi bi-exclamation-triangle"></i> @avisoTipoImpuesto
+                    </div>
+                }
+                @if (producto.TipoImpuestoId is null && producto.IVA.HasValue)
+                {
+                    <div class="notion-hint" style="margin-top: 6px; font-size: 12px; color: #8b8b8b;">
+                        IVA legado detectado: @producto.IVA.Value.ToString("N2")%. Selecciona un tipo para migrar.
+                    </div>
+                }
             </div>
 
             @* Fila 4: Estado *@
@@ -94,17 +112,21 @@
 @code {
     [Parameter] public int Id { get; set; }
 
-    private ProductoDto producto = new() {Activo = true};
+    private ProductoDto producto = new() { Activo = true };
     private bool isSaving;
     private string errorMessage = string.Empty;
+    private string? avisoTipoImpuesto;
+    private List<TipoImpuestoDto> tiposImpuesto = new();
 
     [Inject] private IApiService ApiService { get; set; } = null!;
     [Inject] private NavigationManager NavManager { get; set; } = null!;
 
     protected override async Task OnInitializedAsync()
     {
+        await CargarTiposImpuestoAsync();
         if (Id <= 0)
         {
+            SeleccionarTipoImpuestoPorDefecto();
             return;
         }
 
@@ -116,6 +138,33 @@
         }
 
         producto = response;
+        if (producto.TipoImpuestoId is null)
+        {
+            avisoTipoImpuesto = "Este producto no tiene tipo de impuesto asignado. Selecciona uno para evitar usar IVA legado.";
+        }
+    }
+
+    private async Task CargarTiposImpuestoAsync()
+    {
+        var response = await ApiService.GetAsync<PaginatedResponseDto<TipoImpuestoDto>>("api/tiposimpuesto?page=1&pageSize=200");
+        tiposImpuesto = response?.Items ?? new List<TipoImpuestoDto>();
+    }
+
+    private void SeleccionarTipoImpuestoPorDefecto()
+    {
+        if (producto.TipoImpuestoId.HasValue || tiposImpuesto.Count == 0)
+        {
+            return;
+        }
+
+        var tipoDefault = tiposImpuesto.FirstOrDefault(tipo =>
+                tipo.Activo && tipo.Nombre.Equals("General", StringComparison.OrdinalIgnoreCase))
+            ?? tiposImpuesto.FirstOrDefault(tipo => tipo.Activo);
+
+        if (tipoDefault != null)
+        {
+            producto.TipoImpuestoId = tipoDefault.TipoImpuestoId;
+        }
     }
 
     private async Task GuardarAsync()
@@ -123,14 +172,22 @@
         isSaving = true;
         errorMessage = string.Empty;
 
+        if (!producto.TipoImpuestoId.HasValue)
+        {
+            errorMessage = "Selecciona un tipo de impuesto antes de guardar.";
+            isSaving = false;
+            return;
+        }
+
         if (Id == 0)
         {
             var request = new CrearProductoDto
             {
+                TipoImpuestoId = producto.TipoImpuestoId,
                 Codigo = producto.Codigo,
                 Descripcion = producto.Descripcion,
                 PrecioUnitario = producto.PrecioUnitario,
-                IVA = producto.IVA,
+                IVA = producto.TipoImpuestoId.HasValue ? null: producto.IVA,
                 Unidad = producto.Unidad,
                 Activo = producto.Activo
             };
@@ -147,9 +204,10 @@
         {
             var request = new ActualizarProductoDto
             {
+                TipoImpuestoId = producto.TipoImpuestoId,
                 Descripcion = producto.Descripcion,
                 PrecioUnitario = producto.PrecioUnitario,
-                IVA = producto.IVA,
+                IVA = producto.TipoImpuestoId.HasValue ? null : producto.IVA,
                 Unidad = producto.Unidad,
                 Activo = producto.Activo
             };
