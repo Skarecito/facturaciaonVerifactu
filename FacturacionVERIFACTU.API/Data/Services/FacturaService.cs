@@ -64,8 +64,36 @@ namespace FacturacionVERIFACTU.API.Data.Services
             if (cliente == null)
                 throw new InvalidOperationException($"Cliente {dto.ClienteId} no encontrado");
 
+            var lineasFiltradas = dto.Lineas
+                .Where(l => l.ProductoId.HasValue || !string.IsNullOrWhiteSpace(l.Descripcion))
+                .ToList();
+
+            if (!lineasFiltradas.Any())
+            {
+                throw new InvalidOperationException("Debe incluir al menos una línea válida.");
+            }
+
+            foreach (var linea in lineasFiltradas)
+            {
+                if (linea.Cantidad <= 0)
+                {
+                    throw new InvalidOperationException("La cantidad debe ser mayor a 0.");
+                }
+
+                if (linea.PrecioUnitario < 0)
+                {
+                    throw new InvalidOperationException("El precio unitario no puede ser negativo.");
+                }
+
+                if (linea.PorcentajeDescuento < 0 || linea.PorcentajeDescuento > 100)
+                {
+                    throw new InvalidOperationException("El porcentaje de descuento debe estar entre 0 y 100.");
+                }
+            }
+
+
             // Validar productos
-            var lineasProductoIds = dto.Lineas
+            var lineasProductoIds = lineasFiltradas
                 .Where(l => l.ProductoId.HasValue)
                 .Select(l => l.ProductoId.Value)
                 .Distinct()
@@ -128,9 +156,10 @@ namespace FacturacionVERIFACTU.API.Data.Services
             };
 
             // ⭐ AGREGAR LÍNEAS CON CONFIGURACIÓN FISCAL AUTOMÁTICA
-            var tiposImpuestoActivos = await ObtenerTiposImpuestoActivosAsync(tenantId);
+            var fechaReferencia = (dto.FechaEmision ?? DateTime.UtcNow).ToUniversalTime();
+            var tiposImpuestoActivos = await ObtenerTiposImpuestoActivosAsync(tenantId, fechaReferencia);
             int orden = 1;
-            foreach (var lineaDto in dto.Lineas)
+            foreach (var lineaDto in lineasFiltradas)
             {
                 Producto? producto = null;
                 if (lineaDto.ProductoId.HasValue && productosDict.ContainsKey(lineaDto.ProductoId.Value))
@@ -141,8 +170,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 var (tipoImpuesto, iva, recargo) = ResolverTipoImpuesto(
                     tiposImpuestoActivos,
                     lineaDto.TipoImpuestoId,
-                    producto,
-                    lineaDto.IVA);
+                    producto);
 
                 if (!cliente.RegimenRecargoEquivalencia)
                 {
@@ -155,13 +183,10 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     Descripcion = lineaDto.Descripcion,
                     Cantidad = lineaDto.Cantidad,
                     PrecioUnitario = lineaDto.PrecioUnitario,
-                    IVA = iva,                              // ⭐ APLICADO AUTOMÁTICAMENTE
-                    RecargoEquivalencia = recargo,          // ⭐ APLICADO AUTOMÁTICAMENTE
                     IvaPercentSnapshot = iva,
                     RePercentSnapshot = recargo,
-                    TipoImpuestoId = tipoImpuesto?.Id,
-                    ProductoId = lineaDto.ProductoId,
-                    Importe = Math.Round(lineaDto.Cantidad * lineaDto.PrecioUnitario, 2)
+                    TipoImpuestoId = tipoImpuesto.Id,
+                    ProductoId = lineaDto.ProductoId
                 };
 
                 CalcularLineaFactura(linea);
@@ -282,8 +307,35 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 }
             }
 
+            var lineasFiltradas = dto.Lineas
+                .Where(l => l.ProductoId.HasValue || !string.IsNullOrWhiteSpace(l.Descripcion))
+                .ToList();
+
+            if (!lineasFiltradas.Any())
+            {
+                throw new InvalidOperationException("Debe incluir al menos una línea válida.");
+            }
+
+            foreach (var linea in lineasFiltradas)
+            {
+                if (linea.Cantidad <= 0)
+                {
+                    throw new InvalidOperationException("La cantidad debe ser mayor a 0.");
+                }
+
+                if (linea.PrecioUnitario < 0)
+                {
+                    throw new InvalidOperationException("El precio unitario no puede ser negativo.");
+                }
+
+                if (linea.PorcentajeDescuento < 0 || linea.PorcentajeDescuento > 100)
+                {
+                    throw new InvalidOperationException("El porcentaje de descuento debe estar entre 0 y 100.");
+                }
+            }
+
             // Validar productos
-            var lineasProductoIds = dto.Lineas
+            var lineasProductoIds = lineasFiltradas
                 .Where(l => l.ProductoId.HasValue)
                 .Select(l => l.ProductoId.Value)
                 .Distinct()
@@ -312,7 +364,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
             factura.ActualizadoEn = DateTime.UtcNow;
 
             // Actualización inteligente de líneas
-            var lineasDtoIds = dto.Lineas
+            var lineasDtoIds = lineasFiltradas
                 .Where(l => l.Id.HasValue)
                 .Select(l => l.Id.Value)
                 .ToList();
@@ -327,9 +379,11 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 _context.LineasFacturas.Remove(lineaAEliminar);
             }
 
-            var tiposImpuestoActivos = await ObtenerTiposImpuestoActivosAsync(tenantId);
+            var fechaReferencia = (dto.FechaEmision ?? factura.FechaEmision).ToUniversalTime();
+            var tiposImpuestoActivos = await ObtenerTiposImpuestoActivosAsync(tenantId, fechaReferencia);
+
             int orden = 1;
-            foreach (var lineaDto in dto.Lineas)
+            foreach (var lineaDto in lineasFiltradas)
             {
                 Producto? producto = null;
                 if (lineaDto.ProductoId.HasValue && productosDict.ContainsKey(lineaDto.ProductoId.Value))
@@ -340,8 +394,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 var (tipoImpuesto, iva, recargo) = ResolverTipoImpuesto(
                     tiposImpuestoActivos,
                     lineaDto.TipoImpuestoId,
-                    producto,
-                    lineaDto.IVA);
+                    producto);
 
                 if (!clienteActual.RegimenRecargoEquivalencia)
                 {
@@ -360,13 +413,11 @@ namespace FacturacionVERIFACTU.API.Data.Services
                         lineaExistente.Descripcion = lineaDto.Descripcion;
                         lineaExistente.Cantidad = lineaDto.Cantidad;
                         lineaExistente.PrecioUnitario = lineaDto.PrecioUnitario;
-                        lineaExistente.IVA = iva;                          // ⭐ RECALCULADO
-                        lineaExistente.RecargoEquivalencia = recargo;       // ⭐ RECALCULADO
                         lineaExistente.IvaPercentSnapshot = iva;
                         lineaExistente.RePercentSnapshot = recargo;
-                        lineaExistente.TipoImpuestoId = tipoImpuesto?.Id;
+                        lineaExistente.TipoImpuestoId = tipoImpuesto.Id;
                         lineaExistente.ProductoId = lineaDto.ProductoId;
-                        lineaExistente.Importe = Math.Round(lineaDto.Cantidad * lineaDto.PrecioUnitario, 2);
+                      
                         CalcularLineaFactura(lineaExistente);
                     }
                 }
@@ -380,13 +431,10 @@ namespace FacturacionVERIFACTU.API.Data.Services
                         Descripcion = lineaDto.Descripcion,
                         Cantidad = lineaDto.Cantidad,
                         PrecioUnitario = lineaDto.PrecioUnitario,
-                        IVA = iva,                                  // ⭐ CALCULADO
-                        RecargoEquivalencia = recargo,              // ⭐ CALCULADO
                         IvaPercentSnapshot = iva,
                         RePercentSnapshot = recargo,
                         TipoImpuestoId = tipoImpuesto?.Id,
                         ProductoId = lineaDto.ProductoId,
-                        Importe = Math.Round(lineaDto.Cantidad * lineaDto.PrecioUnitario, 2)
                     };
 
                     CalcularLineaFactura(lineaNueva);
@@ -854,7 +902,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
             foreach (var lineaPresupuesto in presupuestos.SelectMany(p => p.Lineas).OrderBy(l => l.Orden))
             {
                 decimal iva = lineaPresupuesto.IvaPercentSnapshot;
-                decimal recargo = lineaPresupuesto.RecargoEquivalencia;
+                decimal recargo = lineaPresupuesto.RePercentSnapshot;
 
              
 
@@ -1113,26 +1161,31 @@ namespace FacturacionVERIFACTU.API.Data.Services
 
         private void CalcularLineaFactura(LineaFactura linea)
         {
-            var subtotal = linea.Cantidad * linea.PrecioUnitario;
+            var subtotal = Math.Round(linea.Cantidad * linea.PrecioUnitario, 2);
             linea.BaseImponible = subtotal;
-            linea.ImporteIva = subtotal * (linea.IvaPercentSnapshot / 100);
-            linea.ImporteRecargo = subtotal * (linea.RePercentSnapshot / 100);
-            linea.TotalLineaSnapshot = subtotal + linea.ImporteIva + linea.ImporteRecargo;
-            linea.Importe = subtotal;
+            linea.ImporteIva = Math.Round(subtotal * (linea.IvaPercentSnapshot / 100), 2);
+            linea.ImporteRecargo = Math.Round(subtotal * (linea.RePercentSnapshot / 100), 2);
+            linea.TotalLineaSnapshot = Math.Round(subtotal + linea.ImporteIva + linea.ImporteRecargo, 2);
+            linea.Importe = linea.TotalLineaSnapshot;
         }
 
-        private async Task<List<TipoImpuesto>> ObtenerTiposImpuestoActivosAsync(int tenantId)
+        private async Task<List<TipoImpuesto>> ObtenerTiposImpuestoActivosAsync(int tenantId, DateTime fechaReferencia)
         {
             return await _context.TiposImpuesto
-                .Where(t => t.TenantId == tenantId && t.Activo)
+                .Where(t => t.TenantId == tenantId
+                    && t.Activo
+                    && (t.FechaInicio == null || t.FechaInicio <= fechaReferencia)
+                    && (t.FechaFin == null || t.FechaFin >= fechaReferencia))
+                .OrderBy(t => t.Orden.HasValue ? 0 : 1)
+                .ThenBy(t => t.Orden)
+                .ThenBy(t => t.Id)
                 .ToListAsync();
         }
 
         private (TipoImpuesto? TipoImpuesto, decimal Iva, decimal Recargo) ResolverTipoImpuesto(
             List<TipoImpuesto> tiposImpuestoActivos,
             int? tipoImpuestoId,
-            Producto? producto,
-            decimal? ivaOverride)
+            Producto? producto)
         {
             TipoImpuesto? tipoImpuesto = null;
 
@@ -1148,25 +1201,10 @@ namespace FacturacionVERIFACTU.API.Data.Services
                 if (tipoImpuesto == null)
                     throw new InvalidOperationException("Tipo de impuesto del producto no válido o inactivo");
             }
-            else if (ivaOverride.HasValue)
-            {
-                tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.PorcentajeIva == ivaOverride.Value);
-            }
-            else if (producto?.IVA > 0)
-            {
-                tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.PorcentajeIva == producto.IVA);
-            }
 
-            tipoImpuesto ??= tiposImpuestoActivos.FirstOrDefault(t => t.Nombre == "General");
+            tipoImpuesto ??= tiposImpuestoActivos.First();
 
-            var iva = tipoImpuesto?.PorcentajeIva
-                ?? ivaOverride
-                ?? producto?.IVA
-                ?? 0m;
-
-            var recargo = tipoImpuesto?.PorcentajeRecargo ?? 0m;
-
-            return (tipoImpuesto, iva, recargo);
+            return (tipoImpuesto, tipoImpuesto.PorcentajeIva, tipoImpuesto.PorcentajeRecargo);
         }
 
         private static readonly HashSet<string> TiposFacturaVerifactuPermitidos = new(StringComparer.OrdinalIgnoreCase)
@@ -1195,7 +1233,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
 
         private static void ValidarTipoFacturaVerifactu(string? tipoFactura)
         {
-            if (!string.IsNullOrWhiteSpace(tipoFactura) || !TiposFacturaVerifactuPermitidos.Contains(tipoFactura))
+            if (string.IsNullOrWhiteSpace(tipoFactura) || !TiposFacturaVerifactuPermitidos.Contains(tipoFactura))
             {
                 throw new InvalidOperationException(
                    $"TipoFacturaVERIFACTU inválido: {tipoFactura ?? "<vacío>"}.");
@@ -1279,11 +1317,11 @@ namespace FacturacionVERIFACTU.API.Data.Services
             if (factura.Cliente == null)
             {
                 factura.Cliente = await _context.Clientes
-                    .FirstOrDefaultAsync(c => c.Id == factura.ClienteId);
+                    .FirstOrDefaultAsync(c => c.Id == factura.ClienteId && c.TenantId == factura.TenantId);
             }
 
             var serie = await _context.SeriesNumeracion
-                .FirstOrDefaultAsync(s => s.Id == factura.SerieId);
+                .FirstOrDefaultAsync(s => s.Id == factura.SerieId && s.TenantId == factura.TenantId);
 
             // Cargar albaranes si existen
             var albaranesIds = await _context.Albaranes
