@@ -474,8 +474,6 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     Cantidad = lineaPresupuesto.Cantidad,
                     PrecioUnitario = lineaPresupuesto.PrecioUnitario,
                     PorcentajeDescuento = lineaPresupuesto.PorcentajeDescuento,
-                    IVA = iva,
-                    RecargoEquivalencia = recargo,
                     IvaPercentSnapshot = iva,
                     RePercentSnapshot = recargo,
                     TipoImpuestoId = lineaPresupuesto.TipoImpuestoId,

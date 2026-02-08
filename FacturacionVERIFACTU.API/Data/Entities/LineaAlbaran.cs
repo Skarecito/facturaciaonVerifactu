@@ -36,12 +36,6 @@ namespace API.Data.Entities
         [Column("precio_unitario", TypeName = "decimal(18,2)")]
         public decimal PrecioUnitario { get; set; }
 
-        [Column("iva", TypeName = "decimal(5,2)")]
-        public decimal IVA { get; set; }
-
-        [Column("recargo_equivalencia", TypeName = "decimal(5,2)")]
-        public decimal RecargoEquivalencia { get; set; } = 0;
-
         [Column("iva_percent_snapshot", TypeName = "decimal(5,2)")]
         public decimal IvaPercentSnapshot { get; set; }
 
@@ -65,11 +59,6 @@ namespace API.Data.Entities
 
         [Column("importe_recargo", TypeName = "decimal(18,2)")]
         public decimal ImporteRecargo { get; set; } = 0;
-
-        [Column("total_linea", TypeName = "decimal(18,2)")]
-        public decimal TotalLineaSnapshot { get; set; }
-
-        
 
         // Propiedades calculadas
         [NotMapped]

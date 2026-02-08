@@ -1,10 +1,10 @@
-diff a/FacturacionVERIFACTU.API/Data/Services/AlbaranService.cs b/FacturacionVERIFACTU.API/Data/Services/AlbaranService.cs	(rejected hunks)
-@@ -82,52 +82,50 @@ namespace FacturacionVERIFACTU.API.Data.Services
+diff a/FacturacionVERIFACTU.API/Data/Services/PresupuestoService.cs b/FacturacionVERIFACTU.API/Data/Services/PresupuestoService.cs	(rejected hunks)
+@@ -107,52 +107,50 @@ namespace FacturacionVERIFACTU.API.Data.Services
              {
                  Producto? producto = null;
-                 if (lineaDto.ProductoId.HasValue && productosDict.ContainsKey(lineaDto.ProductoId.Value))
+                 if (lineaDto.ArticuloId.HasValue && productosDict.ContainsKey(lineaDto.ArticuloId.Value))
                  {
-                     producto = productosDict[lineaDto.ProductoId.Value];
+                     producto = productosDict[lineaDto.ArticuloId.Value];
                  }
  
                  var (tipoImpuesto, iva, recargo) = ResolverTipoImpuesto(
@@ -18,7 +18,7 @@ diff a/FacturacionVERIFACTU.API/Data/Services/AlbaranService.cs b/FacturacionVER
                      recargo = 0m;
                  }
  
-                 var linea = new LineaAlbaran
+                 var linea = new LineaPresupuesto
                  {
                      Orden = orden++,
                      Descripcion = lineaDto.Descripcion,
@@ -30,29 +30,29 @@ diff a/FacturacionVERIFACTU.API/Data/Services/AlbaranService.cs b/FacturacionVER
                      IvaPercentSnapshot = iva,
                      RePercentSnapshot = recargo,
                      TipoImpuestoId = tipoImpuesto?.Id,
-                     ProductoId = lineaDto.ProductoId,
+                     ProductoId = lineaDto.ArticuloId
                  };
  
                  CalcularLinea(linea);
-                 albaran.Lineas.Add(linea);
+                 presupuesto.Lineas.Add(linea);
              }
  
-             CalcularTotalesAlbaran(albaran);
+             CalcularTotalesPresupuesto(presupuesto);
  
-             _context.Albaranes.Add(albaran);
+             _context.Presupuestos.Add(presupuesto);
              await _context.SaveChangesAsync();
  
-             _logger.LogInformation("Creado albaran {numero} para tenant {TenantId}",
+             _logger.LogInformation(
+                 "Creado presupuesto {NumeroPresupuesto} para tenant {TenantId}",
                  numeroCompleto, tenantId);
  
-             return await MapearAResponseDto(albaran);
+             return await MapearAResponseDto(presupuesto);
          }
  
-         public async Task<AlbaranResponseDto> ActualizarAlbaranAsync(int tenantId, int id, AlbaranUpdateDto dto)
-         {
-             var albaran = await _context.Albaranes
-                 .Include(a => a.Lineas)
-@@ -198,73 +196,69 @@ namespace FacturacionVERIFACTU.API.Data.Services
+ 
+         // API/Services/PresupuestoService.cs - ActualizarPresupuestoAsync
+ 
+@@ -263,73 +261,69 @@ namespace FacturacionVERIFACTU.API.Data.Services
  
                  var (tipoImpuesto, iva, recargo) = ResolverTipoImpuesto(
                      tiposImpuestoActivos,
@@ -67,8 +67,8 @@ diff a/FacturacionVERIFACTU.API/Data/Services/AlbaranService.cs b/FacturacionVER
  
                  if (lineaDto.Id.HasValue && lineaDto.Id.Value > 0)
                  {
-                     //Actualizar linea existente
-                     var lineaExistente = albaran.Lineas
+                     // Actualizar existente
+                     var lineaExistente = presupuesto.Lineas
                          .FirstOrDefault(l => l.Id == lineaDto.Id.Value);
  
                      if (lineaExistente != null)
@@ -83,17 +83,17 @@ diff a/FacturacionVERIFACTU.API/Data/Services/AlbaranService.cs b/FacturacionVER
                          lineaExistente.IvaPercentSnapshot = iva;
                          lineaExistente.RePercentSnapshot = recargo;
                          lineaExistente.TipoImpuestoId = tipoImpuesto?.Id;
-                         lineaExistente.ProductoId = lineaDto.ProductoId;
+                         lineaExistente.ProductoId = lineaDto.ArticuloId;
  
                          CalcularLinea(lineaExistente);
                      }
                  }
                  else
                  {
-                     //Crear linea nueva
-                     var lineaNueva = new LineaAlbaran
+                     // Crear nueva
+                     var lineaNueva = new LineaPresupuesto
                      {
-                         AlbaranId = albaran.Id,
+                         PresupuestoId = presupuesto.Id,
                          Orden = orden++,
                          Descripcion = lineaDto.Descripcion,
                          Cantidad = lineaDto.Cantidad,
@@ -104,29 +104,29 @@ diff a/FacturacionVERIFACTU.API/Data/Services/AlbaranService.cs b/FacturacionVER
                          IvaPercentSnapshot = iva,
                          RePercentSnapshot = recargo,
                          TipoImpuestoId = tipoImpuesto?.Id,
-                         ProductoId = lineaDto.ProductoId
+                         ProductoId = lineaDto.ArticuloId
                      };
  
                      CalcularLinea(lineaNueva);
-                     albaran.Lineas.Add(lineaNueva);
+                     presupuesto.Lineas.Add(lineaNueva);
                  }
              }
  
-             //Recalcular totales
-             CalcularTotalesAlbaran(albaran);
+             // Recalcular totales
+             CalcularTotalesPresupuesto(presupuesto);
  
              await _context.SaveChangesAsync();
  
-             _logger.LogInformation("Actualizado albaran {Numero} para Tenant {TenantId}",
-                 albaran.Numero, tenantId);
+             _logger.LogInformation("Actualizado presupuesto {Numero} para tenant {TenantId}",
+                 presupuesto.Numero, tenantId);
  
-             return await MapearAResponseDto(albaran);
+             return await MapearAResponseDto(presupuesto);
          }
  
-         public async Task<AlbaranResponseDto> CambiarEstadoAsync(int tenantId, int id, CambiarEstadoAlbaranDto dto)
-         {
-             var albaran = await _context.Albaranes
-@@ -482,60 +474,55 @@ namespace FacturacionVERIFACTU.API.Data.Services
+         public async Task<PresupuestoResponseDto> CambiarEstadoAsync(
+             int tenantId,
+             int id,
+@@ -476,60 +470,55 @@ namespace FacturacionVERIFACTU.API.Data.Services
  
          private (TipoImpuesto? TipoImpuesto, decimal Iva, decimal Recargo) ResolverTipoImpuesto(
              List<TipoImpuesto> tiposImpuestoActivos,
@@ -169,36 +169,25 @@ diff a/FacturacionVERIFACTU.API/Data/Services/AlbaranService.cs b/FacturacionVER
              return (tipoImpuesto, iva, recargo);
          }
  
+         /// <summary>
+         /// Valida que la transición de estado sea permitida
+         /// </summary>
          private void ValidarTransicionEstado(string estadoActual, string nuevoEstado)
          {
              var transicionesPermitidas = new Dictionary<string, List<string>>
              {
-                 {"Pendiente", new List<string>{"Entregado", "Anulado"} },
-                 {"Entregado", new List<string>{"Facturado", "Anulado"} },
-                 {"Aceptado", new List<string>{"Facturado"} },
-                 {"Facturado", new List<string> ()}, //Estado final
-                 {"Anulado", new List<string>() } //Estado final
+                 { "Borrador", new List<string> { "Enviado" } },
+                 { "Enviado", new List<string> { "Aceptado", "Rechazado", "Borrador" } },
+                 { "Aceptado", new List<string>() }, // Estado final
+                 { "Rechazado", new List<string> { "Borrador" } },  // Permite volver a Borrador
+                 {"Facturado", new List<string>() }
              };
  
              if (!transicionesPermitidas.ContainsKey(estadoActual))
-                 throw new InvalidOperationException($"Estado actual '{estadoActual}' no valido");
- 
-             if (!transicionesPermitidas[estadoActual].Contains(nuevoEstado))
-                 throw new InvalidOperationException($"No se puede cambiar de '{estadoActual}' a '{nuevoEstado}'");
-         }
- 
-@@ -566,49 +553,50 @@ namespace FacturacionVERIFACTU.API.Data.Services
-                 FechaEntrega = albaran.FechaEntrega,
-                 BaseImponible = albaran.BaseImponible,
-                 TotalIVA = albaran.TotalIVA,
-                 TotalRecargo = albaran.TotalRecargo,
-                 Total = albaran.Total,
-                 Estado = albaran.Estado,
-                 DireccionEntrega = albaran.DireccionEntrega,
-                 Observaciones = albaran.Observaciones,
-                 Facturado = albaran.Facturado,
-                 FacturaId = albaran.FacturaId,
-                 Lineas = albaran.Lineas.Select(l => new LineaAlbaranResponseDto
+             {
+                 throw new InvalidOperationException($"Estado actual '{estadoActual}' no válido");
+             }
+@@ -577,26 +566,26 @@ namespace FacturacionVERIFACTU.API.Data.Services
                  {
                      Id = l.Id,
                      Orden = l.Orden,
@@ -209,30 +198,17 @@ diff a/FacturacionVERIFACTU.API/Data/Services/AlbaranService.cs b/FacturacionVER
                      ImporteDescuento = l.ImporteDescuento,
                      BaseImponible = l.BaseImponible,
                      IVA = l.IvaPercentSnapshot,
-                     ImporteIva = l.ImporteIva,
-                     RecargoEquivalencia = l.RePercentSnapshot,
+                     ImporteIVA = l.ImporteIva,
                      ImporteRecargo = l.ImporteRecargo,
-                     Importe = l.Importe,
-+                    TotalLinea = l.Importe,
+                     RecargoEquivalencia = l.RePercentSnapshot,
+                     Total = l.Importe,
                      TipoImpuestoId = l.TipoImpuestoId,
-                     ProductoId = l.ProductoId
-                 }).OrderBy(l => l.Orden).ToList(),
-                 FechaCreacion = albaran.FechaCreacion,
-                 FechaModificacion = albaran.FechaModificacion
+                     ArticuloId = l.ProductoId,
+                     ArticuloCodigo = l.Producto?.Codigo
+                 }).ToList(),
+                 FechaCreacion = presupuesto.FechaCreacion,
+                 FechaModificacion = presupuesto.FechaModificacion
              };
-         }
- 
-         private async Task<Dictionary<int, Producto>> ObtenerProductosAsync(IEnumerable<int> productosIds, int tenantId)
-         {
-             var ids = productosIds.Distinct().ToList();
-             if (!ids.Any())
-             {
-                 return new Dictionary<int, Producto>();
-             }
- 
-             return await _context.Productos
-                 .Where(p => ids.Contains(p.Id) && p.TenantId == tenantId)
-                 .ToDictionaryAsync(p => p.Id);
          }
  
          #endregion

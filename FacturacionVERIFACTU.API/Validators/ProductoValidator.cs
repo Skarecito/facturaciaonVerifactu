@@ -22,11 +22,6 @@ namespace FacturacionVERIFACTU.API.Validators
                 .GreaterThan(0).WithMessage("El precio debe ser mayor que 0")
                 .LessThan(1000000).WithMessage("El precio no puede superar 999,999");
 
-            RuleFor(x => x.IVA)
-                .GreaterThanOrEqualTo(0).WithMessage("El IVA no puede ser negativo")
-                .LessThanOrEqualTo(100).WithMessage("El IVA no puede superar 100%")
-                .When(x => x.IVA.HasValue);
-
             RuleFor(x => x.Unidad)
                 .MaximumLength(10).When(x => !string.IsNullOrEmpty(x.Unidad));
         }
@@ -46,11 +41,6 @@ namespace FacturacionVERIFACTU.API.Validators
             RuleFor(x => x.PrecioUnitario)
                 .GreaterThan(0).WithMessage("El precio debe ser mayor que 0")
                 .LessThan(1000000).WithMessage("El precio no puede superar 999,999");
-
-            RuleFor(x => x.IVA)
-                .GreaterThanOrEqualTo(0).WithMessage("El IVA no puede ser negativo")
-                .LessThanOrEqualTo(100).WithMessage("El IVA no puede superar 100%")
-                 .When(x => x.IVA.HasValue); ;
 
             RuleFor(x => x.Unidad)
                 .MaximumLength(10).When(x => !string.IsNullOrEmpty(x.Unidad));

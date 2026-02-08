@@ -1035,7 +1035,7 @@
             Cantidad = 1,
             PrecioUnitario = producto.PrecioUnitario,
             PorcentajeDescuento = 0,
-            IVA = producto.IVA,
+            IVA = producto.PorcentajeIva,
             ArticuloId = producto.ProductoId,
             ArticuloCodigo = producto.Codigo
         };
@@ -1194,7 +1194,9 @@
             }
         }
 
-        return producto.IVA.HasValue ? $"IVA legado {producto.IVA.Value:N2}%" : "Sin asignar";
+        return producto.PorcentajeIva.HasValue
+             ? $"IVA {producto.PorcentajeIva.Value:N2}%"
+             : "Sin asignar";
     }
 
     private static decimal CalcularRecargoEquivalencia(decimal iva)

@@ -80,7 +80,7 @@ namespace FacturacionVERIFACTU.API.Controllers
                     Codigo = p.Codigo,
                     Descripcion = p.Descripcion,
                     PrecioUnitario = p.Precio,
-                    IVA = p.IVA,
+                    PorcentajeIva = p.TipoImpuesto != null ? p.TipoImpuesto.PorcentajeIva : 0m,
                     Unidad = p.Unidad,
                     Activo = p.Activo,
                     FechaCreacion = p.FechaCreacion,
@@ -118,7 +118,7 @@ namespace FacturacionVERIFACTU.API.Controllers
                     Codigo = p.Codigo,
                     Descripcion = p.Descripcion,
                     PrecioUnitario = p.Precio,
-                    IVA = p.IVA,
+                    PorcentajeIva = p.TipoImpuesto != null ? p.TipoImpuesto.PorcentajeIva : 0m,
                     Unidad = p.Unidad,
                     Activo = p.Activo,
                     FechaCreacion = p.FechaCreacion,
@@ -154,9 +154,10 @@ namespace FacturacionVERIFACTU.API.Controllers
             if (existeCodigo)
                 return Conflict(new { message = "Ya existe un porducto con ese codigo" });
 
+            TipoImpuesto? tipoImpuesto = null;
             if (dto.TipoImpuestoId.HasValue)
             {
-                var tipoImpuesto = await _context.TiposImpuesto
+                tipoImpuesto = await _context.TiposImpuesto
                     .FirstOrDefaultAsync(t => t.Id == dto.TipoImpuestoId.Value
                         && t.TenantId == tenantId.Value
                         && t.Activo);
@@ -171,7 +172,6 @@ namespace FacturacionVERIFACTU.API.Controllers
                 Codigo = dto.Codigo,
                 Descripcion = dto.Descripcion,
                 Precio = dto.PrecioUnitario,
-                IVA = dto.IVA ?? 0m,
                 TipoImpuestoId = dto.TipoImpuestoId,
                 Unidad = dto.Unidad,
                 Activo = dto.Activo,
@@ -188,7 +188,7 @@ namespace FacturacionVERIFACTU.API.Controllers
                 Codigo = producto.Codigo,
                 Descripcion = producto.Descripcion,
                 PrecioUnitario = producto.Precio,
-                IVA = producto.IVA,
+                PorcentajeIva = tipoImpuesto?.PorcentajeIva ?? 0m,
                 Unidad = producto.Unidad,
                 Activo = producto.Activo,
                 FechaCreacion = producto.FechaCreacion,
@@ -220,9 +220,10 @@ namespace FacturacionVERIFACTU.API.Controllers
             if (producto == null)
                 return NotFound(new { message = "Producto no encontrado" });
 
+            TipoImpuesto? tipoImpuesto = null;
             if (dto.TipoImpuestoId.HasValue)
             {
-                var tipoImpuesto = await _context.TiposImpuesto
+                tipoImpuesto = await _context.TiposImpuesto
                     .FirstOrDefaultAsync(t => t.Id == dto.TipoImpuestoId.Value
                         && t.TenantId == tenantId.Value
                         && t.Activo);
@@ -233,10 +234,7 @@ namespace FacturacionVERIFACTU.API.Controllers
 
             producto.Descripcion = dto.Descripcion;
             producto.Precio = dto.PrecioUnitario;
-            if (dto.IVA.HasValue)
-            {
-                producto.IVA = dto.IVA.Value;
-            }
+            producto.TipoImpuestoId = dto.TipoImpuestoId;
             producto.Unidad = dto.Unidad;
             producto.Activo = dto.Activo;
             producto.FechaModificacion = DateTime.UtcNow;
@@ -249,7 +247,7 @@ namespace FacturacionVERIFACTU.API.Controllers
                 Codigo = producto.Codigo,
                 Descripcion = dto.Descripcion,
                 PrecioUnitario = dto.PrecioUnitario,
-                IVA = producto.IVA,
+                PorcentajeIva = tipoImpuesto?.PorcentajeIva ?? 0m,
                 Unidad = dto.Unidad,
                 Activo = dto.Activo,
                 FechaCreacion = dto.FechaCreacion,

@@ -21,9 +21,7 @@ public class ProductoDto
     [Range(0.01, 1000000, ErrorMessage = "El precio debe ser mayor que 0.")]
     public decimal PrecioUnitario { get; set; }
 
-    [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
-    public decimal? IVA { get; set; } = 21;
-    public decimal? RecargoEquivalenciaDefecto { get; set; }
+    public decimal? PorcentajeIva { get; set; }
 
     public string? Unidad { get; set; } = "Ud";
     public bool Activo { get; set; }
@@ -45,10 +43,6 @@ public class CrearProductoDto
     [Range(0.01, 1000000, ErrorMessage = "El precio debe ser mayor que 0.")]
     public decimal PrecioUnitario { get; set; }
 
-    [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
-    public decimal? IVA { get; set; } = 21;
-
-    public decimal? RecargoEquivalenciaDefecto { get; set; }
     public string? Unidad { get; set; } = "Ud";
     public bool Activo { get; set; }
 }
@@ -65,10 +59,6 @@ public class ActualizarProductoDto
     [Range(0.01, 1000000, ErrorMessage = "El precio debe ser mayor que 0.")]
     public decimal PrecioUnitario { get; set; }
 
-    [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
-    public decimal? IVA { get; set; }
-
-    public decimal? RecargoEquivalenciaDefecto { get; set; }
     public string? Unidad { get; set; }
     public bool Activo { get; set; }
 }

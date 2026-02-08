@@ -74,12 +74,6 @@
                         <i class="bi bi-exclamation-triangle"></i> @avisoTipoImpuesto
                     </div>
                 }
-                @if (producto.TipoImpuestoId is null && producto.IVA.HasValue)
-                {
-                    <div class="notion-hint" style="margin-top: 6px; font-size: 12px; color: #8b8b8b;">
-                        IVA legado detectado: @producto.IVA.Value.ToString("N2")%. Selecciona un tipo para migrar.
-                    </div>
-                }
             </div>
 
             @* Fila 4: Estado *@
@@ -140,7 +134,7 @@
         producto = response;
         if (producto.TipoImpuestoId is null)
         {
-            avisoTipoImpuesto = "Este producto no tiene tipo de impuesto asignado. Selecciona uno para evitar usar IVA legado.";
+            avisoTipoImpuesto = "Este producto no tiene tipo de impuesto asignado. Selecciona uno antes de guardar.";
         }
     }
 
@@ -187,7 +181,6 @@
                 Codigo = producto.Codigo,
                 Descripcion = producto.Descripcion,
                 PrecioUnitario = producto.PrecioUnitario,
-                IVA = producto.TipoImpuestoId.HasValue ? null: producto.IVA,
                 Unidad = producto.Unidad,
                 Activo = producto.Activo
             };
@@ -207,7 +200,6 @@
                 TipoImpuestoId = producto.TipoImpuestoId,
                 Descripcion = producto.Descripcion,
                 PrecioUnitario = producto.PrecioUnitario,
-                IVA = producto.TipoImpuestoId.HasValue ? null : producto.IVA,
                 Unidad = producto.Unidad,
                 Activo = producto.Activo
             };

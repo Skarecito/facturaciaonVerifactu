@@ -764,13 +764,10 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     Descripcion = lineaPresupuesto.Descripcion,
                     Cantidad = cantidad,
                     PrecioUnitario = precioUnitario,
-                    IVA = iva,
-                    RecargoEquivalencia = recargo, // ⭐ MANTENIDO DEL PRESUPUESTO
                     IvaPercentSnapshot = iva,
                     RePercentSnapshot = recargo,
                     TipoImpuestoId = lineaPresupuesto.TipoImpuestoId,
-                    ProductoId = lineaPresupuesto.ProductoId,
-                    Importe = Math.Round(cantidad * precioUnitario, 2)
+                    ProductoId = lineaPresupuesto.ProductoId
                 };
 
                 CalcularLineaFactura(lineaFactura);
@@ -902,7 +899,9 @@ namespace FacturacionVERIFACTU.API.Data.Services
             foreach (var lineaPresupuesto in presupuestos.SelectMany(p => p.Lineas).OrderBy(l => l.Orden))
             {
                 decimal iva = lineaPresupuesto.IvaPercentSnapshot;
-                decimal recargo = lineaPresupuesto.RePercentSnapshot;
+                decimal recargo = cliente.RegimenRecargoEquivalencia
+                    ? lineaPresupuesto.RePercentSnapshot
+                    : 0m; 
 
              
 
@@ -912,13 +911,13 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     Descripcion = lineaPresupuesto.Descripcion,
                     Cantidad = lineaPresupuesto.Cantidad,
                     PrecioUnitario = lineaPresupuesto.PrecioUnitario,
-                    IVA = iva,
+                    IvaPercentSnapshot = iva,
                     RePercentSnapshot = recargo,
                     TipoImpuestoId = lineaPresupuesto.TipoImpuestoId,
-                    ProductoId = lineaPresupuesto.ProductoId,
-                    Importe = Math.Round(lineaPresupuesto.Cantidad * lineaPresupuesto.PrecioUnitario, 2)
+                    ProductoId = lineaPresupuesto.ProductoId
                 };
 
+                CalcularLineaFactura(lineaFactura);
                 factura.Lineas.Add(lineaFactura);
             }
 
@@ -1065,13 +1064,10 @@ namespace FacturacionVERIFACTU.API.Data.Services
                         Descripcion = $"[{albaran.Numero}] {lineaAlbaran.Descripcion}",
                         Cantidad = lineaAlbaran.Cantidad,
                         PrecioUnitario = lineaAlbaran.PrecioUnitario,
-                        IVA = iva,
-                        RecargoEquivalencia = recargo, // ⭐ MANTENIDO DEL ALBARÁN
                         IvaPercentSnapshot = iva,
                         RePercentSnapshot = recargo,
                         TipoImpuestoId = lineaAlbaran.TipoImpuestoId,
-                        ProductoId = lineaAlbaran.ProductoId,
-                        Importe = Math.Round(lineaAlbaran.Cantidad * lineaAlbaran.PrecioUnitario, 2)
+                        ProductoId = lineaAlbaran.ProductoId
                     };
 
                     CalcularLineaFactura(lineaFactura);
@@ -1162,11 +1158,10 @@ namespace FacturacionVERIFACTU.API.Data.Services
         private void CalcularLineaFactura(LineaFactura linea)
         {
             var subtotal = Math.Round(linea.Cantidad * linea.PrecioUnitario, 2);
-            linea.BaseImponible = subtotal;
-            linea.ImporteIva = Math.Round(subtotal * (linea.IvaPercentSnapshot / 100), 2);
+            linea.BaseImponible = Math.Round(subtotal, 2);
+            linea.ImporteIva = Math.Round(linea.BaseImponible * (linea.IvaPercentSnapshot / 100), 2);
             linea.ImporteRecargo = Math.Round(subtotal * (linea.RePercentSnapshot / 100), 2);
-            linea.TotalLineaSnapshot = Math.Round(subtotal + linea.ImporteIva + linea.ImporteRecargo, 2);
-            linea.Importe = linea.TotalLineaSnapshot;
+            linea.Importe = Math.Round(linea.BaseImponible + linea.ImporteIva + linea.ImporteRecargo, 2);
         }
 
         private async Task<List<TipoImpuesto>> ObtenerTiposImpuestoActivosAsync(int tenantId, DateTime fechaReferencia)
@@ -1384,7 +1379,6 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     ImporteIva = l.ImporteIva,
                     ImporteRecargo = l.ImporteRecargo, // ⭐ NUEVO
                     Importe = l.Importe,
-                    TotalLinea = l.TotalLineaSnapshot,
                     TipoImpuestoId = l.TipoImpuestoId
                 }).OrderBy(l => l.Orden).ToList(),
 

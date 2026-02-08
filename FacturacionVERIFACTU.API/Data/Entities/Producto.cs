@@ -29,9 +29,6 @@ namespace FacturacionVERIFACTU.API.Data.Entities
         [Column("precio", TypeName = "decimal(18,2)")]
         public decimal Precio { get; set; }
 
-        [Column("iva", TypeName = "decimal(5,2)")]
-        public decimal IVA { get; set; } = 21.00m;
-
         [Column("tipo_impuesto_id")]
         public int? TipoImpuestoId { get; set; }
 

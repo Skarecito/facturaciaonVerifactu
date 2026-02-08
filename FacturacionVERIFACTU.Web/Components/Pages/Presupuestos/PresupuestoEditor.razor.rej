@@ -1,0 +1,109 @@
+diff a/FacturacionVERIFACTU.Web/Components/Pages/Presupuestos/PresupuestoEditor.razor b/FacturacionVERIFACTU.Web/Components/Pages/Presupuestos/PresupuestoEditor.razor	(rejected hunks)
+@@ -1013,51 +1013,51 @@
+         finally
+         {
+             cargandoProductos = false;
+             await InvokeAsync(StateHasChanged);
+         }
+     }
+ 
+     private async Task BuscarProductosAsync()
+     {
+         await CargarProductosAsync(busquedaProducto);
+     }
+ 
+     private void AgregarLineaDesdeProducto(ProductoDto producto)
+     {
+         if (!EsEditable)
+         {
+             return;
+         }
+ 
+         var linea = new LineaPresupuestoViewModel
+         {
+             Descripcion = producto.Descripcion,
+             Cantidad = 1,
+             PrecioUnitario = producto.PrecioUnitario,
+             PorcentajeDescuento = 0,
+-            IVA = producto.IVA,
++            IVA = producto.PorcentajeIva,
+             ArticuloId = producto.ProductoId,
+             ArticuloCodigo = producto.Codigo
+         };
+ 
+         if (producto.TipoImpuestoId.HasValue)
+         {
+             linea.TipoImpuestoId = producto.TipoImpuestoId;
+             AplicarTipoImpuesto(linea);
+         }
+         else
+         {
+             var tipoDefault = ObtenerTipoImpuestoPorDefecto();
+             if (tipoDefault != null)
+             {
+                 linea.TipoImpuestoId = tipoDefault.TipoImpuestoId;
+                 AplicarTipoImpuesto(linea);
+                 avisoImpuestos = $"El producto {producto.Codigo} no tiene tipo de impuesto asignado. Se aplicó {tipoDefault.Nombre} por defecto.";
+             }
+             else
+             {
+                 avisoImpuestos = $"El producto {producto.Codigo} no tiene tipo de impuesto asignado.";
+             }
+         }
+ 
+         presupuesto.Lineas.Add(linea);
+@@ -1172,51 +1172,53 @@
+         }
+ 
+         var tipo = tiposImpuesto.FirstOrDefault(t => t.TipoImpuestoId == linea.TipoImpuestoId);
+         if (tipo == null)
+         {
+             return;
+         }
+ 
+         linea.IVA = tipo.PorcentajeIVA;
+         linea.RecargoEquivalencia = aplicaRecargoEquivalencia
+             ? tipo.PorcentajeRecargoEquivalencia ?? 0m
+             : 0m;
+     }
+ 
+     private string ObtenerDescripcionImpuesto(ProductoDto producto)
+     {
+         if (producto.TipoImpuestoId.HasValue)
+         {
+             var tipo = tiposImpuesto.FirstOrDefault(t => t.TipoImpuestoId == producto.TipoImpuestoId);
+             if (tipo != null)
+             {
+                 return $"{tipo.Nombre} ({tipo.PorcentajeIVA:N2}% IVA)";
+             }
+         }
+ 
+-        return producto.IVA.HasValue ? $"IVA legado {producto.IVA.Value:N2}%" : "Sin asignar";
++        return producto.PorcentajeIva.HasValue
++            ? $"IVA {producto.PorcentajeIva.Value:N2}%"
++            : "Sin asignar";
+     }
+ 
+     private static decimal CalcularRecargoEquivalencia(decimal iva)
+     {
+         return iva switch
+         {
+             21m => 5.2m,
+             10m => 1.4m,
+             4m => 0.5m,
+             0m => 0m,
+             _ => 0m
+         };
+     }
+ 
+     private static DateTime? ConvertirAUtc(DateTime? value)
+     {
+         if (!value.HasValue)
+         {
+             return null;
+         }
+ 
+         var local = DateTime.SpecifyKind(value.Value, DateTimeKind.Local);
+         return local.ToUniversalTime();
+     }
+ 

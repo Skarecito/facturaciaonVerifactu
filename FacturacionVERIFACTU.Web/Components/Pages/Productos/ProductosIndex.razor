@@ -82,7 +82,7 @@
         new DataTableColumn<ProductoDto> { Header = "Código", Value = item => item.Codigo },
         new DataTableColumn<ProductoDto> { Header = "Descripción", Value = item => item.Descripcion },
         new DataTableColumn<ProductoDto> { Header = "Precio", Value = item => item.PrecioUnitario.ToString("C") },
-        new DataTableColumn<ProductoDto> { Header = "IVA", Value = item => $"{item.IVA:N0}%" },
+        new DataTableColumn<ProductoDto> { Header = "IVA", Value = item => $"{(item.PorcentajeIva ?? 0m):N0}%" },
         new DataTableColumn<ProductoDto> { Header = "Estado", Value = item => item.Activo ? "Activo" : "Inactivo" }
     ];
 

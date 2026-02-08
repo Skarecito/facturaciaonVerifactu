@@ -45,13 +45,6 @@ namespace FacturacionVERIFACTU.API.Data.Entities
         [Column("base_imponible", TypeName = "decimal(18,2)")]
         public decimal BaseImponible { get; set; } = 0;
 
-        // IVA (ya lo tenías)
-        [Column("iva", TypeName = "decimal(5,2)")]
-        public decimal IVA { get; set; }
-
-        [Column("recargo_equivalencia", TypeName = "decimal(5,2)")]
-        public decimal RecargoEquivalencia { get; set; } = 0;
-
         [Column("iva_percent_snapshot", TypeName = "decimal(5,2)")]
         public decimal IvaPercentSnapshot { get; set; }
 
@@ -68,9 +61,6 @@ namespace FacturacionVERIFACTU.API.Data.Entities
         // IMPORTE TOTAL (ya lo tenías - base + IVA)
         [Column("importe", TypeName = "decimal(18,2)")]
         public decimal Importe { get; set; }
-
-        [Column("total_linea", TypeName = "decimal(18,2)")]
-        public decimal TotalLineaSnapshot { get; set; }
 
         // Propiedades calculadas
         [NotMapped]

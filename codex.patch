@@ -1,473 +1,84 @@
-diff --git a/FacturacionVERIFACTU.API/Data/Services/AlbaranService.cs b/FacturacionVERIFACTU.API/Data/Services/AlbaranService.cs
-index 51a9f3e193d21ef00cf0fe4f98fd2d705011984b..eb165f30ce187af06e7ed2a861498817e2295036 100644
---- a/FacturacionVERIFACTU.API/Data/Services/AlbaranService.cs
-+++ b/FacturacionVERIFACTU.API/Data/Services/AlbaranService.cs
-@@ -49,88 +49,113 @@ namespace FacturacionVERIFACTU.API.Data.Services
-             if (serie == null)
-                 throw new InvalidOperationException($"Serie {dto.SerieId} no encontrada");
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/FacturacionVERIFACTU.Web/Models/DTOs/ProdutoDtos.cs b/FacturacionVERIFACTU.Web/Models/DTOs/ProdutoDtos.cs
+index 28b70b12d0526e90cac00a9fc1582462512ec5c9..086093e334401a35ad80d9664fd21f794bb707d7 100644
+--- a/FacturacionVERIFACTU.Web/Models/DTOs/ProdutoDtos.cs
++++ b/FacturacionVERIFACTU.Web/Models/DTOs/ProdutoDtos.cs
+@@ -1,74 +1,64 @@
+ ﻿using System.ComponentModel.DataAnnotations;
+ using System.Runtime.InteropServices;
  
-             //Obtener el siguiente numero
-             var ejercicio = dto.FechaEmision?.Year ?? DateTime.UtcNow.Year;
-             var (numeroCompleto, numero) = await _numeracionService
-                 .ObtenerSiguienteNumeroAsync(tenantId, serie.Codigo, ejercicio, DocumentTypes.ALBARAN);
+ namespace FacturacionVERIFACTU.Web.Models.DTOs;
  
-             //Crear albaran
-             var albaran = new Albaran
-             {
-                 TenantId = tenantId,
-                 ClienteId = dto.ClienteId,
-                 SerieId = dto.SerieId,
-                 PresupuestoId = dto.PresupuestoId,
-                 Numero = numeroCompleto,
-                 Ejercicio = ejercicio,
-                 FechaEmision = (dto.FechaEmision ?? DateTime.UtcNow).ToUniversalTime(),
-                 FechaEntrega = dto.FechaEntrega?.ToUniversalTime(),
-                 Estado = "Pendiente",
-                 DireccionEntrega = dto.DireccionEntrega,
-                 Observaciones = dto.Observaciones,
-                 FechaCreacion = DateTime.UtcNow
-             };
+ public class ProductoDto
+ {
+     public int ProductoId { get; set; }
  
-+            var lineasFiltradas = dto.Lineas
-+                .Where(l => l.ProductoId.HasValue || !string.IsNullOrWhiteSpace(l.Descripcion))
-+                .ToList();
-+
-+            if (!lineasFiltradas.Any())
-+            {
-+                throw new InvalidOperationException("Debe incluir al menos una línea válida.");
-+            }
-+
-+            foreach (var linea in lineasFiltradas)
-+            {
-+                if (linea.Cantidad <= 0)
-+                {
-+                    throw new InvalidOperationException("La cantidad debe ser mayor a 0.");
-+                }
-+
-+                if (linea.PrecioUnitario < 0)
-+                {
-+                    throw new InvalidOperationException("El precio unitario no puede ser negativo.");
-+                }
-+
-+                if (linea.PorcentajeDescuento < 0 || linea.PorcentajeDescuento > 100)
-+                {
-+                    throw new InvalidOperationException("El porcentaje de descuento debe estar entre 0 y 100.");
-+                }
-+            }
-+
-             //Agregar lineas con sistema de tipos de impuesto
-             var productosDict = await ObtenerProductosAsync(
--                dto.Lineas.Where(l => l.ProductoId.HasValue).Select(l => l.ProductoId!.Value),
-+                lineasFiltradas.Where(l => l.ProductoId.HasValue).Select(l => l.ProductoId!.Value),
-                 tenantId);
--            var tiposImpuestoActivos = await ObtenerTiposImpuestoActivosAsync(tenantId);
-+            var fechaReferencia = (dto.FechaEmision ?? DateTime.UtcNow).ToUniversalTime();
-+            var tiposImpuestoActivos = await ObtenerTiposImpuestoActivosAsync(tenantId, fechaReferencia);
+     public int? TipoImpuestoId { get; set; }
+     public string? TipoImpuestoNombre {  get; set; }
  
-             int orden = 1;
--            foreach (var lineaDto in dto.Lineas)
-+            foreach (var lineaDto in lineasFiltradas)
-             {
-                 Producto? producto = null;
-                 if (lineaDto.ProductoId.HasValue && productosDict.ContainsKey(lineaDto.ProductoId.Value))
-                 {
-                     producto = productosDict[lineaDto.ProductoId.Value];
-                 }
+     [Required(ErrorMessage = "El código es obligatorio.")]
+     [StringLength(50, ErrorMessage = "El código no puede superar 50 caracteres.")]
+     public string Codigo { get; set; } = string.Empty;
  
-                 var (tipoImpuesto, iva, recargo) = ResolverTipoImpuesto(
-                     tiposImpuestoActivos,
-                     lineaDto.TipoImpuestoId,
--                    producto,
--                    lineaDto.IVA);
-+                    producto);
+     [Required(ErrorMessage = "La descripción es obligatoria.")]
+     [StringLength(500, ErrorMessage = "La descripción no puede superar 500 caracteres.")]
+     public string Descripcion { get; set; } = string.Empty;
  
-                 if (!cliente.RegimenRecargoEquivalencia)
-                 {
-                     recargo = 0m;
-                 }
+     [Range(0.01, 1000000, ErrorMessage = "El precio debe ser mayor que 0.")]
+     public decimal PrecioUnitario { get; set; }
  
-                 var linea = new LineaAlbaran
-                 {
-                     Orden = orden++,
-                     Descripcion = lineaDto.Descripcion,
-                     Cantidad = lineaDto.Cantidad,
-                     PrecioUnitario = lineaDto.PrecioUnitario,
-                     PorcentajeDescuento = lineaDto.PorcentajeDescuento,
--                    IVA = iva,
--                    RecargoEquivalencia = recargo,
-                     IvaPercentSnapshot = iva,
-                     RePercentSnapshot = recargo,
--                    TipoImpuestoId = tipoImpuesto?.Id,
-+                    TipoImpuestoId = tipoImpuesto.Id,
-                     ProductoId = lineaDto.ProductoId,
-                 };
+-    [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
+-    public decimal? IVA { get; set; } = 21;
+-    public decimal? RecargoEquivalenciaDefecto { get; set; }
++    public decimal? PorcentajeIva { get; set; }
  
-                 CalcularLinea(linea);
-                 albaran.Lineas.Add(linea);
-             }
+     public string? Unidad { get; set; } = "Ud";
+     public bool Activo { get; set; }
+ }
  
-             CalcularTotalesAlbaran(albaran);
+ public class CrearProductoDto
+ {
+     [Required(ErrorMessage = "Selecciona un tipo de impuesto.")]
+     public int? TipoImpuestoId { get; set; }
  
-             _context.Albaranes.Add(albaran);
-             await _context.SaveChangesAsync();
+     [Required(ErrorMessage = "El código es obligatorio.")]
+     [StringLength(50, ErrorMessage = "El código no puede superar 50 caracteres.")]
+     public string Codigo { get; set; } = string.Empty;
  
-             _logger.LogInformation("Creado albaran {numero} para tenant {TenantId}",
-                 numeroCompleto, tenantId);
+     [Required(ErrorMessage = "La descripción es obligatoria.")]
+     [StringLength(500, ErrorMessage = "La descripción no puede superar 500 caracteres.")]
+     public string Descripcion { get; set; } = string.Empty;
  
-             return await MapearAResponseDto(albaran);
-         }
+     [Range(0.01, 1000000, ErrorMessage = "El precio debe ser mayor que 0.")]
+     public decimal PrecioUnitario { get; set; }
  
-         public async Task<AlbaranResponseDto> ActualizarAlbaranAsync(int tenantId, int id, AlbaranUpdateDto dto)
-         {
-             var albaran = await _context.Albaranes
-                 .Include(a => a.Lineas)
-                 .Include(a => a.Cliente)
-                 .FirstOrDefaultAsync(a => a.Id == id && a.TenantId == tenantId);
- 
-@@ -144,130 +169,153 @@ namespace FacturacionVERIFACTU.API.Data.Services
-             // ⭐ SI SE CAMBIÓ EL CLIENTE, RECARGAR
-             Cliente clienteActual = albaran.Cliente;
- 
-             if (dto.ClienteId != albaran.ClienteId)
-             {
-                 clienteActual = await _context.Clientes
-                     .FirstOrDefaultAsync(c => c.Id == dto.ClienteId && c.TenantId == tenantId);
- 
-                 if (clienteActual == null)
-                     throw new InvalidOperationException($"Cliente {dto.ClienteId} no encontrado");
- 
-                 albaran.ClienteId = dto.ClienteId;
- 
-                 _logger.LogInformation(
-                     "Albaran {Id}: Cliente cambiado a {Cliente}",
-                     id, clienteActual.Nombre);
-             }
- 
-             //Actualizar datos
-             albaran.FechaEmision = (dto.FechaEmision ?? albaran.FechaEmision).ToUniversalTime();
-             albaran.FechaEntrega = dto.FechaEntrega?.ToUniversalTime();
-             albaran.DireccionEntrega = dto.DireccionEntrega;
-             albaran.Observaciones = dto.Observaciones;
-             albaran.FechaModificacion = DateTime.UtcNow;
- 
-+            var lineasFiltradas = dto.Lineas
-+                .Where(l => l.ProductoId.HasValue || !string.IsNullOrWhiteSpace(l.Descripcion))
-+                .ToList();
-+
-+            if (!lineasFiltradas.Any())
-+            {
-+                throw new InvalidOperationException("Debe incluir al menos una línea válida.");
-+            }
-+
-+            foreach (var linea in lineasFiltradas)
-+            {
-+                if (linea.Cantidad <= 0)
-+                {
-+                    throw new InvalidOperationException("La cantidad debe ser mayor a 0.");
-+                }
-+
-+                if (linea.PrecioUnitario < 0)
-+                {
-+                    throw new InvalidOperationException("El precio unitario no puede ser negativo.");
-+                }
-+
-+                if (linea.PorcentajeDescuento < 0 || linea.PorcentajeDescuento > 100)
-+                {
-+                    throw new InvalidOperationException("El porcentaje de descuento debe estar entre 0 y 100.");
-+                }
-+            }
-+
-             //Actualizacion inteligente de lineas
--            var lineasDtoIds = dto.Lineas
-+            var lineasDtoIds = lineasFiltradas
-                 .Where(l => l.Id.HasValue)
-                 .Select(l => l.Id.Value)
-                 .ToList();
- 
-             var lineasAEliminar = albaran.Lineas
-                 .Where(l => !lineasDtoIds.Contains(l.Id))
-                 .ToList();
- 
-             foreach (var lineaAEliminar in lineasAEliminar)
-             {
-                 albaran.Lineas.Remove(lineaAEliminar);
-                 _context.LineasAlbaranes.Remove(lineaAEliminar);
-             }
- 
-             var productosDict = await ObtenerProductosAsync(
--                dto.Lineas.Where(l => l.ProductoId.HasValue).Select(l => l.ProductoId!.Value),
-+                lineasFiltradas.Where(l => l.ProductoId.HasValue).Select(l => l.ProductoId!.Value),
-                 tenantId);
--            var tiposImpuestoActivos = await ObtenerTiposImpuestoActivosAsync(tenantId);
-+            var fechaReferencia = (dto.FechaEmision ?? albaran.FechaEmision).ToUniversalTime();
-+            var tiposImpuestoActivos = await ObtenerTiposImpuestoActivosAsync(tenantId, fechaReferencia);
- 
-             int orden = 1;
--            foreach (var lineaDto in dto.Lineas)
-+            foreach (var lineaDto in lineasFiltradas)
-             {
-                 Producto? producto = null;
-                 if (lineaDto.ProductoId.HasValue && productosDict.ContainsKey(lineaDto.ProductoId.Value))
-                 {
-                     producto = productosDict[lineaDto.ProductoId.Value];
-                 }
- 
-                 var (tipoImpuesto, iva, recargo) = ResolverTipoImpuesto(
-                     tiposImpuestoActivos,
-                     lineaDto.TipoImpuestoId,
--                    producto,
--                    lineaDto.IVA);
-+                    producto);
- 
-                 if (!clienteActual.RegimenRecargoEquivalencia)
-                 {
-                     recargo = 0m;
-                 }
- 
-                 if (lineaDto.Id.HasValue && lineaDto.Id.Value > 0)
-                 {
-                     //Actualizar linea existente
-                     var lineaExistente = albaran.Lineas
-                         .FirstOrDefault(l => l.Id == lineaDto.Id.Value);
- 
-                     if (lineaExistente != null)
-                     {
-                         lineaExistente.Orden = orden++;
-                         lineaExistente.Descripcion = lineaDto.Descripcion;
-                         lineaExistente.Cantidad = lineaDto.Cantidad;
-                         lineaExistente.PrecioUnitario = lineaDto.PrecioUnitario;
-                         lineaExistente.PorcentajeDescuento = lineaDto.PorcentajeDescuento;
--                        lineaExistente.IVA = iva;
--                        lineaExistente.RecargoEquivalencia = recargo;
-                         lineaExistente.IvaPercentSnapshot = iva;
-                         lineaExistente.RePercentSnapshot = recargo;
--                        lineaExistente.TipoImpuestoId = tipoImpuesto?.Id;
-+                        lineaExistente.TipoImpuestoId = tipoImpuesto.Id;
-                         lineaExistente.ProductoId = lineaDto.ProductoId;
- 
-                         CalcularLinea(lineaExistente);
-                     }
-                 }
-                 else
-                 {
-                     //Crear linea nueva
-                     var lineaNueva = new LineaAlbaran
-                     {
-                         AlbaranId = albaran.Id,
-                         Orden = orden++,
-                         Descripcion = lineaDto.Descripcion,
-                         Cantidad = lineaDto.Cantidad,
-                         PrecioUnitario = lineaDto.PrecioUnitario,
-                         PorcentajeDescuento = lineaDto.PorcentajeDescuento,
--                        IVA = iva,
--                        RecargoEquivalencia = recargo,
-                         IvaPercentSnapshot = iva,
-                         RePercentSnapshot = recargo,
--                        TipoImpuestoId = tipoImpuesto?.Id,
-+                        TipoImpuestoId = tipoImpuesto.Id,
-                         ProductoId = lineaDto.ProductoId
-                     };
- 
-                     CalcularLinea(lineaNueva);
-                     albaran.Lineas.Add(lineaNueva);
-                 }
-             }
- 
-             //Recalcular totales
-             CalcularTotalesAlbaran(albaran);
- 
-             await _context.SaveChangesAsync();
- 
-             _logger.LogInformation("Actualizado albaran {Numero} para Tenant {TenantId}",
-                 albaran.Numero, tenantId);
- 
-             return await MapearAResponseDto(albaran);
-         }
- 
-         public async Task<AlbaranResponseDto> CambiarEstadoAsync(int tenantId, int id, CambiarEstadoAlbaranDto dto)
-         {
-             var albaran = await _context.Albaranes
-                 .Include(a => a.Lineas)
-                 .FirstOrDefaultAsync(a => a.Id == id && a.TenantId == tenantId);
- 
-@@ -451,126 +499,125 @@ namespace FacturacionVERIFACTU.API.Data.Services
-         }
- 
- 
-         #region Metodos privados
- 
-         private void CalcularLinea(LineaAlbaran linea)
-         {
-             var subtotal = Math.Round(linea.Cantidad * linea.PrecioUnitario, 2);
-             linea.ImporteDescuento = Math.Round(subtotal * (linea.PorcentajeDescuento / 100), 2);
-             linea.BaseImponible = Math.Round(subtotal - linea.ImporteDescuento, 2);
-             linea.ImporteIva = Math.Round(linea.BaseImponible * (linea.IvaPercentSnapshot / 100), 2);
-             linea.ImporteRecargo = Math.Round(linea.BaseImponible * (linea.RePercentSnapshot / 100), 2);
-             linea.Importe = Math.Round(linea.BaseImponible + linea.ImporteIva + linea.ImporteRecargo, 2);
-         }
- 
-         private void CalcularTotalesAlbaran(Albaran albaran)
-         {
-             albaran.BaseImponible = Math.Round(albaran.Lineas.Sum(l => l.BaseImponible), 2);
-             albaran.TotalIVA = Math.Round(albaran.Lineas.Sum(l => l.ImporteIva), 2);
-             albaran.TotalRecargo = Math.Round(albaran.Lineas.Sum(l => l.ImporteRecargo), 2);
- 
-             // Los albaranes NO tienen retención
-             albaran.Total = Math.Round(albaran.BaseImponible + albaran.TotalIVA + albaran.TotalRecargo, 2);
-         }
- 
--        private async Task<List<TipoImpuesto>> ObtenerTiposImpuestoActivosAsync(int tenantId)
-+        private async Task<List<TipoImpuesto>> ObtenerTiposImpuestoActivosAsync(int tenantId, DateTime fechaReferencia)
-         {
-             return await _context.TiposImpuesto
--                .Where(t => t.TenantId == tenantId && t.Activo)
-+                .Where(t => t.TenantId == tenantId
-+                    && t.Activo
-+                    && (t.FechaInicio == null || t.FechaInicio <= fechaReferencia)
-+                    && (t.FechaFin == null || t.FechaFin >= fechaReferencia))
-+                .OrderBy(t => t.Orden.HasValue ? 0 : 1)
-+                .ThenBy(t => t.Orden)
-+                .ThenBy(t => t.Id)
-                 .ToListAsync();
-         }
- 
-         private (TipoImpuesto? TipoImpuesto, decimal Iva, decimal Recargo) ResolverTipoImpuesto(
-             List<TipoImpuesto> tiposImpuestoActivos,
-             int? tipoImpuestoId,
--            Producto? producto,
--            decimal? ivaOverride)
-+            Producto? producto)
-         {
-+            if (!tiposImpuestoActivos.Any())
-+            {
-+                throw new InvalidOperationException("No hay tipos de impuesto vigentes.");
-+            }
-+
-             TipoImpuesto? tipoImpuesto = null;
- 
-             if (tipoImpuestoId.HasValue)
-             {
-                 tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.Id == tipoImpuestoId.Value);
-                 if (tipoImpuesto == null)
-+                {
-                     throw new InvalidOperationException("Tipo de impuesto no válido o inactivo");
-+                }
-             }
-             else if (producto?.TipoImpuestoId.HasValue == true)
-             {
-                 tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.Id == producto.TipoImpuestoId.Value);
-                 if (tipoImpuesto == null)
-+                {
-                     throw new InvalidOperationException("Tipo de impuesto del producto no válido o inactivo");
-+                }
-             }
--            else if (ivaOverride.HasValue)
--            {
--                tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.PorcentajeIva == ivaOverride.Value);
--            }
--            else if (producto?.IVA > 0)
--            {
--                tipoImpuesto = tiposImpuestoActivos.FirstOrDefault(t => t.PorcentajeIva == producto.IVA);
--            }
+-    [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
+-    public decimal? IVA { get; set; } = 21;
 -
--            tipoImpuesto ??= tiposImpuestoActivos.FirstOrDefault(t => t.Nombre == "General");
+-    public decimal? RecargoEquivalenciaDefecto { get; set; }
+     public string? Unidad { get; set; } = "Ud";
+     public bool Activo { get; set; }
+ }
+ 
+ public class ActualizarProductoDto
+ {
+     [Required(ErrorMessage = "Selecciona un tipo de impuesto.")]
+     public int? TipoImpuestoId { get; set; }
+ 
+     [Required(ErrorMessage = "La descripción es obligatoria.")]
+     [StringLength(500, ErrorMessage = "La descripción no puede superar 500 caracteres.")]
+     public string Descripcion { get; set; } = string.Empty;
+ 
+     [Range(0.01, 1000000, ErrorMessage = "El precio debe ser mayor que 0.")]
+     public decimal PrecioUnitario { get; set; }
+ 
+-    [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
+-    public decimal? IVA { get; set; }
 -
--            var iva = tipoImpuesto?.PorcentajeIva
--                ?? ivaOverride
--                ?? producto?.IVA
--                ?? 0m;
- 
--            var recargo = tipoImpuesto?.PorcentajeRecargo ?? 0m;
-+            tipoImpuesto ??= tiposImpuestoActivos.First();
- 
--            return (tipoImpuesto, iva, recargo);
-+            return (tipoImpuesto, tipoImpuesto.PorcentajeIva, tipoImpuesto.PorcentajeRecargo);
-         }
- 
-         private void ValidarTransicionEstado(string estadoActual, string nuevoEstado)
-         {
-             var transicionesPermitidas = new Dictionary<string, List<string>>
-             {
-                 {"Pendiente", new List<string>{"Entregado", "Anulado"} },
-                 {"Entregado", new List<string>{"Facturado", "Anulado"} },
-                 {"Aceptado", new List<string>{"Facturado"} },
-                 {"Facturado", new List<string> ()}, //Estado final
-                 {"Anulado", new List<string>() } //Estado final
-             };
- 
-             if (!transicionesPermitidas.ContainsKey(estadoActual))
-                 throw new InvalidOperationException($"Estado actual '{estadoActual}' no valido");
- 
-             if (!transicionesPermitidas[estadoActual].Contains(nuevoEstado))
-                 throw new InvalidOperationException($"No se puede cambiar de '{estadoActual}' a '{nuevoEstado}'");
-         }
- 
-         private async Task<AlbaranResponseDto> MapearAResponseDto(Albaran albaran)
-         {
-             if (albaran.Cliente == null)
-             {
-                 albaran.Cliente = await _context.Clientes
--                    .FirstOrDefaultAsync(c => c.Id == albaran.ClienteId);
-+                    .FirstOrDefaultAsync(c => c.Id == albaran.ClienteId && c.TenantId == albaran.TenantId);
-             }
- 
-             var serie = await _context.SeriesNumeracion
--                .FirstOrDefaultAsync(s => s.Id == albaran.SerieId);
-+                .FirstOrDefaultAsync(s => s.Id == albaran.SerieId && s.TenantId == albaran.TenantId);
- 
-             return new AlbaranResponseDto
-             {
-                 Id = albaran.Id,
-                 TenantId = albaran.TenantId,
-                 ClienteId = albaran.ClienteId,
-                 ClienteNombre = albaran.Cliente?.Nombre,
-                 SerieId = albaran.SerieId,
-                 SerieCodigo = serie?.Codigo,
-                 PresupuestoId = albaran.PresupuestoId,
-                 PresupuestoNumero = albaran.Presupuesto?.Numero,
-                 Numero = albaran.Numero,
-                 Ejercicio = albaran.Ejercicio,
-                 FechaEmision = albaran.FechaEmision,
-                 FechaEntrega = albaran.FechaEntrega,
-                 BaseImponible = albaran.BaseImponible,
-                 TotalIVA = albaran.TotalIVA,
-                 TotalRecargo = albaran.TotalRecargo,
-                 Total = albaran.Total,
-                 Estado = albaran.Estado,
-                 DireccionEntrega = albaran.DireccionEntrega,
-                 Observaciones = albaran.Observaciones,
-                 Facturado = albaran.Facturado,
-                 FacturaId = albaran.FacturaId,
-                 Lineas = albaran.Lineas.Select(l => new LineaAlbaranResponseDto
-@@ -589,26 +636,26 @@ namespace FacturacionVERIFACTU.API.Data.Services
-                     ImporteRecargo = l.ImporteRecargo,
-                     Importe = l.Importe,
-                     TipoImpuestoId = l.TipoImpuestoId,
-                     ProductoId = l.ProductoId
-                 }).OrderBy(l => l.Orden).ToList(),
-                 FechaCreacion = albaran.FechaCreacion,
-                 FechaModificacion = albaran.FechaModificacion
-             };
-         }
- 
-         private async Task<Dictionary<int, Producto>> ObtenerProductosAsync(IEnumerable<int> productosIds, int tenantId)
-         {
-             var ids = productosIds.Distinct().ToList();
-             if (!ids.Any())
-             {
-                 return new Dictionary<int, Producto>();
-             }
- 
-             return await _context.Productos
-                 .Where(p => ids.Contains(p.Id) && p.TenantId == tenantId)
-                 .ToDictionaryAsync(p => p.Id);
-         }
- 
-         #endregion
-     }
--}
-\ No newline at end of file
-+}
+-    public decimal? RecargoEquivalenciaDefecto { get; set; }
+     public string? Unidad { get; set; }
+     public bool Activo { get; set; }
+ }
  
 EOF
 )
