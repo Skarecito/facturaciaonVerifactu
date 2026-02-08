@@ -97,14 +97,21 @@
             return;
         }
 
-        var response = await ApiService.GetAsync<TipoImpuestoDto>($"api/tiposimpuesto/{Id}");
+        var response = await ApiService.GetAsync<TipoImpuestoListadoDto>($"api/tiposimpuesto/{Id}");
         if (response == null)
         {
             errorMessage = "No se pudo cargar el tipo de impuesto.";
             return;
         }
 
-        tipoImpuesto = response;
+        tipoImpuesto = new TipoImpuestoDto
+        {
+            TipoImpuestoId = response.Id,
+            Nombre = response.Nombre,
+            PorcentajeIVA = response.PorcentajeIva,
+            PorcentajeRecargoEquivalencia = response.PorcentajeRecargo,
+            Activo = response.Activo
+        };
     }
 
     private async Task GuardarAsync()
@@ -136,7 +143,7 @@
             {
                 Nombre = tipoImpuesto.Nombre,
                 PorcentajeIVA = tipoImpuesto.PorcentajeIVA,
-                PorcentajeRecargoEquivalencia = tipoImpuesto.PorcentajeRecargoEquivalencia,
+                PorcentajeRecargo = tipoImpuesto.PorcentajeRecargoEquivalencia,
                 Activo = tipoImpuesto.Activo
             };
 

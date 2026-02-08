@@ -12,6 +12,18 @@ public class TipoImpuestoDto
     public bool EnUso { get; set; }
 }
 
+public class TipoImpuestoListadoDto
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public decimal PorcentajeIva { get; set; }
+    public decimal? PorcentajeRecargo { get; set; }
+    public bool Activo { get; set; }
+    public int? Orden { get; set; }
+    public DateTime? FechaInicio { get; set; }
+    public DateTime? FechaFin { get; set; }
+}
+
 public class CrearTipoImpuestoDto
 {
     [Required(ErrorMessage = "El nombre es obligatorio.")]
@@ -37,7 +49,7 @@ public class ActualizarTipoImpuestoDto
     public decimal PorcentajeIVA { get; set; }
 
     [Range(0, 100, ErrorMessage = "El recargo debe estar entre 0 y 100.")]
-    public decimal? PorcentajeRecargoEquivalencia { get; set; }
+    public decimal? PorcentajeRecargo { get; set; }
 
     public bool Activo { get; set; }
 }

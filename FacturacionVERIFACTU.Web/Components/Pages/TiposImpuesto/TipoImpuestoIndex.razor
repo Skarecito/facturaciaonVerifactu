@@ -55,14 +55,10 @@ else
                     <tr class="@(tipo.Activo ? "" : "notion-row-inactive")">
                         <td style="padding: 16px">
                             <div class="notion-cell-title">@tipo.Nombre</div>
-                            @if (tipo.EnUso)
-                            {
-                                <div class="notion-cell-desc">En uso</div>
-                            }
-                        </td>
-                        <td style="padding: 16px; text-align: right;">@tipo.PorcentajeIVA.ToString("N2")%</td>
-                        <td style="padding: 16px; text-align: right;">@(tipo.PorcentajeRecargoEquivalencia.HasValue ? $"{tipo.PorcentajeRecargoEquivalencia.Value.ToString("N2")}%" : "-")</td>
-                        <td style="padding: 16px; text-align: center">
+                            </td>
+                                <td style="padding: 16px; text-align: right;">@tipo.PorcentajeIva.ToString("N2")%</td>
+                                <td style="padding: 16px; text-align: right;">@(tipo.PorcentajeRecargo.HasValue ? $"{tipo.PorcentajeRecargo.Value.ToString("N2")}%" : "-")</td>
+                                <td style="padding: 16px; text-align: center">
                             <span class="notion-badge @(tipo.Activo ? "active" : "inactive")">
                                 @(tipo.Activo ? "Activo" : "Inactivo")
                             </span>
@@ -89,7 +85,7 @@ else
 }
 
 @code {
-    private List<TipoImpuestoDto> tiposImpuesto = new();
+    private List<TipoImpuestoListadoDto> tiposImpuesto = new();
     private bool isLoading = true;
     private string errorMessage = string.Empty;
 
@@ -107,15 +103,15 @@ else
         isLoading = true;
         errorMessage = string.Empty;
 
-        var response = await ApiService.GetAsync<PaginatedResponseDto<TipoImpuestoDto>>("api/tiposimpuesto?page=1&pageSize=200");
+        var response = await ApiService.GetAsync<List<TipoImpuestoListadoDto>>("api/tiposimpuesto");
         if (response == null)
         {
             errorMessage = "No se pudieron cargar los tipos de impuesto.";
-            tiposImpuesto = new List<TipoImpuestoDto>();
+            tiposImpuesto = new List<TipoImpuestoListadoDto>();
         }
         else
         {
-            tiposImpuesto = response.Items;
+            tiposImpuesto = response;
         }
 
         isLoading = false;
@@ -123,9 +119,9 @@ else
 
     private void NuevoTipo() => NavManager.NavigateTo("/tipos-impuesto/nuevo");
 
-    private void EditarTipo(TipoImpuestoDto tipo) => NavManager.NavigateTo($"/tipos-impuesto/editar/{tipo.TipoImpuestoId}");
+    private void EditarTipo(TipoImpuestoListadoDto tipo) => NavManager.NavigateTo($"/tipos-impuesto/editar/{tipo.Id}");
 
-    private async Task CambiarEstado(TipoImpuestoDto tipo)
+    private async Task CambiarEstado(TipoImpuestoListadoDto tipo)
     {
         var confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"¿{(tipo.Activo ? "Desactivar" : "Activar")} el tipo {tipo.Nombre}?");
         if (!confirm)
@@ -136,12 +132,12 @@ else
         var request = new ActualizarTipoImpuestoDto
         {
             Nombre = tipo.Nombre,
-            PorcentajeIVA = tipo.PorcentajeIVA,
-            PorcentajeRecargoEquivalencia = tipo.PorcentajeRecargoEquivalencia,
+            PorcentajeIVA = tipo.PorcentajeIva,
+            PorcentajeRecargo = tipo.PorcentajeRecargo,
             Activo = !tipo.Activo
         };
 
-        var result = await ApiService.PutAsync<ActualizarTipoImpuestoDto, TipoImpuestoDto>($"api/tiposimpuesto/{tipo.TipoImpuestoId}", request);
+        var result = await ApiService.PutAsync<ActualizarTipoImpuestoDto, TipoImpuestoDto>($"api/tiposimpuesto/{tipo.Id}", request);
         if (result == null)
         {
             errorMessage = "No se pudo actualizar el estado del tipo.";
