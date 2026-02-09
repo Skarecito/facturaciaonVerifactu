@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
+@inject ConfirmDialogService Confirm
 
 
 <div class="notion-app">
@@ -25,3 +26,25 @@
         </NotAuthorized>
     </AuthorizeView>
 </div>
+
+<ConfirmDialog IsOpen="@Confirm.IsOpen"
+               Title="@Confirm.Title"
+               Message="@Confirm.Message"
+               ConfirmText="@Confirm.ConfirmText"
+               CancelText="@Confirm.CancelText"
+               Danger="@Confirm.Danger"
+               IsBusy="@Confirm.IsBusy"
+               OnCancel="Confirm.CancelAsync"
+               OnConfirm="Confirm.ConfirmAsync" />
+
+@code{
+    protected override void OnInitialized()
+    {
+        Confirm.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Confirm.OnChange -= StateHasChanged;
+    }
+}

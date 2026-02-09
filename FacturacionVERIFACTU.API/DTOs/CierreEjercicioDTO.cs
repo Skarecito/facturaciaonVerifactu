@@ -51,7 +51,7 @@ namespace FacturacionVERIFACTU.API.DTOs
         public string NombreTimestre {  get; set; }
         public int NumFacturas { get; set; }
         public decimal BaseImponible {  get; set; }
-        public decimal IVA { get; set; }
+        public decimal TotalIva { get; set; }
         public decimal Recargo {  get; set; }
         public decimal Total {  get; set; }
     }

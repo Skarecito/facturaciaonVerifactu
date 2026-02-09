@@ -1374,7 +1374,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     PorcentajeDescuento = 0,
                     ImporteDescuento = 0,
                     BaseImponible = l.BaseImponible,
-                    IVA = l.IvaPercentSnapshot,
+                    //IVA = l.IvaPercentSnapshot,
                     RecargoEquivalencia = l.RePercentSnapshot, // ⭐ NUEVO
                     ImporteIva = l.ImporteIva,
                     ImporteRecargo = l.ImporteRecargo, // ⭐ NUEVO

@@ -1,12 +1,12 @@
 ﻿@page "/productos"
 @using Microsoft.AspNetCore.Authorization
-@inject SweetAlertService Swal
+@inject ConfirmDialogService Confirm
 @attribute [Authorize]
 
 
 <PageTitle>Productos - FacturaVERIFACTU</PageTitle>
 
-<div class="notion-content">
+
     @* --- CABECERA: Igual que en Clientes --- *@
     <div class="notion-header">
         <div class="header-main">
@@ -36,8 +36,7 @@
         </div>
     </div>
 
-    
-</div>
+
 
     @* --- CONTENIDO PRINCIPAL --- *@
     @if (isLoading)
@@ -71,11 +70,16 @@
     }
 
 
+
+
 @code {
     private List<ProductoDto> productos = new();
     private string searchText = string.Empty;
     private bool isLoading = true;
     private string errorMessage = string.Empty;
+    private bool confirmOpen;
+    private ProductoDto? productoPendienteEliminar;
+    private bool eliminando;
 
     private readonly IReadOnlyList<DataTableColumn<ProductoDto>> columns =
     [
@@ -88,7 +92,9 @@
 
     [Inject] private IApiService ApiService { get; set; } = null!;
     [Inject] private NavigationManager NavManager { get; set; } = null!;
-    [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+    private string ConfirmMessage => productoPendienteEliminar == null
+        ? string.Empty
+        : $"¿Eliminar \"{productoPendienteEliminar.Codigo} - {productoPendienteEliminar.Descripcion}\"? Esta acción no se puede deshacer.";
 
     protected override async Task OnInitializedAsync()
     {
@@ -127,39 +133,62 @@
 
     private void EditarProducto(ProductoDto producto) => NavManager.NavigateTo($"/productos/editar/{producto.ProductoId}");
 
-    private async Task EliminarProducto(ProductoDto producto)
+    private async Task EliminarProducto(ProductoDto p)
     {
-        var confirm = await Swal.FireAsync(new SweetAlertOptions
+        Confirm.Show(
+            title: "Eliminar Producto",
+            message: $"Seguro que quieres eliminar '{p.Codigo} - {p.Descripcion}'?",
+            onConfirm: async () =>
             {
-                Title = "¿Eliminar producto?",
-                Text = $"El producto {producto.Codigo} se borrará permanentemente.",
-                Icon = SweetAlertIcon.Warning,
-                ShowCancelButton = true,
-                ConfirmButtonText = "Eliminar",
-                CancelButtonText = "Cancelar",
-                ConfirmButtonColor = "#eb5757", // Rojo Notion
-                CancelButtonColor = "#37352f",  // Negro/Gris Notion
-                Background = "#ffffff",
-                CustomClass = new SweetAlertCustomClass
+                eliminando = true;
+                try
                 {
-                    Popup = "notion-swal-popup",
-                    ConfirmButton = "btn-modern",
-                    CancelButton = "btn-modern-secondary"
+                    await ApiService.DeleteAsync($"api/productos/{p.ProductoId}");
+                    productos.Remove(p);
                 }
-            });
-        
-        if (confirm.IsDenied)
+                finally
+                {
+                    eliminando = false;
+                }
+            },
+            onCancel: () => Task.CompletedTask,
+            confirmText: "Eliminar",
+            cancelText: "Cancelar",
+            danger: true
+        );
+    }
+
+    private async Task ConfirmarEliminar()
+    {
+        if(productoPendienteEliminar == null)
         {
+            confirmOpen = false;
             return;
         }
 
-        var success = await ApiService.DeleteAsync($"api/productos/{producto.ProductoId}");
+        eliminando = true;
+        errorMessage = string.Empty;
+
+        var success = await ApiService.DeleteAsync($"api/productos/{productoPendienteEliminar.ProductoId}");
+
         if (!success)
         {
             errorMessage = "No se pudo eliminar el producto.";
-            return;
         }
-
-        await CargarProductosAsync(searchText);
+        else
+        {
+            await CargarProductosAsync(searchText);
+        }
+        eliminando = false;
+        confirmOpen = false;
+        productoPendienteEliminar = null;
     }
+
+    private Task CancelarEliminar()
+    {
+        confirmOpen = false;
+        productoPendienteEliminar = null;
+        return Task.CompletedTask;
+    }
+   
 }

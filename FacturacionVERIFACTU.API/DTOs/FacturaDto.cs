@@ -134,9 +134,6 @@ namespace FacturacionVERIFACTU.API.DTOs
         [Range(0, 100)]
         public decimal PorcentajeDescuento { get; set; } = 0;
 
-        [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100")]
-        public decimal? IVA { get; set; }
-
         [Range(0, 100)]
         public decimal? RecargoEquivalencia { get; set; }
         public int? TipoImpuestoId { get; set; }
@@ -157,7 +154,6 @@ namespace FacturacionVERIFACTU.API.DTOs
         public decimal PorcentajeDescuento { get; set; }
         public decimal ImporteDescuento { get; set; }
         public decimal BaseImponible { get; set; }
-        public decimal IVA { get; set; }
         public decimal RecargoEquivalencia { get; set; } 
         public decimal ImporteIva { get; set; }
         public decimal ImporteRecargo { get; set; }

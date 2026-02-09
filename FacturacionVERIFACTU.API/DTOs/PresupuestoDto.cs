@@ -99,8 +99,6 @@ namespace FacturacionVERIFACTU.API.DTOs
         [Range(0, 100)]
         public decimal PorcentajeDescuento { get; set; } = 0;
 
-        [Range(0, 100)]
-        public decimal? IVA { get; set; }
         public decimal? RecargoEquivalencia { get; set; } // ⭐ NUEVO (opcional)
 
         public int? ArticuloId { get; set; }

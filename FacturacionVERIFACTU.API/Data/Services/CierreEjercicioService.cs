@@ -56,7 +56,7 @@ namespace FacturacionVERIFACTU.API.Data.Services
                     Trimestre = g.Key,
                     NumFacturas = g.Count(),
                     BaseImponible = g.Sum(f => f.BaseImponible),
-                    IVA = g.Sum(f => f.TotalIVA),
+                    TotalIva = g.Sum(f => f.TotalIVA),
                     Recargo = g.Sum(f => f.CuotaRecargo),
                     Total = g.Sum(f => f.Total)
                 })
