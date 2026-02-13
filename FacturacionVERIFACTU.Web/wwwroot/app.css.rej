@@ -1,0 +1,84 @@
+diff a/FacturacionVERIFACTU.Web/wwwroot/app.css b/FacturacionVERIFACTU.Web/wwwroot/app.css	(rejected hunks)
+@@ -864,26 +864,80 @@ index 024cbc30988e88b844e90bf16b87d53e05f8c9ab..f5383efcd19c8bef36169b233b5b441a
+     justify-content: center;
+     z-index: 9999;
+     backdrop-filter: blur(2px); /* Toque moderno */
+ }
+ 
+ /* Forzar que SweetAlert2 use nuestra tipografa y bordes */
+ .notion-swal-popup {
+     font-family: 'Inter', sans-serif !important;
+     border-radius: 12px !important;
+     padding: 2rem !important;
+ }
+ 
+ .swal2-title {
+     font-size: 1.25rem !important;
+     color: #37352f !important;
+ }
+ 
+ .swal2-html-container {
+     color: rgba(55, 53, 47, 0.6) !important;
+ }
+ 
+ /* Hacer que los botones de la librera hereden tu estilo */
+ .swal2-confirm.btn-modern {
+     border-radius: 8px !important;
+     padding: 10px 24px !important;
+-}
+\ No newline at end of file
++}
++/* ConfirmDialog overrides (colocar al final para ganar prioridad) */
++.notion-modal-overlay {
++    position: fixed;
++    inset: 0;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    background: rgba(15, 15, 15, 0.4);
++    backdrop-filter: blur(2px);
++    z-index: 2147483000;
++}
++
++.notion-modal {
++    width: min(92vw, 480px);
++    max-width: 480px;
++    background: #fff;
++    border: 1px solid #edeceb;
++    border-radius: 14px;
++    box-shadow: 0 24px 64px rgba(15, 15, 15, 0.28);
++    padding: 20px;
++    display: flex;
++    flex-direction: column;
++    gap: 12px;
++}
++
++.notion-modal h3 {
++    margin: 0;
++    font-size: 1.1rem;
++    font-weight: 600;
++    color: #37352f;
++}
++
++.notion-modal p {
++    margin: 0;
++    color: rgba(55, 53, 47, 0.8);
++}
++
++.notion-modal-actions {
++    margin-top: 8px;
++    display: flex;
++    flex-direction: row;
++    gap: 10px;
++    justify-content: flex-end;
++}
++
++.notion-modal-error {
++    margin-top: 2px;
++    border-radius: 10px;
++    border: 1px solid rgba(235, 87, 87, 0.25);
++    background: rgba(235, 87, 87, 0.08);
++    color: #8f2d2d;
++    padding: 10px 12px;
++    font-size: 0.92rem;
++}

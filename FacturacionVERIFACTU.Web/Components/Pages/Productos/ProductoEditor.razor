@@ -64,7 +64,7 @@
                     <option value="">Selecciona un tipo</option>
                     @foreach (var tipo in tiposImpuesto.Where(tipo => tipo.Activo))
                     {
-                        <option value="@tipo.TipoImpuestoId">@tipo.Nombre (@tipo.PorcentajeIVA.ToString("N2")% IVA@(tipo.PorcentajeRecargoEquivalencia.HasValue ? $" + {tipo.PorcentajeRecargoEquivalencia.Value.ToString("N2")}% RE" : string.Empty))</option>
+                        <option value="@tipo.Id">@tipo.Nombre (@tipo.PorcentajeIva.ToString("N2")% IVA@(tipo.PorcentajeRecargo.HasValue ? $" + {tipo.PorcentajeRecargo.Value.ToString("N2")}% RE" : string.Empty))</option>
                     }
                 </InputSelect>
                 <ValidationMessage For="() => producto.TipoImpuestoId" class="notion-error" />
@@ -110,7 +110,7 @@
     private bool isSaving;
     private string errorMessage = string.Empty;
     private string? avisoTipoImpuesto;
-    private List<TipoImpuestoDto> tiposImpuesto = new();
+    private List<TipoImpuestoListadoDto> tiposImpuesto = new();
 
     [Inject] private IApiService ApiService { get; set; } = null!;
     [Inject] private NavigationManager NavManager { get; set; } = null!;
@@ -141,7 +141,7 @@
     private async Task CargarTiposImpuestoAsync()
     {
         var response = await ApiService.GetAsync<PaginatedResponseDto<TipoImpuestoDto>>("api/tiposimpuesto?page=1&pageSize=200");
-        tiposImpuesto = response?.Items ?? new List<TipoImpuestoDto>();
+        tiposImpuesto = await ApiService.GetAsync<List<TipoImpuestoListadoDto>>("api/tiposimpuesto") ?? new List<TipoImpuestoListadoDto>();
     }
 
     private void SeleccionarTipoImpuestoPorDefecto()
@@ -157,7 +157,7 @@
 
         if (tipoDefault != null)
         {
-            producto.TipoImpuestoId = tipoDefault.TipoImpuestoId;
+            producto.TipoImpuestoId = tipoDefault.Id;
         }
     }
 

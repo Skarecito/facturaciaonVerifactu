@@ -9,4 +9,5 @@ public interface IApiService
     Task<TResponse?> PutAsync<TRequest,TResponse>(string endpoint, TRequest data);
     Task<TResponse?> PatchAsync<TRequest, TResponse>(string endpoint, TRequest data);
     Task<bool> DeleteAsync(string endpoint);
+    Task<ApiResult> DeleteAsyncDetailed(string endpoint);
 }

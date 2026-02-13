@@ -202,7 +202,7 @@
                                         <option value="">Selecciona</option>
                                         @foreach (var tipo in tiposImpuesto.Where(tipo => tipo.Activo))
                                         {
-                                            <option value="@tipo.TipoImpuestoId">@tipo.Nombre</option>
+                                            <option value="@tipo.Id">@tipo.Nombre (@tipo.PorcentajeIva.ToString("N2")% IVA@(tipo.PorcentajeRecargo.HasValue ? $" + {tipo.PorcentajeRecargo.Value.ToString("N2")}% RE" : string.Empty))</option>
                                         }
                                     </select>
                                     <div class="notion-cell-desc" style="text-align: right;">
@@ -438,69 +438,77 @@
     }
 </div>
 
+@* Reemplazar el modal de productos en PresupuestoForm.razor *@
+
 @if (mostrarModalProductos)
 {
-    <div class="modal-backdrop" @onclick="CerrarModalProductos"></div>
-    <div class="modal-panel">
-        <div class="modal-header">
-            <h4>Selecciona un producto</h4>
-            <button type="button" class="notion-action-btn" @onclick="CerrarModalProductos">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-        <div class="modal-body">
-            <div class="notion-search-wrapper" style="max-width: 100%; border: 1px solid #edeceb;">
-                <i class="bi bi-search" style="font-size: 14px;"></i>
-                <input class="notion-search-input"
-                       placeholder="Buscar producto"
-                       value="@busquedaProducto"
-                       @oninput="@(async (ChangeEventArgs e) => { busquedaProducto = e?.Value?.ToString() ?? string.Empty; await BuscarProductosAsync(); })" />
+    <div class="notion-modal-overlay" @onclick="CerrarModalProductos">
+        <div class="notion-modal-productos" @onclick:stopPropagation="true">
+            <div class="notion-modal-header">
+                <h3>Selecciona un producto</h3>
+                <button type="button" class="notion-modal-close" @onclick="CerrarModalProductos" aria-label="Cerrar">×</button>
             </div>
+            <div class="notion-modal-body">
+                <div class="notion-search-wrapper" style="max-width: 100%; border: 1px solid #edeceb; margin-bottom: 16px;">
+                    <i class="bi bi-search" style="font-size: 14px;"></i>
+                    <input class="notion-search-input"
+                           placeholder="Buscar producto"
+                           value="@busquedaProducto"
+                           @oninput="@(async (ChangeEventArgs e) => { busquedaProducto = e?.Value?.ToString() ?? string.Empty; await BuscarProductosAsync(); })" />
+                </div>
 
-            @if (cargandoProductos)
-            {
-                <div class="notion-loading" style="margin-top: 16px;">
-                    <div class="spinner-modern"></div>
-                    <span>Cargando productos...</span>
-                </div>
-            }
-            else if (productos == null || !productos.Any())
-            {
-                <div class="notion-empty" style="padding: 24px;">No hay productos disponibles.</div>
-            }
-            else
-            {
-                <div class="modal-table">
-                    <table class="notion-table" style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="border-bottom: 1px solid var(--notion-border);">
-                                <th style="padding: 10px; text-align: left;">CÓDIGO</th>
-                                <th style="padding: 10px; text-align: left;">DESCRIPCIÓN</th>
-                                <th style="padding: 10px; text-align: right;">PRECIO</th>
-                                <th style="padding: 10px; text-align: right;">IMPUESTO</th>
-                                <th style="padding: 10px; text-align: right;">ACC.</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var producto in productos)
-                            {
-                                <tr>
-                                    <td style="padding: 10px;">@producto.Codigo</td>
-                                    <td style="padding: 10px;">@producto.Descripcion</td>
-                                    <td style="padding: 10px; text-align: right;">@producto.PrecioUnitario.ToString("C")</td>
-                                    <td style="padding: 10px; text-align: right;">@ObtenerDescripcionImpuesto(producto)</td>
-                                    <td style="padding: 10px; text-align: right;">
-                                        <button class="btn-modern-secondary" @onclick="() => AgregarLineaDesdeProducto(producto)">Añadir</button>
-                                    </td>
+                @if (cargandoProductos)
+                {
+                    <div class="notion-loading" style="padding: 40px; text-align: center;">
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                        <span style="margin-left: 10px;">Cargando productos...</span>
+                    </div>
+                }
+                else if (productos == null || !productos.Any())
+                {
+                    <div class="notion-empty" style="padding: 40px; text-align: center; color: rgba(55, 53, 47, 0.5);">
+                        No hay productos disponibles.
+                    </div>
+                }
+                else
+                {
+                    <div style="overflow-x: auto;">
+                        <table class="notion-table" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--notion-border);">
+                                    <th style="padding: 12px 10px; text-align: left; font-size: 11px; color: rgba(55, 53, 47, 0.6); font-weight: 600; text-transform: uppercase;">Código</th>
+                                    <th style="padding: 12px 10px; text-align: left; font-size: 11px; color: rgba(55, 53, 47, 0.6); font-weight: 600; text-transform: uppercase;">Descripción</th>
+                                    <th style="padding: 12px 10px; text-align: right; font-size: 11px; color: rgba(55, 53, 47, 0.6); font-weight: 600; text-transform: uppercase;">Precio</th>
+                                    <th style="padding: 12px 10px; text-align: right; font-size: 11px; color: rgba(55, 53, 47, 0.6); font-weight: 600; text-transform: uppercase;">Impuesto</th>
+                                    <th style="padding: 12px 10px; text-align: center; font-size: 11px; color: rgba(55, 53, 47, 0.6); font-weight: 600; text-transform: uppercase;">Acción</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
+                            </thead>
+                            <tbody>
+                                @foreach (var producto in productos)
+                                {
+                                    <tr style="border-bottom: 1px solid #f1f1f0;">
+                                        <td style="padding: 12px 10px; font-size: 14px;">
+                                            <span class="notion-code-text">@producto.Codigo</span>
+                                        </td>
+                                        <td style="padding: 12px 10px; font-size: 14px;">@producto.Descripcion</td>
+                                        <td style="padding: 12px 10px; text-align: right; font-size: 14px; font-weight: 600;">@producto.PrecioUnitario.ToString("C")</td>
+                                        <td style="padding: 12px 10px; text-align: right; font-size: 13px; color: rgba(55, 53, 47, 0.7);">@ObtenerDescripcionImpuesto(producto)</td>
+                                        <td style="padding: 12px 10px; text-align: center;">
+                                            <button type="button" class="btn-modern-secondary" @onclick="() => AgregarLineaDesdeProducto(producto)">
+                                                <i class="bi bi-plus-lg"></i> Añadir
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
         </div>
     </div>
 }
+
 
 @code {
 
@@ -511,7 +519,7 @@
     private PresupuestoFormModel presupuesto = new();
     private List<ClienteDto> clientes = new();
     private List<ProductoDto> productos = new();
-    private List<TipoImpuestoDto> tiposImpuesto = new();
+    private List<TipoImpuestoListadoDto> tiposImpuesto = new();
 
     private List<SerieDto> SeriesPresupuestos = new();
     private List<SerieDto> SeriesFacturas = new();
@@ -589,8 +597,7 @@
 
     private async Task CargarTiposImpuestoAsync()
     {
-        var response = await ApiService.GetAsync<PaginatedResponseDto<TipoImpuestoDto>>("api/tiposimpuesto?page=1&pageSize=200");
-        tiposImpuesto = response?.Items ?? new List<TipoImpuestoDto>();
+        tiposImpuesto = await ApiService.GetAsync<List<TipoImpuestoListadoDto>>("api/tiposimpuesto") ?? new List<TipoImpuestoListadoDto>();
     }
 
     private async Task CargarSeriesPresupuestosAsync()
@@ -1050,7 +1057,7 @@
             var tipoDefault = ObtenerTipoImpuestoPorDefecto();
             if (tipoDefault != null)
             {
-                linea.TipoImpuestoId = tipoDefault.TipoImpuestoId;
+                linea.TipoImpuestoId = tipoDefault.Id;
                 AplicarTipoImpuesto(linea);
                 avisoImpuestos = $"El producto {producto.Codigo} no tiene tipo de impuesto asignado. Se aplicó {tipoDefault.Nombre} por defecto.";
             }
@@ -1145,14 +1152,14 @@
         var tipoDefault = ObtenerTipoImpuestoPorDefecto();
         if (tipoDefault != null)
         {
-            linea.TipoImpuestoId = tipoDefault.TipoImpuestoId;
+            linea.TipoImpuestoId = tipoDefault.Id;
             AplicarTipoImpuesto(linea);
         }
 
         return linea;
     }
 
-    private TipoImpuestoDto? ObtenerTipoImpuestoPorDefecto()
+    private TipoImpuestoListadoDto? ObtenerTipoImpuestoPorDefecto()
     {
         return tiposImpuesto.FirstOrDefault(tipo =>
                 tipo.Activo && tipo.Nombre.Equals("General", StringComparison.OrdinalIgnoreCase))
@@ -1171,15 +1178,15 @@
             return;
         }
 
-        var tipo = tiposImpuesto.FirstOrDefault(t => t.TipoImpuestoId == linea.TipoImpuestoId);
+        var tipo = tiposImpuesto.FirstOrDefault(t => t.Id == linea.TipoImpuestoId);
         if (tipo == null)
         {
             return;
         }
 
-        linea.IVA = tipo.PorcentajeIVA;
+        linea.IVA = tipo.PorcentajeIva;
         linea.RecargoEquivalencia = aplicaRecargoEquivalencia
-            ? tipo.PorcentajeRecargoEquivalencia ?? 0m
+            ? tipo.PorcentajeRecargo ?? 0m
             : 0m;
     }
 
@@ -1187,10 +1194,10 @@
     {
         if (producto.TipoImpuestoId.HasValue)
         {
-            var tipo = tiposImpuesto.FirstOrDefault(t => t.TipoImpuestoId == producto.TipoImpuestoId);
+            var tipo = tiposImpuesto.FirstOrDefault(t => t.Id == producto.TipoImpuestoId);
             if (tipo != null)
             {
-                return $"{tipo.Nombre} ({tipo.PorcentajeIVA:N2}% IVA)";
+                return $"{tipo.Nombre} ({tipo.PorcentajeIva:N2}% IVA)";
             }
         }
 

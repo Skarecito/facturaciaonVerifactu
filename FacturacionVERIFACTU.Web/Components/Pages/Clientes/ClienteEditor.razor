@@ -99,7 +99,7 @@
                 <InputSelect @bind-Value="cliente.TipoCliente" class="notion-input-modern">
                     <option value="B2B">B2B</option>
                     <option value="B2C">B2C</option>
-                    <option value="Profecional">Profecional</option>
+                    <option value="Profesional">Profesional</option>
                     <option value="Minorista">Minorista</option>
                 </InputSelect>
             </div>
@@ -108,15 +108,16 @@
                 <label class="notion-label">Retencion por defecto</label>
                 <InputNumber @bind-Value="cliente.PorcentajeRetencionDefecto"
                     class="notion-input-modern"
-                    step="0.01"
+                    step="1.00"
                     onforminput="0"
                     placeholder="0,00"/>
             </div>
 
-            <div class="notion-input-group" style="grip-colunm; span2;display:flex; align-items: center;gap:10px;padding:10px 0;">
-                <InputCheckbox @bind-Value="cliente.RegimenRecargoEquivalencia" id="chkRecargo" style="width: 18px; height: 18px; accent-color: #000;"/>
+            <div class="notion-input-group" style="grid-column: span 2; display:flex; align-items:center; gap:10px; padding:10px 0;">
+                <InputCheckbox @bind-Value="cliente.RegimenRecargoEquivalencia" id="chkRecargo" style="width: 18px; height: 18px; accent-color: #000;" />
                 <label for="chkRecargo" style="font-size: 14px; font-weight: 500; cursor:pointer;">Recargo de equivalencia</label>
             </div>
+
 
             <div class="notion-input-group" style="grid-column: span 2;">
                 <label class="notion-label">Notas fiscales</label>

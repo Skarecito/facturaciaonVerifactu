@@ -1,20 +1,5 @@
 diff a/FacturacionVERIFACTU.Web/Components/Pages/Presupuestos/PresupuestoEditor.razor b/FacturacionVERIFACTU.Web/Components/Pages/Presupuestos/PresupuestoEditor.razor	(rejected hunks)
-@@ -1013,51 +1013,51 @@
-         finally
-         {
-             cargandoProductos = false;
-             await InvokeAsync(StateHasChanged);
-         }
-     }
- 
-     private async Task BuscarProductosAsync()
-     {
-         await CargarProductosAsync(busquedaProducto);
-     }
- 
-     private void AgregarLineaDesdeProducto(ProductoDto producto)
-     {
-         if (!EsEditable)
+@@ -1028,51 +1027,51 @@
          {
              return;
          }
@@ -25,8 +10,7 @@ diff a/FacturacionVERIFACTU.Web/Components/Pages/Presupuestos/PresupuestoEditor.
              Cantidad = 1,
              PrecioUnitario = producto.PrecioUnitario,
              PorcentajeDescuento = 0,
--            IVA = producto.IVA,
-+            IVA = producto.PorcentajeIva,
+             IVA = producto.IVA,
              ArticuloId = producto.ProductoId,
              ArticuloCodigo = producto.Codigo
          };
@@ -41,7 +25,8 @@ diff a/FacturacionVERIFACTU.Web/Components/Pages/Presupuestos/PresupuestoEditor.
              var tipoDefault = ObtenerTipoImpuestoPorDefecto();
              if (tipoDefault != null)
              {
-                 linea.TipoImpuestoId = tipoDefault.TipoImpuestoId;
+-                linea.TipoImpuestoId = tipoDefault.TipoImpuestoId;
++                linea.TipoImpuestoId = tipoDefault.Id;
                  AplicarTipoImpuesto(linea);
                  avisoImpuestos = $"El producto {producto.Codigo} no tiene tipo de impuesto asignado. Se aplicó {tipoDefault.Nombre} por defecto.";
              }
@@ -52,18 +37,87 @@ diff a/FacturacionVERIFACTU.Web/Components/Pages/Presupuestos/PresupuestoEditor.
          }
  
          presupuesto.Lineas.Add(linea);
-@@ -1172,51 +1172,53 @@
+ 
+         CerrarModalProductos();
+         StateHasChanged();
+     }
+ 
+     private LineaPresupuestoDto MapLineaRequest(LineaPresupuestoViewModel linea)
+     {
+         return new LineaPresupuestoDto
+         {
+             Id = linea.Id,
+             TipoImpuestoId = linea.TipoImpuestoId,
+             Descripcion = linea.Descripcion,
+             Cantidad = linea.Cantidad,
+             PrecioUnitario = linea.PrecioUnitario,
+             PorcentajeDescuento = linea.PorcentajeDescuento,
+@@ -1123,96 +1122,96 @@
+     private decimal TotalPresupuesto => presupuesto.Lineas.Sum(CalcularTotalLinea);
+     private decimal TotalRetencion => TotalBaseImponible * ((presupuesto.PorcentajeRetencion ?? 0m) / 100m);
+     private decimal TotalConRetencion => TotalPresupuesto - TotalRetencion;
+ 
+     private void ActualizarClienteRecargo()
+     {
+         var cliente = clientes.FirstOrDefault(c => c.ClienteId == presupuesto.ClienteId);
+         aplicaRecargoEquivalencia = cliente?.RegimenRecargoEquivalencia ?? false;
+         if (!aplicaRecargoEquivalencia)
+         {
+             return;
          }
  
-         var tipo = tiposImpuesto.FirstOrDefault(t => t.TipoImpuestoId == linea.TipoImpuestoId);
+         foreach (var linea in presupuesto.Lineas.Where(l => l.TipoImpuestoId.HasValue && !l.RecargoEquivalencia.HasValue))
+         {
+             AplicarTipoImpuesto(linea);
+         }
+     }
+ 
+     private LineaPresupuestoViewModel CrearLineaConTipoPorDefecto()
+     {
+         var linea = new LineaPresupuestoViewModel();
+         var tipoDefault = ObtenerTipoImpuestoPorDefecto();
+         if (tipoDefault != null)
+         {
+-            linea.TipoImpuestoId = tipoDefault.TipoImpuestoId;
++            linea.TipoImpuestoId = tipoDefault.Id;
+             AplicarTipoImpuesto(linea);
+         }
+ 
+         return linea;
+     }
+ 
+-    private TipoImpuestoDto? ObtenerTipoImpuestoPorDefecto()
++    private TipoImpuestoListadoDto? ObtenerTipoImpuestoPorDefecto()
+     {
+         return tiposImpuesto.FirstOrDefault(tipo =>
+                 tipo.Activo && tipo.Nombre.Equals("General", StringComparison.OrdinalIgnoreCase))
+             ?? tiposImpuesto.FirstOrDefault(tipo => tipo.Activo);
+     }
+ 
+     private void ActualizarImpuestoLinea(LineaPresupuestoViewModel linea)
+     {
+         AplicarTipoImpuesto(linea);
+     }
+ 
+     private void AplicarTipoImpuesto(LineaPresupuestoViewModel linea)
+     {
+         if (!linea.TipoImpuestoId.HasValue)
+         {
+             return;
+         }
+ 
+-        var tipo = tiposImpuesto.FirstOrDefault(t => t.TipoImpuestoId == linea.TipoImpuestoId);
++        var tipo = tiposImpuesto.FirstOrDefault(t => t.Id == linea.TipoImpuestoId);
          if (tipo == null)
          {
              return;
          }
  
-         linea.IVA = tipo.PorcentajeIVA;
+-        linea.IVA = tipo.PorcentajeIVA;
++        linea.IVA = tipo.PorcentajeIva;
          linea.RecargoEquivalencia = aplicaRecargoEquivalencia
-             ? tipo.PorcentajeRecargoEquivalencia ?? 0m
+-            ? tipo.PorcentajeRecargoEquivalencia ?? 0m
++            ? tipo.PorcentajeRecargo ?? 0m
              : 0m;
      }
  
@@ -71,17 +125,16 @@ diff a/FacturacionVERIFACTU.Web/Components/Pages/Presupuestos/PresupuestoEditor.
      {
          if (producto.TipoImpuestoId.HasValue)
          {
-             var tipo = tiposImpuesto.FirstOrDefault(t => t.TipoImpuestoId == producto.TipoImpuestoId);
+-            var tipo = tiposImpuesto.FirstOrDefault(t => t.TipoImpuestoId == producto.TipoImpuestoId);
++            var tipo = tiposImpuesto.FirstOrDefault(t => t.Id == producto.TipoImpuestoId);
              if (tipo != null)
              {
-                 return $"{tipo.Nombre} ({tipo.PorcentajeIVA:N2}% IVA)";
+-                return $"{tipo.Nombre} ({tipo.PorcentajeIVA:N2}% IVA)";
++                return $"{tipo.Nombre} ({tipo.PorcentajeIva:N2}% IVA)";
              }
          }
  
--        return producto.IVA.HasValue ? $"IVA legado {producto.IVA.Value:N2}%" : "Sin asignar";
-+        return producto.PorcentajeIva.HasValue
-+            ? $"IVA {producto.PorcentajeIva.Value:N2}%"
-+            : "Sin asignar";
+         return producto.IVA.HasValue ? $"IVA legado {producto.IVA.Value:N2}%" : "Sin asignar";
      }
  
      private static decimal CalcularRecargoEquivalencia(decimal iva)
@@ -102,8 +155,4 @@ diff a/FacturacionVERIFACTU.Web/Components/Pages/Presupuestos/PresupuestoEditor.
          {
              return null;
          }
- 
-         var local = DateTime.SpecifyKind(value.Value, DateTimeKind.Local);
-         return local.ToUniversalTime();
-     }
  

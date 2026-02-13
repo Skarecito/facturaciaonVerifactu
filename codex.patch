@@ -1,84 +1,324 @@
- (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
-diff --git a/FacturacionVERIFACTU.Web/Models/DTOs/ProdutoDtos.cs b/FacturacionVERIFACTU.Web/Models/DTOs/ProdutoDtos.cs
-index 28b70b12d0526e90cac00a9fc1582462512ec5c9..086093e334401a35ad80d9664fd21f794bb707d7 100644
---- a/FacturacionVERIFACTU.Web/Models/DTOs/ProdutoDtos.cs
-+++ b/FacturacionVERIFACTU.Web/Models/DTOs/ProdutoDtos.cs
-@@ -1,74 +1,64 @@
- ﻿using System.ComponentModel.DataAnnotations;
- using System.Runtime.InteropServices;
- 
- namespace FacturacionVERIFACTU.Web.Models.DTOs;
- 
- public class ProductoDto
- {
-     public int ProductoId { get; set; }
- 
-     public int? TipoImpuestoId { get; set; }
-     public string? TipoImpuestoNombre {  get; set; }
- 
-     [Required(ErrorMessage = "El código es obligatorio.")]
-     [StringLength(50, ErrorMessage = "El código no puede superar 50 caracteres.")]
-     public string Codigo { get; set; } = string.Empty;
- 
-     [Required(ErrorMessage = "La descripción es obligatoria.")]
-     [StringLength(500, ErrorMessage = "La descripción no puede superar 500 caracteres.")]
-     public string Descripcion { get; set; } = string.Empty;
- 
-     [Range(0.01, 1000000, ErrorMessage = "El precio debe ser mayor que 0.")]
-     public decimal PrecioUnitario { get; set; }
- 
--    [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
--    public decimal? IVA { get; set; } = 21;
--    public decimal? RecargoEquivalenciaDefecto { get; set; }
-+    public decimal? PorcentajeIva { get; set; }
- 
-     public string? Unidad { get; set; } = "Ud";
-     public bool Activo { get; set; }
+diff --git a/FacturacionVERIFACTU.Web/Components/Pages/Presupuestos/PresupuestoEditor.razor b/FacturacionVERIFACTU.Web/Components/Pages/Presupuestos/PresupuestoEditor.razor
+index cc17504d328f4c5191d9491e32d5e99bc97e9320..b2716b02ecb35eb565ed1dc363eca513499bff77 100644
+--- a/FacturacionVERIFACTU.Web/Components/Pages/Presupuestos/PresupuestoEditor.razor
++++ b/FacturacionVERIFACTU.Web/Components/Pages/Presupuestos/PresupuestoEditor.razor
+@@ -180,51 +180,51 @@
+                                            step="1.00"
+                                            value="@lineaActual.PrecioUnitario.ToString("0.##")"
+                                            @onchange="@(e => { if (decimal.TryParse(e.Value?.ToString(), out var v)) lineaActual.PrecioUnitario = v; })"
+                                            disabled="@(!EsEditable)"
+                                            style="text-align: right;" />
+                                 </td>
+                                 <td style="padding: 12px 10px; text-align: right;">
+                                     <input type="number"
+                                            class="notion-input-modern"
+                                            step="1.00"
+                                            max="100"
+                                            value="@lineaActual.PorcentajeDescuento.ToString("0.##")"
+                                            @onchange="@(e => { if (decimal.TryParse(e.Value?.ToString(), out var v)) lineaActual.PorcentajeDescuento = v; })"
+                                            disabled="@(!EsEditable)"
+                                            style="text-align: right;" />
+                                 </td>
+                                 <td style="padding: 12px 10px; text-align: right;">
+                                     <select class="notion-input-modern"
+                                             value="@lineaActual.TipoImpuestoId"
+                                             @onchange="@(e => { if (int.TryParse(e.Value?.ToString(), out var v)) { lineaActual.TipoImpuestoId = v; ActualizarImpuestoLinea(lineaActual); } })"
+                                             disabled="@(!EsEditable)"
+                                             style="text-align: right;">
+                                         <option value="">Selecciona</option>
+                                         @foreach (var tipo in tiposImpuesto.Where(tipo => tipo.Activo))
+                                         {
+-                                            <option value="@tipo.TipoImpuestoId">@tipo.Nombre</option>
++                                            <option value="@tipo.Id">@tipo.Nombre (@tipo.PorcentajeIva.ToString("N2")% IVA@(tipo.PorcentajeRecargo.HasValue ? $" + {tipo.PorcentajeRecargo.Value.ToString("N2")}% RE" : string.Empty))</option>
+                                         }
+                                     </select>
+                                     <div class="notion-cell-desc" style="text-align: right;">
+                                         @if (lineaActual.IVA.HasValue)
+                                         {
+                                             <span>IVA @lineaActual.IVA.Value.ToString("N2")%</span>
+                                         }
+                                         @if (aplicaRecargoEquivalencia && lineaActual.RecargoEquivalencia.HasValue && lineaActual.RecargoEquivalencia.Value > 0)
+                                         {
+                                             <span> · RE @lineaActual.RecargoEquivalencia.Value.ToString("N2")%</span>
+                                         }
+                                     </div>
+                                 </td>
+                                 <td style="padding: 12px 10px; text-align: right;">
+                                     <span style="font-weight: 600;">@CalcularTotalLinea(lineaActual).ToString("C")</span>
+                                 </td>
+                                 <td style="padding: 12px 10px; text-align: right;">
+                                     <button type="button"
+                                             class="notion-action-btn delete"
+                                             disabled="@(!EsEditable)"
+                                             @onclick="@(() => EliminarLineaAsync(lineaActual))">
+                                         <i class="bi bi-trash3"></i>
+                                     </button>
+                                 </td>
+                             </tr>
+@@ -489,51 +489,51 @@
+                                     <td style="padding: 10px;">@producto.Descripcion</td>
+                                     <td style="padding: 10px; text-align: right;">@producto.PrecioUnitario.ToString("C")</td>
+                                     <td style="padding: 10px; text-align: right;">@ObtenerDescripcionImpuesto(producto)</td>
+                                     <td style="padding: 10px; text-align: right;">
+                                         <button class="btn-modern-secondary" @onclick="() => AgregarLineaDesdeProducto(producto)">Añadir</button>
+                                     </td>
+                                 </tr>
+                             }
+                         </tbody>
+                     </table>
+                 </div>
+             }
+         </div>
+     </div>
  }
  
- public class CrearProductoDto
- {
-     [Required(ErrorMessage = "Selecciona un tipo de impuesto.")]
-     public int? TipoImpuestoId { get; set; }
+ @code {
  
-     [Required(ErrorMessage = "El código es obligatorio.")]
-     [StringLength(50, ErrorMessage = "El código no puede superar 50 caracteres.")]
-     public string Codigo { get; set; } = string.Empty;
+     [Parameter] public int Id { get; set; }
  
-     [Required(ErrorMessage = "La descripción es obligatoria.")]
-     [StringLength(500, ErrorMessage = "La descripción no puede superar 500 caracteres.")]
-     public string Descripcion { get; set; } = string.Empty;
+     private EditContext? editContext;
  
-     [Range(0.01, 1000000, ErrorMessage = "El precio debe ser mayor que 0.")]
-     public decimal PrecioUnitario { get; set; }
+     private PresupuestoFormModel presupuesto = new();
+     private List<ClienteDto> clientes = new();
+     private List<ProductoDto> productos = new();
+-    private List<TipoImpuestoDto> tiposImpuesto = new();
++    private List<TipoImpuestoListadoDto> tiposImpuesto = new();
  
--    [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
--    public decimal? IVA { get; set; } = 21;
--
--    public decimal? RecargoEquivalenciaDefecto { get; set; }
-     public string? Unidad { get; set; } = "Ud";
-     public bool Activo { get; set; }
- }
+     private List<SerieDto> SeriesPresupuestos = new();
+     private List<SerieDto> SeriesFacturas = new();
  
- public class ActualizarProductoDto
- {
-     [Required(ErrorMessage = "Selecciona un tipo de impuesto.")]
-     public int? TipoImpuestoId { get; set; }
+     private List<SerieDto> SeriesAlbaranes = new();
  
-     [Required(ErrorMessage = "La descripción es obligatoria.")]
-     [StringLength(500, ErrorMessage = "La descripción no puede superar 500 caracteres.")]
-     public string Descripcion { get; set; } = string.Empty;
+     private string clienteFiltro = string.Empty;
+     private string busquedaProducto = string.Empty;
+     private bool mostrarModalProductos;
+     private bool cargandoProductos;
+     private bool isSaving;
+     private bool isConverting;
+     private bool isConvertingAlbaran;
+     private string errorMessage = string.Empty;
+     private string? avisoImpuestos;
+     private string convertirMensaje = string.Empty;
+     private string convertirAlbaranMensaje = string.Empty;
+     private string numeroPresupuesto = "";
+     private string estadoPresupuesto = "Borrador";
+     private bool isCambiandoEstado;
+     private string estadoNuevo = string.Empty;
+     private string motivoCambioEstado = string.Empty;
+     private bool aplicaRecargoEquivalencia;
  
-     [Range(0.01, 1000000, ErrorMessage = "El precio debe ser mayor que 0.")]
-     public decimal PrecioUnitario { get; set; }
+     private ConversionFacturaModel conversionFactura = new();
+@@ -567,52 +567,51 @@
+             if (Id > 0)
+             {
+                 await CargarPresupuestoAsync();
+                 ActualizarClienteRecargo();
+             }
+             else
+             {
+                 presupuesto.Lineas = new List<LineaPresupuestoViewModel>();
+             }
+         }
+         catch (Exception ex)
+         {
+             errorMessage = $"Error inicializando componente: {ex.Message}";
+             StateHasChanged();
+         }
+     }
  
--    [Range(0, 100, ErrorMessage = "El IVA debe estar entre 0 y 100.")]
--    public decimal? IVA { get; set; }
--
--    public decimal? RecargoEquivalenciaDefecto { get; set; }
-     public string? Unidad { get; set; }
-     public bool Activo { get; set; }
- }
+     private async Task CargarClientesAsync()
+     {
+         var response = await ApiService.GetAsync<PaginatedResponseDto<ClienteDto>>("api/clientes?page=1&pageSize=500");
+         clientes = response?.Items ?? new List<ClienteDto>();
+     }
+ 
+     private async Task CargarTiposImpuestoAsync()
+     {
+-        var response = await ApiService.GetAsync<PaginatedResponseDto<TipoImpuestoDto>>("api/tiposimpuesto?page=1&pageSize=200");
+-        tiposImpuesto = response?.Items ?? new List<TipoImpuestoDto>();
++        tiposImpuesto = await ApiService.GetAsync<List<TipoImpuestoListadoDto>>("api/tiposimpuesto") ?? new List<TipoImpuestoListadoDto>();
+     }
+ 
+     private async Task CargarSeriesPresupuestosAsync()
+     {
+         var response = await ApiService.GetAsync<PaginatedResponseDto<SerieDto>>(
+             "api/series?page=1&pageSize=100&tipoDocumento=PRESUPUESTO&soloActivas=true");
+         SeriesPresupuestos = response?.Items ?? new List<SerieDto>();
+     }
+ 
+     private async Task CargarSeriesFacturasAsync()
+     {
+         var response = await ApiService.GetAsync<PaginatedResponseDto<SerieDto>>(
+             "api/series?page=1&pageSize=100&tipoDocumento=FACTURA&soloActivas=true");
+         SeriesFacturas = response?.Items ?? new List<SerieDto>();
+     }
+ 
+     private async Task CargarSeriesAlbaranesAsync()
+     {
+         var response = await ApiService.GetAsync<PaginatedResponseDto<SerieDto>>(
+             "api/series?page=1&pageSize=100&tipoDocumento=ALBARAN&soloActivas=true");
+         SeriesAlbaranes = response?.Items ?? new List<SerieDto>();
+     }
+ 
+     private async Task CargarPresupuestoAsync()
+     {
+@@ -1028,51 +1027,51 @@
+         {
+             return;
+         }
+ 
+         var linea = new LineaPresupuestoViewModel
+         {
+             Descripcion = producto.Descripcion,
+             Cantidad = 1,
+             PrecioUnitario = producto.PrecioUnitario,
+             PorcentajeDescuento = 0,
+             IVA = producto.IVA,
+             ArticuloId = producto.ProductoId,
+             ArticuloCodigo = producto.Codigo
+         };
+ 
+         if (producto.TipoImpuestoId.HasValue)
+         {
+             linea.TipoImpuestoId = producto.TipoImpuestoId;
+             AplicarTipoImpuesto(linea);
+         }
+         else
+         {
+             var tipoDefault = ObtenerTipoImpuestoPorDefecto();
+             if (tipoDefault != null)
+             {
+-                linea.TipoImpuestoId = tipoDefault.TipoImpuestoId;
++                linea.TipoImpuestoId = tipoDefault.Id;
+                 AplicarTipoImpuesto(linea);
+                 avisoImpuestos = $"El producto {producto.Codigo} no tiene tipo de impuesto asignado. Se aplicó {tipoDefault.Nombre} por defecto.";
+             }
+             else
+             {
+                 avisoImpuestos = $"El producto {producto.Codigo} no tiene tipo de impuesto asignado.";
+             }
+         }
+ 
+         presupuesto.Lineas.Add(linea);
+ 
+         CerrarModalProductos();
+         StateHasChanged();
+     }
+ 
+     private LineaPresupuestoDto MapLineaRequest(LineaPresupuestoViewModel linea)
+     {
+         return new LineaPresupuestoDto
+         {
+             Id = linea.Id,
+             TipoImpuestoId = linea.TipoImpuestoId,
+             Descripcion = linea.Descripcion,
+             Cantidad = linea.Cantidad,
+             PrecioUnitario = linea.PrecioUnitario,
+             PorcentajeDescuento = linea.PorcentajeDescuento,
+@@ -1123,96 +1122,96 @@
+     private decimal TotalPresupuesto => presupuesto.Lineas.Sum(CalcularTotalLinea);
+     private decimal TotalRetencion => TotalBaseImponible * ((presupuesto.PorcentajeRetencion ?? 0m) / 100m);
+     private decimal TotalConRetencion => TotalPresupuesto - TotalRetencion;
+ 
+     private void ActualizarClienteRecargo()
+     {
+         var cliente = clientes.FirstOrDefault(c => c.ClienteId == presupuesto.ClienteId);
+         aplicaRecargoEquivalencia = cliente?.RegimenRecargoEquivalencia ?? false;
+         if (!aplicaRecargoEquivalencia)
+         {
+             return;
+         }
+ 
+         foreach (var linea in presupuesto.Lineas.Where(l => l.TipoImpuestoId.HasValue && !l.RecargoEquivalencia.HasValue))
+         {
+             AplicarTipoImpuesto(linea);
+         }
+     }
+ 
+     private LineaPresupuestoViewModel CrearLineaConTipoPorDefecto()
+     {
+         var linea = new LineaPresupuestoViewModel();
+         var tipoDefault = ObtenerTipoImpuestoPorDefecto();
+         if (tipoDefault != null)
+         {
+-            linea.TipoImpuestoId = tipoDefault.TipoImpuestoId;
++            linea.TipoImpuestoId = tipoDefault.Id;
+             AplicarTipoImpuesto(linea);
+         }
+ 
+         return linea;
+     }
+ 
+-    private TipoImpuestoDto? ObtenerTipoImpuestoPorDefecto()
++    private TipoImpuestoListadoDto? ObtenerTipoImpuestoPorDefecto()
+     {
+         return tiposImpuesto.FirstOrDefault(tipo =>
+                 tipo.Activo && tipo.Nombre.Equals("General", StringComparison.OrdinalIgnoreCase))
+             ?? tiposImpuesto.FirstOrDefault(tipo => tipo.Activo);
+     }
+ 
+     private void ActualizarImpuestoLinea(LineaPresupuestoViewModel linea)
+     {
+         AplicarTipoImpuesto(linea);
+     }
+ 
+     private void AplicarTipoImpuesto(LineaPresupuestoViewModel linea)
+     {
+         if (!linea.TipoImpuestoId.HasValue)
+         {
+             return;
+         }
+ 
+-        var tipo = tiposImpuesto.FirstOrDefault(t => t.TipoImpuestoId == linea.TipoImpuestoId);
++        var tipo = tiposImpuesto.FirstOrDefault(t => t.Id == linea.TipoImpuestoId);
+         if (tipo == null)
+         {
+             return;
+         }
+ 
+-        linea.IVA = tipo.PorcentajeIVA;
++        linea.IVA = tipo.PorcentajeIva;
+         linea.RecargoEquivalencia = aplicaRecargoEquivalencia
+-            ? tipo.PorcentajeRecargoEquivalencia ?? 0m
++            ? tipo.PorcentajeRecargo ?? 0m
+             : 0m;
+     }
+ 
+     private string ObtenerDescripcionImpuesto(ProductoDto producto)
+     {
+         if (producto.TipoImpuestoId.HasValue)
+         {
+-            var tipo = tiposImpuesto.FirstOrDefault(t => t.TipoImpuestoId == producto.TipoImpuestoId);
++            var tipo = tiposImpuesto.FirstOrDefault(t => t.Id == producto.TipoImpuestoId);
+             if (tipo != null)
+             {
+-                return $"{tipo.Nombre} ({tipo.PorcentajeIVA:N2}% IVA)";
++                return $"{tipo.Nombre} ({tipo.PorcentajeIva:N2}% IVA)";
+             }
+         }
+ 
+         return producto.IVA.HasValue ? $"IVA legado {producto.IVA.Value:N2}%" : "Sin asignar";
+     }
+ 
+     private static decimal CalcularRecargoEquivalencia(decimal iva)
+     {
+         return iva switch
+         {
+             21m => 5.2m,
+             10m => 1.4m,
+             4m => 0.5m,
+             0m => 0m,
+             _ => 0m
+         };
+     }
+ 
+     private static DateTime? ConvertirAUtc(DateTime? value)
+     {
+         if (!value.HasValue)
+         {
+             return null;
+         }
+ 
  
 EOF
 )

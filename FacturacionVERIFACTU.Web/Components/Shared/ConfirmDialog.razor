@@ -1,0 +1,58 @@
+@using Microsoft.AspNetCore.Components
+
+@if (IsVisible)
+{
+    <div class="notion-modal-overlay" @onclick="HandleOverlayClick">
+        <div class="notion-modal" @onclick:stopPropagation="true">
+            <div class="notion-modal-header">
+                <h3>@Title</h3>
+                <button class="notion-modal-close" @onclick="HandleCancel" disabled="@IsBusy" aria-label="Cerrar">×</button>
+            </div>
+            <div class="notion-modal-body">
+                <p>@Message</p>
+                @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+                {
+                    <div class="notion-modal-error">@ErrorMessage</div>
+                }
+            </div>
+            <div class="notion-modal-footer">
+                <button class="btn-modern-secondary" @onclick="HandleCancel" disabled="@IsBusy">
+                    @CancelButtonText
+                </button>
+                <button class="btn-modern" @onclick="HandleConfirm" disabled="@IsBusy">
+                    @(IsBusy ? "Procesando..." : ConfirmButtonText)
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Message { get; set; } = string.Empty;
+    [Parameter] public string ConfirmButtonText { get; set; } = "Confirmar";
+    [Parameter] public string CancelButtonText { get; set; } = "Cancelar";
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task HandleConfirm()
+    {
+        if (IsBusy) return;
+        await OnConfirm.InvokeAsync();
+    }
+
+    private async Task HandleCancel()
+    {
+        if (IsBusy) return;
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task HandleOverlayClick()
+    {
+        if (IsBusy) return;
+        await HandleCancel();
+    }
+}

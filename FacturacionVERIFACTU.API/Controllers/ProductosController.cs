@@ -274,11 +274,15 @@ namespace FacturacionVERIFACTU.API.Controllers
             if (producto == null)
                 return NotFound(new { message = "Producto no encontrado" });
 
-            var tieneLineas = await _context.LineasFacturas
-                .AnyAsync(l => l.Id == producto.Id);
+            var tieneLineasFactura = await _context.LineasFacturas
+                 .AnyAsync(l => l.ProductoId == producto.Id);
+            var tieneLineasAlbaran = await _context.LineasAlbaranes
+                .AnyAsync(l => l.ProductoId == producto.Id);
+            var tieneLineasPresupuesto = await _context.LineasPresupuesto
+                .AnyAsync(l => l.ProductoId == producto.Id);
 
-            if (tieneLineas)
-                return BadRequest(new { message = "No se puede eliminar el producto porque esta en uso en facturas" });
+            if (tieneLineasFactura || tieneLineasAlbaran || tieneLineasPresupuesto)
+                return BadRequest(new { message = "No se puede eliminar el producto porque esta en uso" });
 
             _context.Productos.Remove(producto);
             await _context.SaveChangesAsync();

@@ -20,7 +20,7 @@ namespace FacturacionVERIFACTU.API.Validators
                 .MaximumLength(200).WithMessage("El nombre no puede superar los 200 caracteres");
 
             RuleFor(x => x.Direccion)
-                .MaximumLength(500).When(x => !string.IsNullOrEmpty(x.Nombre));
+                .MaximumLength(200).When(x => !string.IsNullOrEmpty(x.Nombre));
 
             RuleFor(x=>x.CodigoPostal)
                 .MaximumLength(10).When(x=> !string.IsNullOrEmpty(x.CodigoPostal))
@@ -48,7 +48,8 @@ namespace FacturacionVERIFACTU.API.Validators
                     .MaximumLength(200).WithMessage("El nombre no puede superar 200 caracteres");
 
                 RuleFor(x => x.Direccion)
-                    .MaximumLength(500).When(x => !string.IsNullOrEmpty(x.Direccion));
+                    .MaximumLength(200).When(x => !string.IsNullOrEmpty(x.Direccion))
+                    .WithMessage("La direccion no puede superar los 200 caracteres");
 
                 RuleFor(x => x.CodigoPostal)
                     .MaximumLength(10).When(x => !string.IsNullOrEmpty(x.CodigoPostal))

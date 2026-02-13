@@ -1,5 +1,6 @@
 ﻿@page "/clientes"
 @using Microsoft.AspNetCore.Authorization
+@inject ConfirmDialogService ConfirmDialog
 @attribute [Authorize]
 
 <PageTitle>Clientes - FacturaVERIFACTU</PageTitle>
@@ -117,7 +118,7 @@ else
 
     [Inject] private IApiService ApiService { get; set; } = null!;
     [Inject] private NavigationManager NavManager { get; set; } = null!;
-    [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -156,21 +157,33 @@ else
 
     private void EditarCliente(ClienteDto cliente) => NavManager.NavigateTo($"/clientes/editar/{cliente.ClienteId}");
 
-    private async Task EliminarCliente(ClienteDto cliente)
+    private Task EliminarCliente(ClienteDto cliente)
     {
-        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"¿Eliminar a {cliente.Nombre}?");
-        if (!confirm)
-        {
-            return;
-        }
+        var options = new ConfirmDialogOptions(
+            "¿Eliminar cliente?",
+            $"El cliente {cliente.Nombre} se borrara permanentemente.",
+            "Eliminar",
+            "Cancelar"
+        );
 
-        var success = await ApiService.DeleteAsync($"api/clientes/{cliente.ClienteId}");
-        if (!success)
+        ConfirmDialog.Show(options, async () =>
         {
-            errorMessage = "No se pudo eliminar el cliente.";
-            return;
-        }
+            var result = await ApiService.DeleteAsyncDetailed($"api/clientes/{cliente.ClienteId}");
 
-        await CargarClientesAsync(searchText);
+            if (!result.Success)
+            {
+                var message = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                    ? "No se puede eliminar el cliente."
+                    : result.ErrorMessage;
+
+                throw new InvalidOperationException(message);
+            }
+
+            await CargarClientesAsync(searchText);
+
+            await InvokeAsync(StateHasChanged);
+        });
+
+        return Task.CompletedTask;
     }
 }

@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Identity.Data;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace FacturacionVERIFACTU.Web.Services
 {
@@ -122,17 +124,65 @@ namespace FacturacionVERIFACTU.Web.Services
 
         public async Task<bool> DeleteAsync(string endpoint)
         {
+            var result = await DeleteAsyncDetailed(endpoint);
+            return result.Success;
+        }
+
+        public async Task<ApiResult> DeleteAsyncDetailed(string endpoint)
+        {
             try
             {
                 await AddAuthHeaderAsync();
                 var response = await _httpClient.DeleteAsync(endpoint);
-                return response.IsSuccessStatusCode;
+                var errorMessage = response.IsSuccessStatusCode
+                    ? null
+                    : await ExtractErrorMessageAsync(response);
+
+                return new ApiResult(response.IsSuccessStatusCode, response.StatusCode, errorMessage);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error en DELETE {Endpoint}", endpoint);
-                return false;
+                return new ApiResult(false, HttpStatusCode.InternalServerError, ex.Message);
             }
+        }
+
+        private static async Task<string?> ExtractErrorMessageAsync(HttpResponseMessage response)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return "Se produjo un error al procesar la solicitud.";
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(content);
+                var root = document.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Object)
+                {
+                    if (root.TryGetProperty("message", out var message) && message.ValueKind == JsonValueKind.String)
+                    {
+                        return message.GetString();
+                    }
+
+                    if (root.TryGetProperty("detail", out var detail) && detail.ValueKind == JsonValueKind.String)
+                    {
+                        return detail.GetString();
+                    }
+
+                    if (root.TryGetProperty("title", out var title) && title.ValueKind == JsonValueKind.String)
+                    {
+                        return title.GetString();
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+            }
+
+            return content;
         }
     }
 }

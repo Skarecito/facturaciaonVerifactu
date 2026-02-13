@@ -1,85 +1,82 @@
-﻿using Microsoft.AspNetCore.Components;
-using System.Reflection;
+﻿namespace FacturacionVERIFACTU.Web.Services;
 
-namespace FacturacionVERIFACTU.Web.Services
+public sealed class ConfirmDialogService
 {
-    public class ConfirmDialogService
+    private Func<Task>? _onConfirm;
+
+    public bool IsVisible { get; private set; }
+    public bool IsBusy { get; private set; }
+    public string Title { get; private set; } = "Confirmar";
+    public string Message { get; private set; } = string.Empty;
+    public string ConfirmButtonText { get; private set; } = "Confirmar";
+    public string CancelButtonText { get; private set; } = "Cancelar";
+    public string? ErrorMessage { get; private set; }
+
+    public event Action? OnChange;
+
+    public void Show(ConfirmDialogOptions options, Func<Task> onConfirm)
     {
-        public event Action? OnChange;
-
-        public bool IsOpen { get; private set; }
-        public string Title { get; private set; } = "";
-        public string Message { get; private set; } = "";
-        public string ConfirmText { get; private set; } = "Confirmar";
-        public string CancelText { get; private set; } = "Cancelar";
-        public bool Danger { get; private set; }
-        public bool IsBusy { get; private set; }
-
-        private Func<Task> _onConfirm;
-        private Func<Task> _onCancel;
-
-        public void Show(
-            string title,
-            string message,
-            Func<Task> onConfirm,
-            Func<Task> onCancel,
-            string confirmText = "Confirmar",
-            string cancelText = "Cancelar",
-            bool danger = false)
-        {
-            Title = title;
-            Message = message;
-            ConfirmText = confirmText;
-            CancelText = cancelText;
-            Danger = danger;
-
-            _onConfirm = onConfirm;
-            _onCancel = onCancel;
-
-            IsBusy = false;
-            IsOpen = true;
-            Notify();
-        }
-
-        private void Close()
-        {
-            IsOpen = false;
-            IsBusy = false;
-            Notify();
-        }
-
-        public async Task ConfirmAsync()
-        {
-            if (_onConfirm == null) return;
-            IsBusy = true;
-            Notify();
-
-            try
-            {
-                await _onConfirm();
-            }
-            finally
-            {
-                IsBusy = false;
-                IsOpen= false;
-                Notify();
-            }
-        }
-
-        public async Task CancelAsync()
-        {
-            if (IsBusy) return;
-
-            if(_onCancel != null) await _onCancel();
-
-            Close();
-        }
-
-
-
-
-        private void Notify() => OnChange?.Invoke();
+        Title = options.Title;
+        Message = options.Message;
+        ConfirmButtonText = options.ConfirmButtonText;
+        CancelButtonText = options.CancelButtonText;
+        ErrorMessage = null;
+        _onConfirm = onConfirm;
+        IsVisible = true;
+        Notify();
     }
 
-    
+    public async Task ConfirmAsync()
+    {
+        if (_onConfirm is null || IsBusy)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        ErrorMessage = null;
+        Notify();
+
+        try
+        {
+            await _onConfirm();
+            Close();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = string.IsNullOrWhiteSpace(ex.Message)
+                ? "No se pudo completar la acción."
+                : ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+            Notify();
+        }
+    }
+
+    public void Cancel()
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        Close();
+        Notify();
+    }
+
+    private void Close()
+    {
+        IsVisible = false;
+        _onConfirm = null;
+    }
+
+    private void Notify() => OnChange?.Invoke();
 }
+
+public sealed record ConfirmDialogOptions(
+    string Title,
+    string Message,
+    string ConfirmButtonText = "Confirmar",
+    string CancelButtonText = "Cancelar");

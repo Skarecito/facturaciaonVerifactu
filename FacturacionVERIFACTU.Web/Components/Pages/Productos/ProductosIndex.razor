@@ -1,85 +1,84 @@
 ﻿@page "/productos"
 @using Microsoft.AspNetCore.Authorization
-@inject ConfirmDialogService Confirm
+@inject ConfirmDialogService ConfirmDialog
 @attribute [Authorize]
-
 
 <PageTitle>Productos - FacturaVERIFACTU</PageTitle>
 
-
-    @* --- CABECERA: Igual que en Clientes --- *@
-    <div class="notion-header">
-        <div class="header-main">
-            @* Icono circular sutil igual que en clientes *@
-            <span class="header-icon">
-                <i class="bi bi-archive"></i>
-            </span>
-            <div>
-                <h1>Productos</h1>
-            </div>
-        </div>
-        @* Botón con el estilo secundario moderno que usas en el index de clientes *@
-        <button class="btn-modern-secondary" @onclick="NuevoProducto">
-            <i class="bi bi-plus-lg"></i> Nuevo producto
-        </button>
-    </div>
-
-    @* --- TOOLBAR DE BÚSQUEDA: Copiado exactamente de Clientes --- *@
-    <div class="notion-toolbar" style="border-bottom: 1px solid #edeceb; margin-bottom: 30px;">
-        <div class="notion-search-wrapper" style="max-width: 100%; border: none;">
-            <i class="bi bi-search" style="font-size: 14px;"></i>
-            <input @bind="searchText"
-                   @bind:event="oninput"
-                   @onkeyup="Buscar"
-                   placeholder="Buscar por código o descripción..."
-                   class="notion-search-input" />
+@* --- CABECERA --- *@
+<div class="notion-header">
+    <div class="header-main">
+        <span class="header-icon">
+            <i class="bi bi-archive"></i>
+        </span>
+        <div>
+            <h1>Productos</h1>
         </div>
     </div>
 
+    <button class="btn-modern-secondary" @onclick="NuevoProducto">
+        <i class="bi bi-plus-lg"></i> Nuevo producto
+    </button>
+</div>
 
+@* --- TOOLBAR DE BÚSQUEDA --- *@
+<div class="notion-toolbar" style="border-bottom: 1px solid #edeceb; margin-bottom: 30px;">
+    <div class="notion-search-wrapper" style="max-width: 100%; border: none;">
+        <i class="bi bi-search" style="font-size: 14px;"></i>
+        <input @bind="searchText"
+               @bind:event="oninput"
+               @onkeyup="Buscar"
+               placeholder="Buscar por código o descripción..."
+               class="notion-search-input" />
+    </div>
+</div>
 
-    @* --- CONTENIDO PRINCIPAL --- *@
-    @if (isLoading)
-    {
-        <div class="notion-loading" style="padding: 50px; text-align: center;">
-            <span class="spinner-border spinner-border-sm" role="status"></span>
-            <span style="margin-left: 10px; color: #787774;">Cargando catálogo...</span>
-        </div>
-    }
-    else if (!string.IsNullOrEmpty(errorMessage) || (productos != null && !productos.Any()))
-    {
-        <div class="notion-empty-state" style="padding: 80px 0; text-align: center;">
-            <i class="bi bi-box-seam" style="font-size: 48px; color: #edeceb; margin-bottom: 16px; display: block;"></i>
-            <h4 style="font-weight: 600; margin-bottom: 8px;">No hay productos</h4>
-            <p style="color: #787774; font-size: 14px; margin-bottom: 24px;">Gestiona tus artículos y servicios para agilizar tus facturas.</p>
-            <button class="btn-modern-secondary" @onclick="NuevoProducto">Añadir primer producto</button>
-        </div>
-    }
-    else
-    {
-        @* El componente DataTable ya hereda el espaciado amplio que configuramos antes *@
-        <DataTable TItem="ProductoDto"
-                   Items="productos"
-                   Columns="columns"
-                   OnEdit="EditarProducto"
-                   OnDelete="EliminarProducto" />
+@* --- CONTENIDO PRINCIPAL --- *@
+@if (isLoading)
+{
+    <div class="notion-loading" style="padding: 50px; text-align: center;">
+        <span class="spinner-border spinner-border-sm" role="status"></span>
+        <span style="margin-left: 10px; color: #787774;">Cargando catálogo...</span>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="notion-empty-state" style="padding: 80px 0; text-align: center;">
+        <i class="bi bi-exclamation-triangle" style="font-size: 48px; color: #edeceb; margin-bottom: 16px; display: block;"></i>
+        <h4 style="font-weight: 600; margin-bottom: 8px;">Error</h4>
+        <p style="color: #787774; font-size: 14px; margin-bottom: 24px;">@errorMessage</p>
+        <button class="btn-modern-secondary" @onclick="() => CargarProductosAsync(searchText)">Reintentar</button>
+    </div>
+}
+else if (productos == null || !productos.Any())
+{
+    <div class="notion-empty-state" style="padding: 80px 0; text-align: center;">
+        <i class="bi bi-box-seam" style="font-size: 48px; color: #edeceb; margin-bottom: 16px; display: block;"></i>
+        <h4 style="font-weight: 600; margin-bottom: 8px;">No hay productos</h4>
+        <p style="color: #787774; font-size: 14px; margin-bottom: 24px;">
+            Gestiona tus artículos y servicios para agilizar tus facturas.
+        </p>
+        <button class="btn-modern-secondary" @onclick="NuevoProducto">Añadir primer producto</button>
+    </div>
+}
+else
+{
+    <DataTable TItem="ProductoDto"
+               Items="productos"
+               Columns="columns"
+               OnEdit="EditarProducto"
+               OnDelete="EliminarProducto" />
 
-        <div class="notion-table-footer" style="margin-top: 20px; border-top: 1px solid #edeceb; padding-top: 12px; color: rgba(55, 53, 47, 0.4); font-size: 12px;">
-            <span>Total: @productos.Count productos en catálogo</span>
-        </div>
-    }
-
-
-
+    <div class="notion-table-footer" style="margin-top: 20px; border-top: 1px solid #edeceb; padding-top: 12px; color: rgba(55, 53, 47, 0.4); font-size: 12px;">
+        <span>Total: @productos.Count productos en catálogo</span>
+    </div>
+}
 
 @code {
     private List<ProductoDto> productos = new();
     private string searchText = string.Empty;
     private bool isLoading = true;
     private string errorMessage = string.Empty;
-    private bool confirmOpen;
-    private ProductoDto? productoPendienteEliminar;
-    private bool eliminando;
 
     private readonly IReadOnlyList<DataTableColumn<ProductoDto>> columns =
     [
@@ -92,9 +91,6 @@
 
     [Inject] private IApiService ApiService { get; set; } = null!;
     [Inject] private NavigationManager NavManager { get; set; } = null!;
-    private string ConfirmMessage => productoPendienteEliminar == null
-        ? string.Empty
-        : $"¿Eliminar \"{productoPendienteEliminar.Codigo} - {productoPendienteEliminar.Descripcion}\"? Esta acción no se puede deshacer.";
 
     protected override async Task OnInitializedAsync()
     {
@@ -111,6 +107,7 @@
             : $"api/productos?search={Uri.EscapeDataString(search)}";
 
         var response = await ApiService.GetAsync<PaginatedResponseDto<ProductoDto>>(endpoint);
+
         if (response == null)
         {
             errorMessage = "No se pudieron cargar los productos.";
@@ -118,7 +115,7 @@
         }
         else
         {
-            productos = response.Items;
+            productos = response.Items ?? new List<ProductoDto>();
         }
 
         isLoading = false;
@@ -127,68 +124,45 @@
     private async Task Buscar()
     {
         await CargarProductosAsync(searchText);
+        await InvokeAsync(StateHasChanged);
     }
 
     private void NuevoProducto() => NavManager.NavigateTo("/productos/nuevo");
 
-    private void EditarProducto(ProductoDto producto) => NavManager.NavigateTo($"/productos/editar/{producto.ProductoId}");
+    private void EditarProducto(ProductoDto producto)
+        => NavManager.NavigateTo($"/productos/editar/{producto.ProductoId}");
 
-    private async Task EliminarProducto(ProductoDto p)
+    private Task EliminarProducto(ProductoDto producto)
     {
-        Confirm.Show(
-            title: "Eliminar Producto",
-            message: $"Seguro que quieres eliminar '{p.Codigo} - {p.Descripcion}'?",
-            onConfirm: async () =>
-            {
-                eliminando = true;
-                try
-                {
-                    await ApiService.DeleteAsync($"api/productos/{p.ProductoId}");
-                    productos.Remove(p);
-                }
-                finally
-                {
-                    eliminando = false;
-                }
-            },
-            onCancel: () => Task.CompletedTask,
-            confirmText: "Eliminar",
-            cancelText: "Cancelar",
-            danger: true
+        var options = new ConfirmDialogOptions(
+            "¿Eliminar producto?",
+            $"El producto {producto.Codigo} se borrará permanentemente.",
+            "Eliminar",
+            "Cancelar"
         );
-    }
 
-    private async Task ConfirmarEliminar()
-    {
-        if(productoPendienteEliminar == null)
+        ConfirmDialog.Show(options, async () =>
         {
-            confirmOpen = false;
-            return;
-        }
+            var result = await ApiService.DeleteAsyncDetailed($"api/productos/{producto.ProductoId}");
 
-        eliminando = true;
-        errorMessage = string.Empty;
+            if (!result.Success)
+            {
+                var message = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                    ? "No se puede eliminar el producto."
+                    : result.ErrorMessage;
 
-        var success = await ApiService.DeleteAsync($"api/productos/{productoPendienteEliminar.ProductoId}");
+                // Esto permite que el modal muestre el error si tu ConfirmDialog lo soporta.
+                // Si no lo soporta, al menos no se queda “silencioso”.
+                throw new InvalidOperationException(message);
+            }
 
-        if (!success)
-        {
-            errorMessage = "No se pudo eliminar el producto.";
-        }
-        else
-        {
+            // ✅ Recarga catálogo
             await CargarProductosAsync(searchText);
-        }
-        eliminando = false;
-        confirmOpen = false;
-        productoPendienteEliminar = null;
-    }
 
-    private Task CancelarEliminar()
-    {
-        confirmOpen = false;
-        productoPendienteEliminar = null;
+            // ✅ Garantiza repintado
+            await InvokeAsync(StateHasChanged);
+        });
+
         return Task.CompletedTask;
     }
-   
 }

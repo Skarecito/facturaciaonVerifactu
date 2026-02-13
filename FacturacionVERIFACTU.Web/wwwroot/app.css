@@ -1,4 +1,337 @@
 /* ========================================
+   NOTION CONFIRM DIALOG (LIMPIO Y ÚNICO)
+   ======================================== */
+
+/* Overlay a pantalla completa */
+/* FIX definitivo: inmune a overrides */
+
+/* Forzar display flex con especificidad máxima */
+div.notion-modal-overlay {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(15, 15, 15, 0.5) !important;
+    z-index: 999999 !important;
+    padding: 20px !important;
+}
+
+div.notion-modal {
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+    max-width: 480px !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+div.notion-modal-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 24px 24px 16px 24px !important;
+    border-bottom: 1px solid #edeceb !important;
+}
+
+div.notion-modal-body {
+    padding: 16px 24px !important;
+}
+
+div.notion-modal-footer {
+    display: flex !important;
+    gap: 10px !important;
+    justify-content: flex-end !important;
+    padding: 16px 24px 24px 24px !important;
+    border-top: 1px solid #edeceb !important;
+}
+
+.notion-modal-header h3 {
+    margin: 0 !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    color: #37352f !important;
+}
+
+.notion-modal-body p {
+    margin: 0 !important;
+    color: rgba(55, 53, 47, 0.7) !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+}
+
+.notion-modal-close {
+    background: transparent !important;
+    border: none !important;
+    font-size: 28px !important;
+    line-height: 1 !important;
+    color: rgba(55, 53, 47, 0.4) !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 4px !important;
+}
+
+    .notion-modal-close:hover {
+        background: #f1f1f0 !important;
+        color: #37352f !important;
+    }
+
+.notion-modal-error {
+    margin-top: 12px !important;
+    padding: 12px !important;
+    background: rgba(235, 87, 87, 0.08) !important;
+    border: 1px solid rgba(235, 87, 87, 0.25) !important;
+    border-radius: 8px !important;
+    color: #8f2d2d !important;
+    font-size: 13px !important;
+}
+
+.notion-btn-cancel {
+    background: white !important;
+    border: 1px solid #edeceb !important;
+    padding: 10px 20px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #37352f !important;
+    cursor: pointer !important;
+}
+
+    .notion-btn-cancel:hover:not(:disabled) {
+        background: #fbfbfa !important;
+        border-color: #37352f !important;
+    }
+
+.notion-btn-confirm {
+    background: #eb5757 !important;
+    border: none !important;
+    padding: 10px 20px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: white !important;
+    cursor: pointer !important;
+}
+
+    .notion-btn-confirm:hover:not(:disabled) {
+        background: #d64545 !important;
+    }
+
+
+/* ==============================================
+   MODAL PRODUCTOS - Estilo Notion Premium
+   REEMPLAZAR el CSS anterior del modal productos
+   ============================================== */
+
+/* Overlay con fondo más oscuro y blur */
+.notion-modal-overlay {
+    background: rgba(15, 15, 15, 0.6) !important;
+    backdrop-filter: blur(3px) !important;
+    -webkit-backdrop-filter: blur(3px) !important;
+}
+
+/* Modal de productos */
+.notion-modal-productos {
+    background: white !important;
+    border-radius: 16px !important;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.25), 0 10px 24px rgba(0, 0, 0, 0.12) !important;
+    max-width: 900px !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    max-height: 85vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border: 1px solid rgba(15, 15, 15, 0.05) !important;
+}
+
+    .notion-modal-productos .notion-modal-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 24px 28px !important;
+        border-bottom: 1px solid #e8e7e5 !important;
+        background: #fbfbfa !important;
+        flex-shrink: 0 !important;
+    }
+
+        .notion-modal-productos .notion-modal-header h3 {
+            margin: 0 !important;
+            font-size: 20px !important;
+            font-weight: 600 !important;
+            color: #37352f !important;
+            letter-spacing: -0.02em !important;
+        }
+
+    .notion-modal-productos .notion-modal-body {
+        padding: 24px 28px 28px 28px !important;
+        overflow-y: auto !important;
+        flex: 1 !important;
+        background: white !important;
+    }
+
+    /* Búsqueda mejorada */
+    .notion-modal-productos .notion-search-wrapper {
+        border-radius: 10px !important;
+        padding: 12px 16px !important;
+        border: 1.5px solid #e8e7e5 !important;
+        background: white !important;
+        transition: all 0.2s !important;
+    }
+
+        .notion-modal-productos .notion-search-wrapper:focus-within {
+            border-color: #37352f !important;
+            box-shadow: 0 0 0 3px rgba(55, 53, 47, 0.08) !important;
+        }
+
+        .notion-modal-productos .notion-search-wrapper i {
+            color: rgba(55, 53, 47, 0.4) !important;
+        }
+
+    .notion-modal-productos .notion-search-input {
+        font-size: 15px !important;
+        color: #37352f !important;
+    }
+
+        .notion-modal-productos .notion-search-input::placeholder {
+            color: rgba(55, 53, 47, 0.4) !important;
+        }
+
+    /* Tabla limpia estilo Notion */
+    .notion-modal-productos .notion-table {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+    }
+
+        .notion-modal-productos .notion-table thead tr {
+            background: #fbfbfa !important;
+        }
+
+        .notion-modal-productos .notion-table thead th {
+            padding: 14px 12px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            color: rgba(55, 53, 47, 0.5) !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.03em !important;
+            border-bottom: 1.5px solid #e8e7e5 !important;
+            background: #fbfbfa !important;
+        }
+
+        .notion-modal-productos .notion-table tbody tr {
+            transition: background 0.15s ease !important;
+            border-bottom: 1px solid #f1f0ef !important;
+        }
+
+            .notion-modal-productos .notion-table tbody tr:hover {
+                background: #f7f7f6 !important;
+            }
+
+            .notion-modal-productos .notion-table tbody tr:last-child {
+                border-bottom: none !important;
+            }
+
+        .notion-modal-productos .notion-table tbody td {
+            padding: 16px 12px !important;
+            color: #37352f !important;
+            font-size: 14px !important;
+        }
+
+    /* Código de producto */
+    .notion-modal-productos .notion-code-text {
+        background-color: #ebebea !important;
+        color: #37352f !important;
+        font-weight: 500 !important;
+        padding: 3px 6px !important;
+        border-radius: 4px !important;
+        font-size: 13px !important;
+    }
+
+    /* Botones dentro del modal */
+    .notion-modal-productos .btn-modern-secondary {
+        padding: 8px 14px !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        border-radius: 6px !important;
+        transition: all 0.2s !important;
+    }
+
+        .notion-modal-productos .btn-modern-secondary:hover {
+            background: #37352f !important;
+            color: white !important;
+            border-color: #37352f !important;
+            transform: translateY(-1px) !important;
+        }
+
+    /* Estados vacíos y carga */
+    .notion-modal-productos .notion-loading,
+    .notion-modal-productos .notion-empty {
+        padding: 60px 20px !important;
+        text-align: center !important;
+        color: rgba(55, 53, 47, 0.4) !important;
+        font-size: 14px !important;
+    }
+
+    /* Scrollbar estilo Notion */
+    .notion-modal-productos .notion-modal-body::-webkit-scrollbar {
+        width: 10px !important;
+    }
+
+    .notion-modal-productos .notion-modal-body::-webkit-scrollbar-track {
+        background: transparent !important;
+    }
+
+    .notion-modal-productos .notion-modal-body::-webkit-scrollbar-thumb {
+        background: rgba(55, 53, 47, 0.16) !important;
+        border-radius: 10px !important;
+        border: 2px solid white !important;
+    }
+
+        .notion-modal-productos .notion-modal-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(55, 53, 47, 0.26) !important;
+        }
+
+/* Animación de entrada del modal */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.notion-modal-productos {
+    animation: modalFadeIn 0.2s ease-out !important;
+}
+
+/* Animación del overlay */
+@keyframes overlayFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.notion-modal-overlay {
+    animation: overlayFadeIn 0.2s ease-out !important;
+}
+
+
+/* ========================================
    RESET Y LIMPIEZA ANTI-AZUL
    ======================================== */
 :root {
@@ -873,116 +1206,220 @@ index 024cbc30988e88b844e90bf16b87d53e05f8c9ab..f5383efcd19c8bef36169b233b5b441a
     padding: 10px 24px !important;
 }
 
+
+/* ==============================================
+   OVERLAY MEJORADO - AÑADIR AL FINAL DE app.css
+   ============================================== */
+
+/* Cuando el overlay tiene el modal de productos, fondo más oscuro */
+.notion-modal-overlay:has(.notion-modal-productos) {
+    background: rgba(15, 15, 15, 0.75) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+}
+
+/* Modal de productos con mejor diseño */
+.notion-modal-productos {
+    background: white !important;
+    border-radius: 16px !important;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.3), 0 10px 24px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+    max-width: 900px !important;
+    width: 100% !important;
+    max-height: 85vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+    /* Header del modal productos */
+    .notion-modal-productos .notion-modal-header {
+        padding: 24px 28px !important;
+        border-bottom: 1px solid #e8e7e5 !important;
+        background: #fafafa !important;
+    }
+
+        .notion-modal-productos .notion-modal-header h3 {
+            font-size: 20px !important;
+            font-weight: 600 !important;
+            letter-spacing: -0.02em !important;
+        }
+
+    /* Body del modal */
+    .notion-modal-productos .notion-modal-body {
+        padding: 24px 28px 28px 28px !important;
+        background: white !important;
+        overflow-y: auto !important;
+    }
+
+    /* Buscador mejorado */
+    .notion-modal-productos .notion-search-wrapper {
+        background: white !important;
+        border: 1.5px solid #e0e0e0 !important;
+        border-radius: 10px !important;
+        padding: 12px 16px !important;
+        margin-bottom: 20px !important;
+    }
+
+        .notion-modal-productos .notion-search-wrapper:focus-within {
+            border-color: #2383e2 !important;
+            box-shadow: 0 0 0 3px rgba(35, 131, 226, 0.1) !important;
+        }
+
+    /* Tabla mejorada */
+    .notion-modal-productos table.notion-table {
+        margin-top: 0 !important;
+    }
+
+        .notion-modal-productos table.notion-table thead {
+            background: #fafafa !important;
+        }
+
+            .notion-modal-productos table.notion-table thead th {
+                background: #fafafa !important;
+                padding: 14px 12px !important;
+                font-size: 11px !important;
+                letter-spacing: 0.05em !important;
+                border-bottom: 2px solid #e8e7e5 !important;
+            }
+
+        .notion-modal-productos table.notion-table tbody tr {
+            border-bottom: 1px solid #f1f1f0 !important;
+            transition: background 0.15s !important;
+        }
+
+            .notion-modal-productos table.notion-table tbody tr:hover {
+                background: #f9f9f8 !important;
+            }
+
+        .notion-modal-productos table.notion-table tbody td {
+            padding: 16px 12px !important;
+        }
+
+    /* Scrollbar */
+    .notion-modal-productos .notion-modal-body::-webkit-scrollbar {
+        width: 10px !important;
+    }
+
+    .notion-modal-productos .notion-modal-body::-webkit-scrollbar-thumb {
+        background: rgba(55, 53, 47, 0.2) !important;
+        border-radius: 10px !important;
+        border: 2px solid white !important;
+    }
+
+        .notion-modal-productos .notion-modal-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(55, 53, 47, 0.3) !important;
+        }
+
 /* ========================================
-   NOTION CONFIRM DIALOG (LIMPIO Y ÚNICO)
+   DASHBOARD (HOME) - Notion style
    ======================================== */
 
-/* Overlay a pantalla completa */
-/* FIX definitivo: inmune a overrides */
-
-.notion-modal-overlay
-
-{
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 16px !important;
-    background: rgba(15,15,15,.4) !important;
-    z-index: 99999 !important;
-    margin: 0 !important;
+.dashboard-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin: 12px 0 18px;
 }
 
-
-/* Caja del modal */
-
-.notion-modal {
-    background: #fff !important;
-    border-radius: 14px !important;
-    box-shadow: 0 16px 40px rgba(0,0,0,.18) !important;
-    width: min(480px, 92vw) !important;
-    padding: 20px !important;
-    border: 1px solid rgba(55,53,47,.10) !important;
+.dashboard-kpi {
+    background: #fff;
+    border: 1px solid #edeceb;
+    border-radius: 12px;
+    padding: 16px 16px;
 }
 
-@keyframes notionModalIn {
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-.notion-modal-header h3 {
-    font-size: 16px;
+.dashboard-kpi-title {
+    font-size: 12px;
     font-weight: 600;
-    margin: 0;
+    color: rgba(55, 53, 47, 0.55);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
     margin-bottom: 8px;
 }
 
-.notion-modal-body p {
-    margin: 0;
-    color: rgba(55, 53, 47, 0.75);
-    font-size: 14px;
-    line-height: 1.4;
+.dashboard-kpi-value {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #37352f;
 }
 
-.notion-modal-actions {
-    margin-top: 16px;
+.dashboard-kpi-hint {
+    margin-top: 6px;
+    font-size: 13px;
+    color: rgba(55, 53, 47, 0.55);
+}
+
+.dashboard-two-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+}
+
+@media (max-width: 1100px) {
+    .dashboard-two-cols {
+        grid-template-columns: 1fr;
+    }
+}
+
+.dashboard-card-head {
     display: flex;
-    justify-content: flex-end;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.dashboard-card-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #37352f;
+}
+
+.dashboard-card-subtitle {
+    font-size: 13px;
+    color: rgba(55, 53, 47, 0.6);
+    margin-top: 2px;
+}
+
+/* Mini bars (muy Notion) */
+.mini-bars {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
 }
 
-.notion-modal-button {
-    border-radius: 10px;
-    padding: 8px 12px;
-    font-size: 14px;
-    border: 1px solid rgba(55, 53, 47, 0.12);
-    background: #f3f3f2;
-    color: #37352f;
-    display: inline-flex;
+.mini-bar-row {
+    display: grid;
+    grid-template-columns: 42px 1fr 110px;
     align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    gap: 12px;
 }
 
-    .notion-modal-button:hover:enabled {
-        background: #e8e8e6;
-    }
-
-    .notion-modal-button:disabled {
-        cursor: not-allowed;
-        opacity: 0.6;
-    }
-
-.notion-modal-confirm {
-    background: #111111;
-    border-color: #111111;
-    color: #ffffff;
+.mini-bar-label {
+    font-size: 12px;
+    color: rgba(55, 53, 47, 0.55);
+    font-weight: 600;
 }
 
-    .notion-modal-confirm:hover:enabled {
-        background: #000000;
-        border-color: #000000;
-    }
+.mini-bar-track {
+    height: 10px;
+    background: #f1f1f0;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid #edeceb;
+}
 
-    .notion-modal-confirm.is-danger {
-        background: #eb5757;
-        border-color: #eb5757;
-        color: #ffffff;
-    }
+.mini-bar-fill {
+    height: 100%;
+    background: #c9c7c4;
+    border-radius: 999px;
+}
 
-        .notion-modal-confirm.is-danger:hover:enabled {
-            background: #d94a4a;
-            border-color: #d94a4a;
-        }
-
-.notion-modal-cancel {
-    background: #f3f3f2;
-    color: #37352f;
+.mini-bar-value {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    color: rgba(55, 53, 47, 0.75);
 }

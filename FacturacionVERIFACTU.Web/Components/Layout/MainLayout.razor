@@ -1,7 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
 @using Microsoft.AspNetCore.Components.Authorization
 @inject ConfirmDialogService Confirm
-
 
 <div class="notion-app">
     <AuthorizeView>
@@ -10,7 +10,6 @@
             <aside class="notion-sidebar">
                 <NavMenu />
             </aside>
-
             @* Lado derecho: Contenido *@
             <main class="notion-main">
                 <div class="notion-content">
@@ -27,17 +26,18 @@
     </AuthorizeView>
 </div>
 
-<ConfirmDialog IsOpen="@Confirm.IsOpen"
+@* Modal fuera del contenedor principal para evitar conflictos con position fixed *@
+<ConfirmDialog IsVisible="@Confirm.IsVisible"
+               IsBusy="@Confirm.IsBusy"
                Title="@Confirm.Title"
                Message="@Confirm.Message"
-               ConfirmText="@Confirm.ConfirmText"
-               CancelText="@Confirm.CancelText"
-               Danger="@Confirm.Danger"
-               IsBusy="@Confirm.IsBusy"
-               OnCancel="Confirm.CancelAsync"
-               OnConfirm="Confirm.ConfirmAsync" />
+               ConfirmButtonText="@Confirm.ConfirmButtonText"
+               CancelButtonText="@Confirm.CancelButtonText"
+               ErrorMessage="@Confirm.ErrorMessage"
+               OnConfirm="@Confirm.ConfirmAsync"
+               OnCancel="@Confirm.Cancel" />
 
-@code{
+@code {
     protected override void OnInitialized()
     {
         Confirm.OnChange += StateHasChanged;

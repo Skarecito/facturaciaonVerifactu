@@ -1,6 +1,12 @@
 ﻿@page "/"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @attribute [Authorize]
+
+@inject IApiService ApiService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Dashboard - FacturaVERIFACTU</PageTitle>
 
 <h1 style="font-weight: 700; font-size: 2.5rem; letter-spacing: -0.04em; margin-bottom: 8px;">
     Dashboard
@@ -9,6 +15,7 @@
     Gestión centralizada de Verifactu
 </p>
 
+<!-- Tarjetas de navegación -->
 <div class="notion-grid">
     <a href="/facturas" class="notion-card">
         <div class="notion-card-icon-wrapper blue">
@@ -33,4 +40,396 @@
         <div class="notion-card-title">Productos</div>
         <div class="notion-card-desc">Catálogo de productos</div>
     </a>
+    <a href="/presupuestos" class="notion-card">
+        <div class="notion-card-icon-wrapper purple">
+            <i class="bi bi-box-seam"></i>
+        </div>
+        <div class="notion-card-title">Presupuestos</div>
+        <div class="notion-card-desc">Emision y control de presupuestos</div>
+    </a>
+    <a href="/albaranes" class="notion-card">
+        <div class="notion-card-icon-wrapper purple">
+            <i class="bi bi-box-seam"></i>
+        </div>
+        <div class="notion-card-title">Albaranes</div>
+        <div class="notion-card-desc">Emision y control de albaranes</div>
+    </a>
 </div>
+
+
+<!-- Separador -->
+<div style="height: 1px; background: #edeceb; margin: 28px 0;"></div>
+
+<!-- Toolbar Notion: año + refrescar -->
+<div class="notion-toolbar" style="justify-content: space-between; border-bottom: none; margin-bottom: 10px;">
+    <div style="display:flex; gap:10px; align-items:center;">
+        <span style="font-size: 12px; font-weight: 600; color: rgba(55, 53, 47, 0.55); text-transform: uppercase; letter-spacing: .03em;">
+            Dashboard
+        </span>
+    </div>
+
+    <div style="display:flex; gap:10px; align-items:center;">
+        <select class="notion-input"
+                style="max-width:140px;"
+                @bind="SelectedYear"
+                disabled="@isLoading">
+
+            @foreach (var y in years)
+            {
+                <option value="@y">@y</option>
+            }
+        </select>
+
+        <button class="btn-modern-secondary" @onclick="ReloadAll" disabled="@isLoading">
+            <i class="bi bi-arrow-clockwise"></i> Actualizar
+        </button>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <div style="padding: 12px 14px; border: 1px solid rgba(235,87,87,.25); background: rgba(235,87,87,.08); border-radius: 10px; color:#8f2d2d; margin-bottom: 18px;">
+        <strong>Error:</strong> @error
+    </div>
+}
+
+@if (isLoading)
+{
+    <div class="notion-loading">
+        <i class="bi bi-arrow-repeat"></i> Cargando dashboard...
+    </div>
+}
+else
+{
+    <!-- KPIs -->
+    <div class="dashboard-kpi-grid">
+        <div class="dashboard-kpi">
+            <div class="dashboard-kpi-title">Facturación mes actual</div>
+            <div class="dashboard-kpi-value">@FormatCurrency(resumen?.FacturacionMesActual ?? 0)</div>
+            <div class="dashboard-kpi-hint">Facturas "Emitida" del mes (UTC)</div>
+        </div>
+
+        <div class="dashboard-kpi">
+            <div class="dashboard-kpi-title">Facturas pendientes</div>
+            <div class="dashboard-kpi-value">@((resumen?.FacturasPendientesPago ?? 0).ToString("N0"))</div>
+            <div class="dashboard-kpi-hint">Estado = "Emitida"</div>
+        </div>
+
+        <div class="dashboard-kpi">
+            <div class="dashboard-kpi-title">Presupuestos pendientes</div>
+            <div class="dashboard-kpi-value">@((resumen?.PresupuestosPendientes ?? 0).ToString("N0"))</div>
+            <div class="dashboard-kpi-hint">Pendiente / Enviado</div>
+        </div>
+
+        <div class="dashboard-kpi">
+            <div class="dashboard-kpi-title">Clientes activos</div>
+            <div class="dashboard-kpi-value">@((resumen?.ClientesActivos ?? 0).ToString("N0"))</div>
+            <div class="dashboard-kpi-hint">Con facturas últimos 6 meses</div>
+        </div>
+    </div>
+
+    <!-- 2 columnas: Facturación mensual + Comparativa -->
+    <div class="dashboard-two-cols">
+        <div class="notion-card">
+            <div style="margin-bottom: 12px;">
+                <div style="font-size: 16px; font-weight: 700; letter-spacing: -0.02em; color: #37352f;">Facturación mensual</div>
+                <div style="font-size: 13px; color: rgba(55, 53, 47, 0.6);">@selectedYear · no anuladas</div>
+            </div>
+
+            @if (facturacionMensual?.Count > 0)
+            {
+                <div class="mini-bars">
+                    @{
+                        var max = facturacionMensual.Max(x => x.Total);
+                        foreach (var m in facturacionMensual.OrderBy(x => x.NumeroMes))
+                        {
+                            var pct = max <= 0 ? 0 : (double)(m.Total / max) * 100.0;
+                            <div class="mini-bar-row" title="@m.Mes: @FormatCurrency(m.Total) · @m.CantidadFacturas facturas">
+                                <div class="mini-bar-label">@MesCorto(m.NumeroMes)</div>
+                                <div class="mini-bar-track">
+                                    <div class="mini-bar-fill" style="width:@pct.ToString("0.##")%"></div>
+                                </div>
+                                <div class="mini-bar-value">@FormatCurrency(m.Total)</div>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="notion-empty">Sin datos.</div>
+            }
+        </div>
+
+        <div class="notion-card">
+            <div style="margin-bottom: 12px;">
+                <div style="font-size: 16px; font-weight: 700; letter-spacing: -0.02em; color: #37352f;">Comparativa anual</div>
+                <div style="font-size: 13px; color: rgba(55, 53, 47, 0.6);">@comparativa?.YearAnterior vs @comparativa?.YearActual</div>
+            </div>
+
+            @if (comparativa is not null && comparativa.DatosActual?.Count == 12 && comparativa.DatosAnterior?.Count == 12)
+            {
+                <div class="notion-table-wrapper">
+                    <table class="notion-table">
+                        <thead>
+                            <tr>
+                                <th>Mes</th>
+                                <th style="text-align:right;">@comparativa.YearAnterior</th>
+                                <th style="text-align:right;">@comparativa.YearActual</th>
+                                <th style="text-align:right;">Δ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < 12; i++)
+                            {
+                                var prev = comparativa.DatosAnterior[i];
+                                var curr = comparativa.DatosActual[i];
+                                var delta = curr - prev;
+
+                                <tr>
+                                    <td>@MesCorto(i + 1)</td>
+                                    <td style="text-align:right;">@FormatCurrency(prev)</td>
+                                    <td style="text-align:right;">@FormatCurrency(curr)</td>
+                                    <td style="text-align:right;">
+                                        <span style="font-weight:600; color:@(delta >= 0 ? "#1e6148" : "#8f2d2d");">
+                                            @FormatCurrency(delta)
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="notion-empty">Sin datos.</div>
+            }
+        </div>
+    </div>
+
+    <!-- 2 columnas: Top clientes + Productos -->
+    <div class="dashboard-two-cols">
+        <div class="notion-card">
+            <div style="margin-bottom: 12px;">
+                <div style="font-size: 16px; font-weight: 700; letter-spacing: -0.02em; color: #37352f;">Top clientes</div>
+                <div style="font-size: 13px; color: rgba(55, 53, 47, 0.6);">@selectedYear · por total facturado</div>
+            </div>
+
+            @if (clientesTop?.Count > 0)
+            {
+                <div class="notion-table-wrapper">
+                    <table class="notion-table">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>NIF</th>
+                                <th style="text-align:right;">Total</th>
+                                <th style="text-align:right;">#</th>
+                                <th>Última</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in clientesTop)
+                            {
+                                <tr>
+                                    <td title="@c.RazonSocial" style="max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        @c.RazonSocial
+                                    </td>
+                                    <td class="notion-code-text" style="color:#37352f;">@c.NIF</td>
+                                    <td style="text-align:right;">@FormatCurrency(c.TotalFacturado)</td>
+                                    <td style="text-align:right;">@c.CantidadFacturas</td>
+                                    <td>@(c.UltimaFactura?.ToLocalTime().ToString("dd/MM/yyyy") ?? "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="notion-empty">Sin datos.</div>
+            }
+        </div>
+
+        <div class="notion-card">
+            <div style="margin-bottom: 12px;">
+                <div style="font-size: 16px; font-weight: 700; letter-spacing: -0.02em; color: #37352f;">Productos más vendidos</div>
+                <div style="font-size: 13px; color: rgba(55, 53, 47, 0.6);">@selectedYear · por cantidad vendida</div>
+            </div>
+
+            @if (productosMasVendidos?.Count > 0)
+            {
+                <div class="notion-table-wrapper">
+                    <table class="notion-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th style="text-align:right;">Cantidad</th>
+                                <th style="text-align:right;">Total</th>
+                                <th style="text-align:right;">Precio medio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in productosMasVendidos)
+                            {
+                                <tr>
+                                    <td title="@p.Nombre" style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        @p.Nombre
+                                    </td>
+                                    <td style="text-align:right;">@p.CantidadVendida.ToString("N2")</td>
+                                    <td style="text-align:right;">@FormatCurrency(p.TotalFacturado)</td>
+                                    <td style="text-align:right;">@FormatCurrency(p.PrecioMedio)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="notion-empty">Sin datos.</div>
+            }
+        </div>
+    </div>
+
+    <!-- Cobros -->
+    <div class="notion-card">
+        <div style="margin-bottom: 12px;">
+            <div style="font-size: 16px; font-weight: 700; letter-spacing: -0.02em; color: #37352f;">Cobros</div>
+            <div style="font-size: 13px; color: rgba(55, 53, 47, 0.6);">Facturado vs cobrado vs pendiente</div>
+        </div>
+
+        @if (cobros is not null)
+        {
+            <div class="dashboard-kpi-grid" style="margin-top: 8px;">
+                <div class="dashboard-kpi">
+                    <div class="dashboard-kpi-title">Total facturado</div>
+                    <div class="dashboard-kpi-value">@FormatCurrency(cobros.TotalFacturado)</div>
+                    <div class="dashboard-kpi-hint">No anuladas</div>
+                </div>
+
+                <div class="dashboard-kpi">
+                    <div class="dashboard-kpi-title">Total cobrado</div>
+                    <div class="dashboard-kpi-value">@FormatCurrency(cobros.TotalCobrado)</div>
+                    <div class="dashboard-kpi-hint">Estado = "Pagada"</div>
+                </div>
+
+                <div class="dashboard-kpi">
+                    <div class="dashboard-kpi-title">Total pendiente</div>
+                    <div class="dashboard-kpi-value">@FormatCurrency(cobros.TotalPendiente)</div>
+                    <div class="dashboard-kpi-hint">Estado = "Emitida"</div>
+                </div>
+
+                <div class="dashboard-kpi">
+                    <div class="dashboard-kpi-title">Vencido</div>
+                    <div class="dashboard-kpi-value">@FormatCurrency(cobros.TotalVencido)</div>
+                    <div class="dashboard-kpi-hint">Ahora está a 0</div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top: 14px;">
+                <span class="notion-badge inactive">Pagadas: @cobros.CantidadPagadas</span>
+                <span class="notion-badge inactive">Pendientes: @cobros.CantidadPendientes</span>
+                <span class="notion-badge inactive">Vencidas: @cobros.CantidadVencidas</span>
+            </div>
+        }
+        else
+        {
+            <div class="notion-empty">Sin datos.</div>
+        }
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private string? error;
+
+    private int selectedYear;
+    private List<int> years = new();
+
+    private ResumenDashboardDto? resumen;
+    private List<FacturacionMensualDto>? facturacionMensual;
+    private List<ClienteTopDto>? clientesTop;
+    private List<ProductoMasVendidoDto>? productosMasVendidos;
+    private FacturacionComparativaDto? comparativa;
+    private EstadisticasCobrosDto? cobros;
+
+    protected override async Task OnInitializedAsync()
+    {
+        selectedYear = DateTime.Now.Year;
+        years = Enumerable.Range(selectedYear - 4, 5).Reverse().ToList();
+        await ReloadAll();
+    }
+
+    private int SelectedYear
+    {
+        get => selectedYear;
+        set
+        {
+            if (selectedYear != value)
+            {
+                selectedYear = value;
+                _ = ReloadYearScoped();
+            }
+        }
+    }
+
+    private async Task ReloadAll()
+    {
+        error = null;
+        isLoading = true;
+
+        try
+        {
+            resumen = await ApiService.GetAsync<ResumenDashboardDto>("api/dashboard/resumen");
+            await ReloadYearScoped();
+            comparativa = await ApiService.GetAsync<FacturacionComparativaDto>("api/dashboard/facturacion-comparativa");
+            cobros = await ApiService.GetAsync<EstadisticasCobrosDto>("api/dashboard/estadisticas-cobros");
+        }
+        catch (Exception ex)
+        {
+            error = $"Error cargando dashboard: {ex.Message}";
+            Console.WriteLine($"Error en ReloadAll: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ReloadYearScoped()
+    {
+        try
+        {
+            facturacionMensual = await ApiService.GetAsync<List<FacturacionMensualDto>>($"api/dashboard/facturacion-mensual?year={selectedYear}");
+            clientesTop = await ApiService.GetAsync<List<ClienteTopDto>>($"api/dashboard/clientes-top?limit=5&year={selectedYear}");
+            productosMasVendidos = await ApiService.GetAsync<List<ProductoMasVendidoDto>>($"api/dashboard/productos-mas-vendidos?limit=10&year={selectedYear}");
+        }
+        catch (Exception ex)
+        {
+            error = $"Error cargando datos del año: {ex.Message}";
+            Console.WriteLine($"Error en ReloadYearScoped: {ex}");
+        }
+    }
+
+    private static string MesCorto(int mes) => mes switch
+    {
+        1 => "Ene",
+        2 => "Feb",
+        3 => "Mar",
+        4 => "Abr",
+        5 => "May",
+        6 => "Jun",
+        7 => "Jul",
+        8 => "Ago",
+        9 => "Sep",
+        10 => "Oct",
+        11 => "Nov",
+        12 => "Dic",
+        _ => "-"
+    };
+
+    private static string FormatCurrency(decimal value) => value.ToString("C2");
+}
