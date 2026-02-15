@@ -888,7 +888,8 @@
             }
             else
             {
-                convertirAlbaranMensaje = $"Albarán generado correctamente: {result.Numero ?? "sin número"}.";
+                var numeroText = Convert.ToString(result.Numero) ?? "sin numero";
+                convertirAlbaranMensaje = $"Albarán generado correctamente: {numeroText}.";
                 NavManager.NavigateTo($"/albaranes/editar/{result.Id}");
             }
         }
