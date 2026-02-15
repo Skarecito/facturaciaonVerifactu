@@ -18,6 +18,17 @@
     
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet @rendermode="new InteractiveServerRenderMode(prerender: false)" />
+
+    <script>
+        window.downloadFile = function(filename, base64Content) {
+            const link = document.createElement('a');
+        link.download = filename;
+        link.href = "data:application/pdf;base64," + base64Content;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        }
+    </script>
 </head>
 
 @* Añadimos una clase de limpieza al body *@
