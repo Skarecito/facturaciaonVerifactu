@@ -124,16 +124,16 @@
         </div>
 
         <div class="notion-table-wrapper">
-            <table class="notion-table" style="width: 100%; border-collapse: collapse;">
+            <table class="notion-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
                 <thead>
                     <tr style="border-bottom: 1px solid var(--notion-border);">
-                        <th style="padding: 12px 10px; width: 28%; text-align: left;">DESCRIPCIÓN</th>
+                        <th style="padding: 12px 10px; width: 25%; text-align: left;">DESCRIPCIÓN</th>
                         <th style="padding: 12px 10px; width: 10%; text-align: right;">CANTIDAD</th>
                         <th style="padding: 12px 10px; width: 12%; text-align: right;">PRECIO</th>
-                        <th style="padding: 12px 10px; width: 10%; text-align: right;">DTO %</th>
+                        <th style="padding: 12px 10px; width: 10%; text-align: right; white-space: nowrap;">DTO %</th>
                         <th style="padding: 12px 10px; width: 16%; text-align: right;">IMPUESTO</th>
-                        <th style="padding: 12px 10px; width: 12%; text-align: right;">TOTAL</th>
-                        <th style="padding: 12px 10px; width: 8%; text-align: right;">ACC.</th>
+                        <th style="padding: 12px 10px; width: 15%; text-align: right;">TOTAL</th>
+                        <th style="padding: 12px 10px; width: 6%; text-align: center;">ACC.</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -159,67 +159,61 @@
                                            placeholder="Descripción"
                                            value="@lineaActual.Descripcion"
                                            @onchange="@(e => { lineaActual.Descripcion = e.Value?.ToString() ?? string.Empty; })"
-                                           disabled="@(!EsEditable)" />
+                                           disabled="@(!EsEditable)"
+                                           style="font-size: 13px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                                           title="@lineaActual.Descripcion" />
                                     @if (!string.IsNullOrWhiteSpace(lineaActual.ArticuloCodigo))
                                     {
-                                        <div class="notion-cell-desc">@lineaActual.ArticuloCodigo</div>
+                                        <div class="notion-cell-desc" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="@lineaActual.ArticuloCodigo">@lineaActual.ArticuloCodigo</div>
                                     }
                                 </td>
                                 <td style="padding: 12px 10px; text-align: right;">
                                     <input type="number"
                                            class="notion-input-modern"
-                                           step="1.00"
+                                           step="0.01"
                                            value="@lineaActual.Cantidad.ToString("0.##")"
                                            @onchange="@(e => { if (decimal.TryParse(e.Value?.ToString(), out var v)) lineaActual.Cantidad = v; })"
                                            disabled="@(!EsEditable)"
-                                           style="text-align: right;" />
+                                           style="text-align: right; font-size: 13px; width: 100%;" />
                                 </td>
                                 <td style="padding: 12px 10px; text-align: right;">
                                     <input type="number"
                                            class="notion-input-modern"
-                                           step="1.00"
+                                           step="0.01"
                                            value="@lineaActual.PrecioUnitario.ToString("0.##")"
                                            @onchange="@(e => { if (decimal.TryParse(e.Value?.ToString(), out var v)) lineaActual.PrecioUnitario = v; })"
                                            disabled="@(!EsEditable)"
-                                           style="text-align: right;" />
+                                           style="text-align: right; font-size: 13px; width: 100%;" />
                                 </td>
                                 <td style="padding: 12px 10px; text-align: right;">
                                     <input type="number"
                                            class="notion-input-modern"
-                                           step="1.00"
+                                           step="0.01"
                                            max="100"
                                            value="@lineaActual.PorcentajeDescuento.ToString("0.##")"
                                            @onchange="@(e => { if (decimal.TryParse(e.Value?.ToString(), out var v)) lineaActual.PorcentajeDescuento = v; })"
                                            disabled="@(!EsEditable)"
-                                           style="text-align: right;" />
+                                           style="text-align: right; font-size: 13px; width: 100%;" />
                                 </td>
                                 <td style="padding: 12px 10px; text-align: right;">
                                     <select class="notion-input-modern"
                                             value="@lineaActual.TipoImpuestoId"
                                             @onchange="@(e => { if (int.TryParse(e.Value?.ToString(), out var v)) { lineaActual.TipoImpuestoId = v; ActualizarImpuestoLinea(lineaActual); } })"
                                             disabled="@(!EsEditable)"
-                                            style="text-align: right;">
+                                            style="font-size: 13px; width: 100%;">
                                         <option value="">Selecciona</option>
                                         @foreach (var tipo in tiposImpuesto.Where(tipo => tipo.Activo))
                                         {
-                                            <option value="@tipo.Id">@tipo.Nombre (@tipo.PorcentajeIva.ToString("N2")% IVA@(tipo.PorcentajeRecargo.HasValue ? $" + {tipo.PorcentajeRecargo.Value.ToString("N2")}% RE" : string.Empty))</option>
+                                            <option value="@tipo.Id" title="@tipo.Nombre,@(tipo.PorcentajeRecargo.HasValue && tipo.PorcentajeRecargo.Value > 0 ? $" (IVA {tipo.PorcentajeIva:N2}% + RE {tipo.PorcentajeRecargo.Value:N2}%)" : "")">
+                                                IVA @tipo.PorcentajeIva.ToString("N0")%
+                                            </option>
                                         }
                                     </select>
-                                    <div class="notion-cell-desc" style="text-align: right;">
-                                        @if (lineaActual.IVA.HasValue)
-                                        {
-                                            <span>IVA @lineaActual.IVA.Value.ToString("N2")%</span>
-                                        }
-                                        @if (aplicaRecargoEquivalencia && lineaActual.RecargoEquivalencia.HasValue && lineaActual.RecargoEquivalencia.Value > 0)
-                                        {
-                                            <span> · RE @lineaActual.RecargoEquivalencia.Value.ToString("N2")%</span>
-                                        }
-                                    </div>
                                 </td>
                                 <td style="padding: 12px 10px; text-align: right;">
-                                    <span style="font-weight: 600;">@CalcularTotalLinea(lineaActual).ToString("C")</span>
+                                    <span style="font-weight: 600; font-size: 14px; white-space: nowrap;">@CalcularTotalLinea(lineaActual).ToString("C")</span>
                                 </td>
-                                <td style="padding: 12px 10px; text-align: right;">
+                                <td style="padding: 12px 10px; text-align: center;">
                                     <button type="button"
                                             class="notion-action-btn delete"
                                             disabled="@(!EsEditable)"
@@ -508,6 +502,9 @@
         </div>
     </div>
 }
+
+
+
 
 
 @code {

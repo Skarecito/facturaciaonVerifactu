@@ -1,5 +1,6 @@
 ﻿@page "/presupuestos"
 @using Microsoft.AspNetCore.Authorization
+@inject ConfirmDialogService confirmDialog
 @attribute [Authorize]
 
 <PageTitle>Presupuestos - FacturacionVERIFACTU</PageTitle>
@@ -346,28 +347,34 @@ else
     private void EditarPresupuesto(PresupuestoResponseDto presupuesto) =>
         NavigationManager.NavigateTo($"/presupuestos/editar/{presupuesto.Id}");
 
-    private async Task EliminarPresupuesto(PresupuestoResponseDto presupuesto)
+    private Task EliminarPresupuesto(PresupuestoResponseDto presupuesto)
     {
-        if(presupuesto.Estado != "Borrador")
+        var options = new ConfirmDialogOptions(
+            "¿Eliminar presupuesto?",
+            $"El presupuesto {presupuesto.Id} se borrara permanentemente.",
+            "Eliminar",
+            "Cancelar"
+        );
+
+        confirmDialog.Show(options, async () =>
         {
-            return;
-        }
+            var result = await ApiService.DeleteAsyncDetailed($"api/presupuestos/{presupuesto.Id}");
 
-        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"¿Eliminar el presupuesto {presupuesto.NumeroPresupuesto}?");
+            if (!result.Success)
+            {
+                var message = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                    ? "No se puede eliminar el presupuesto."
+                    : result.ErrorMessage;
 
-        if (!confirm)
-        {
-            return;
-        }
+                throw new InvalidOperationException(message);
+            }
 
-        var success = await ApiService.DeleteAsync($"api/Presupuestos/{presupuesto.Id}");
-        if (!success)
-        {
-            errorMessage = "No se puedo eliminar el presupuesto";
-            return;
-        }
+            await CargarPresupuestosAsync(estadoSeleccionado);
 
-        await CargarPresupuestosAsync(estadoSeleccionado);
+            await InvokeAsync(StateHasChanged);
+        });
+
+        return Task.CompletedTask;
     }
 
     private sealed class ConversionFacturaAgrupadaModel

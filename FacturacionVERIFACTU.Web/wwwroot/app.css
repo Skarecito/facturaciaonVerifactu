@@ -125,6 +125,173 @@ div.notion-modal-footer {
         background: #d64545 !important;
     }
 
+/* ========================================
+   MEJORAS PARA TABLA DE LÍNEAS DE PRESUPUESTO
+   Añadir este código al final de app.css
+   ======================================== */
+
+/* Wrapper de tabla sin scroll horizontal - se ajusta al contenedor */
+.notion-table-wrapper {
+    width: 100%;
+    overflow: visible;
+    margin-bottom: 20px;
+}
+
+/* ELIMINAR FLECHAS DE LOS INPUTS NUMÉRICOS - FORZADO */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    margin: 0 !important;
+    display: none !important;
+}
+
+input[type=number] {
+    -moz-appearance: textfield !important;
+    appearance: textfield !important;
+}
+
+.notion-table input[type=number]::-webkit-inner-spin-button,
+.notion-table input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+    display: none !important;
+}
+
+.notion-table input[type=number] {
+    -moz-appearance: textfield !important;
+}
+
+/* Inputs dentro de la tabla */
+.notion-table input.notion-input-modern {
+    padding: 6px 8px !important;
+    font-size: 13px !important;
+    min-height: 32px;
+    border: 1px solid #e8e7e5 !important;
+    border-radius: 6px !important;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+    .notion-table input.notion-input-modern:focus {
+        border-color: #37352f !important;
+        box-shadow: 0 0 0 2px rgba(55, 53, 47, 0.1) !important;
+    }
+
+/* Select dentro de la tabla */
+.notion-table select.notion-input-modern {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+    min-height: 32px;
+    border: 1px solid #e8e7e5 !important;
+    border-radius: 6px !important;
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+    .notion-table select.notion-input-modern:focus {
+        border-color: #37352f !important;
+        box-shadow: 0 0 0 2px rgba(55, 53, 47, 0.1) !important;
+    }
+
+    /* Opciones del select - mostrar texto completo al desplegar */
+    .notion-table select.notion-input-modern option {
+        font-size: 12px;
+        padding: 4px 8px;
+        white-space: normal;
+    }
+
+/* Texto pequeño (código de artículo) */
+.notion-cell-desc {
+    font-size: 11px !important;
+    color: rgba(55, 53, 47, 0.5) !important;
+    margin-top: 2px !important;
+    line-height: 1.2 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Headers de tabla */
+.notion-table thead th {
+    font-size: 11px !important;
+    padding: 10px 8px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap;
+    font-weight: 600 !important;
+    color: rgba(55, 53, 47, 0.5) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Celdas de la tabla */
+.notion-table tbody td {
+    padding: 10px 8px !important;
+    vertical-align: middle;
+    border-bottom: 1px solid #f7f7f5;
+}
+
+/* Botones de acción en la tabla */
+.notion-table .notion-action-btn {
+    padding: 6px !important;
+    font-size: 13px;
+}
+
+/* Asegurar que los totales se vean bien */
+.presupuesto-totales {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+    padding: 20px;
+    background: #fbfbfa;
+    border-radius: 12px;
+    border: 1px solid #edeceb;
+}
+
+.totales-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+    .totales-item span {
+        font-size: 13px;
+        color: rgba(55, 53, 47, 0.6);
+        font-weight: 500;
+    }
+
+    .totales-item strong {
+        font-size: 18px;
+        color: #37352f;
+        font-weight: 700;
+    }
+
+    .totales-item.highlight strong {
+        color: #0f5132;
+        font-size: 20px;
+    }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .notion-table {
+        font-size: 11px;
+    }
+
+        .notion-table input.notion-input-modern,
+        .notion-table select.notion-input-modern {
+            font-size: 11px !important;
+            padding: 5px 6px !important;
+        }
+
+        .notion-table thead th {
+            font-size: 10px !important;
+            padding: 8px 6px !important;
+        }
+}
+
+
 
 /* ==============================================
    MODAL PRODUCTOS - Estilo Notion Premium
@@ -1423,3 +1590,8 @@ index 024cbc30988e88b844e90bf16b87d53e05f8c9ab..f5383efcd19c8bef36169b233b5b441a
     font-size: 13px;
     color: rgba(55, 53, 47, 0.75);
 }
+
+
+
+
+
