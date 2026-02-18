@@ -1,0 +1,310 @@
+﻿@page "/facturas"
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+@inject ConfirmDialogService ConfirmDialog
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<PageTitle>Facturas - FacturacionVERIFACTU</PageTitle>
+
+<div class="notion-content">
+    <div class="notion-header">
+        <div class="header-main">
+            <span class="header-icon">
+                <i class="bi bi-receipt"></i>
+            </span>
+            <div>
+                <h1>Facturas</h1>
+                <p>Gestión y control de facturas con VeriFactu</p>
+            </div>
+        </div>
+        <button class="btn-modern-secondary" @onclick="NuevaFactura">
+            <i class="bi bi-receipt"></i>Nueva Factura
+        </button>
+    </div>
+
+    @* Filtros *@
+    <div class="notion-toolbar" style="border-bottom: 1px solid #edeceb; margin-bottom: 24px;">
+        <select class="notion-select-filter" @bind="clienteIdFiltro" @bind:after="CargarFacturasAsync">
+            <option value="0">Todos los clientes</option>
+            @foreach (var cliente in clientes)
+            {
+                <option value="@cliente.ClienteId">@cliente.Nombre</option>
+            }
+        </select>
+
+        <select class="notion-select-filter" @bind="filtroEstado" @bind:after="CargarFacturasAsync">
+            <option value="">Todos los estados</option>
+            <option value="Emitida">Emitida</option>
+            <option value="Pagada">Pagada</option>
+            <option value="Anulada">Anulada</option>
+        </select>
+
+        <select class="notion-select-filter" @bind="filtroTipoFactura" @bind:after="CargarFacturasAsync">
+            <option value="">Tipo: Todos</option>
+            <option value="F1">F1 - Normal</option>
+            <option value="F2">F2 - Simplificada</option>
+            <option value="F3">F3 - Rectificativa</option>
+            <option value="R1">R1 - Sin identificación</option>
+            <option value="R2">R2 - Sustitución</option>
+            <option value="R3">R3 - Diferencias</option>
+            <option value="R4">R4 - Rectificativa por descuento</option>
+        </select>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="notion-loading">
+            <div class="spinner-modern"></div>
+            <span>Cargando Facturas...</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
+            <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
+        </div>
+    }
+    else if (facturasAMostrar == null || !facturasAMostrar.Any())
+    {
+        <div style="text-align: center; padding: 80px 20px; color: rgba(55, 53, 47, 0.4);">
+            <i class="bi bi-receipt" style="font-size: 48px; color: #edeceb; margin-bottom: 16px; display: block;"></i>
+            <h4 style="font-weight: 600; margin-bottom: 8px;">No hay facturas</h4>
+            <p style="color: #787774; font-size: 14px; margin-bottom: 24px;">Crea tu primera factura</p>
+            <button class="btn-modern-secondary" @onclick="NuevaFactura">Crear factura</button>
+        </div>
+    }
+    else
+    {
+        <div class="notion-table-wrapper">
+            <table class="notion-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--notion-border);">
+                        <th style="padding: 12px 16px; width: 20%; text-align: left;">Número</th>
+                        <th style="padding: 12px 16px; width: 24%; text-align: left;">Fecha</th>
+                        <th style="padding: 12px 16px; width: 24%; text-align: left;">Cliente</th>
+                        <th style="padding: 12px 16px; width: 24%; text-align: right;">Total</th>
+                        <th style="padding: 12px 16px; width: 24%; text-align: left;">Estado</th>
+                        <th style="padding: 12px 16px; width: 24%; text-align: left;">VeriFactu</th>
+                        <th style="padding: 12px 16px; width: 24%; text-align: left;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var factura in facturasAMostrar)
+                    {
+                        <tr>
+                            <td style="padding: 16px;">
+                                <strong style="color: #dc2626;">@factura.Numero</strong>
+                            </td>
+                            <td style="padding: 16px;">
+                                @factura.FechaEmision.ToString("dd/MM/yyyy")
+                            </td>
+                            <td style="padding: 16px;">
+                                <div>@factura.ClienteNombre</div>
+                            </td>
+                            <td style="padding: 16px; text-align: right;">
+                                <strong style="font-size: 14px;">@factura.Total.ToString("C2")</strong>
+                            </td>
+                            <td style="padding: 16px; text-align: center;">
+                                <span class="notion-badge @GetEstadoClass(factura.Estado)">
+                                    @factura.Estado
+                                </span>
+                            </td>
+                            <td style="padding: 16px; text-align: center;">
+                                @if (factura.EnviadaVERIFACTU)
+                                {
+                                    <span class="notion-badge" style="background: #dcfce7; color: #166534;">
+                                        <i class="bi bi-check-circle-fill"></i> Enviada
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="notion-badge" style="background: #fef3c7; color: #92400e;">
+                                        <i class="bi bi-clock"></i> Pendiente
+                                    </span>
+                                }
+                            </td>
+                            <td style="padding: 16px; text-align: right;">
+                                <div class="notion-actions" style="justify-content: flex-end; gap: 4px;">
+                                    <button class="notion-action-btn" @onclick="() => VerFactura(factura.Id)" title="Ver">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    @if (!factura.Bloqueada && factura.Estado != "Anulada")
+                                    {
+                                        <button class="notion-action-btn" @onclick="() => EditarFactura(factura.Id)" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    }
+                                    <button class="notion-action-btn" @onclick="() => DescargarPDF(factura.Id)" title="PDF">
+                                        <i class="bi bi-file-pdf"></i>
+                                    </button>
+                                    @if (!factura.EnviadaVERIFACTU && factura.Estado != "Anulada")
+                                    {
+                                        <button class="notion-action-btn" style="color: #0ea5e9;" @onclick="() => EnviarAVerifactu(factura.Id)" title="Enviar VeriFactu">
+                                            <i class="bi bi-send"></i>
+                                        </button>
+                                    }
+                                    @if (factura.Estado != "Anulada" && !factura.Bloqueada)
+                                    {
+                                        <button class="notion-action-btn delete" @onclick="() => AnularFactura(factura.Id)" title="Anular">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top: 20px; border-top: 1px solid #edeceb; padding-top: 12px; color: rgba(55, 53, 47, 0.4); font-size: 12px;">
+            <span>Mostrando @facturasAMostrar.Count facturas</span>
+        </div>
+    }
+</div>
+
+@code {
+    private List<FacturaResponseDto> todasFacturas = new();
+    private List<ClienteDto> clientes = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    private int clienteIdFiltro = 0;
+    private string filtroEstado = string.Empty;
+    private string filtroTipoFactura = string.Empty;
+
+    private List<FacturaResponseDto> facturasAMostrar => todasFacturas
+        .Where(f =>
+            (clienteIdFiltro == 0 || f.ClienteId == clienteIdFiltro) &&
+            (string.IsNullOrEmpty(filtroEstado) || f.Estado == filtroEstado) &&
+            (string.IsNullOrEmpty(filtroTipoFactura) || f.TipoFacturaVERIFACTU == filtroTipoFactura))
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarClientesAsync();
+        await CargarFacturasAsync();
+    }
+
+    private async Task CargarClientesAsync()
+    {
+        try
+        {
+            var response = await ApiService.GetAsync<PaginatedResponseDto<ClienteDto>>("api/clientes?page=1&pageSize=500");
+            clientes = response?.Items ?? new List<ClienteDto>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando clientes: {ex.Message}");
+            clientes = new List<ClienteDto>();
+        }
+    }
+
+    private async Task CargarFacturasAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            todasFacturas = await ApiService.GetAsync<List<FacturaResponseDto>>("api/facturas") ?? new();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar facturas: {ex.Message}";
+            todasFacturas = new();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetEstadoClass(string estado) => estado.ToLower() switch
+    {
+        "emitida" => "estado-emitida",
+        "pagada" => "estado-pagada",
+        "anulada" => "estado-anulada",
+        _ => ""
+    };
+
+    private string GetTipoFacturaClass(string tipo) => tipo.ToLower() switch
+    {
+        "f1" => "tipo-f1",
+        "f2" => "tipo-f2",
+        "f3" or "r1" or "r2" or "r3" or "r4" => "tipo-rectificativa",
+        _ => ""
+    };
+
+    private void VerFactura(int id) => Navigation.NavigateTo($"/facturas/ver/{id}");
+
+    private void EditarFactura(int id) => Navigation.NavigateTo($"/facturas/editar/{id}");
+
+    private void NuevaFactura()
+    {
+        Navigation.NavigateTo("/facturas/nuevo");
+    }
+
+    private async Task DescargarPDF(int id)
+    {
+        try
+        {
+            // Implementar descarga de PDF
+            Console.WriteLine($"Descargar PDF de factura {id}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al descargar PDF: {ex.Message}";
+        }
+    }
+
+    private async Task EnviarAVerifactu(int id)
+    {
+        var options = new ConfirmDialogOptions(
+            "Enviar a VeriFactu",
+            "¿Deseas enviar esta factura a VeriFactu? Esta acción registrará la factura en el sistema de la AEAT.",
+            "Enviar",
+            "Cancelar");
+
+        ConfirmDialog.Show(options, async () =>
+        {
+            try
+            {
+                await ApiService.PostAsync<object, object>($"api/facturas/{id}/enviar-verifactu", new { });
+                await CargarFacturasAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error al enviar a VeriFactu: {ex.Message}";
+                await InvokeAsync(StateHasChanged);
+            }
+        });
+    }
+
+    private async Task AnularFactura(int id)
+    {
+        var options = new ConfirmDialogOptions(
+            "Anular factura",
+            "¿Estás seguro de que deseas anular esta factura? Esta acción no se puede deshacer.",
+            "Sí, anular",
+            "Cancelar");
+
+        ConfirmDialog.Show(options, async () =>
+        {
+            try
+            {
+                // Implementar anulación
+                Console.WriteLine($"Anular factura {id}");
+                await CargarFacturasAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error al anular factura: {ex.Message}";
+                await InvokeAsync(StateHasChanged);
+            }
+        });
+    }
+}

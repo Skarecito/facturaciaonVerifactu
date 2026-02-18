@@ -40,25 +40,35 @@
     <!-- Barra de acciones masivas (cuando hay selección) -->
     @if (seleccionados.Any())
     {
-        <div class="notion-toolbar" style="margin-bottom: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px; border-radius: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="color: white;">
+        <div class="notion-toolbar" style="margin-bottom: 24px;">
+            <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 16px; align-items: end;">
+                <div class="notion-input-group">
                     <span style="font-weight: 600;">@seleccionados.Count seleccionado(s)</span>
-                    <button class="btn-link" style="color: white; opacity: 0.9; margin-left: 16px;" @onclick="LimpiarSeleccion">
-                        Limpiar selección
-                    </button>
                 </div>
-                <div style="display: flex; gap: 12px;">
+                @if (seleccionados.All(id => albaranes.First(a => a.Id == id).Estado == "Pendiente"))
+                {
+                    <div class="notion-input-group">
+                        <button type="button" class="btn-modern" @onclick='() => MarcarComoEnviado("Entregado")'>
+                            <i class="bi bi-check-circle"></i> Marcar como Entregado
+                        </button>
+                    </div>
+                }
+                
+                
+             
                     @if (seleccionados.All(id => albaranes.First(a => a.Id == id).Estado == "Entregado"))
                     {
-                        <button class="btn-modern" @onclick="ConvertirAFacturaMasivo">
-                            <i class="bi bi-receipt"></i> Convertir a Factura
-                        </button>
+                        <div class="notion-input-group">
+                            <button class="btn-modern" @onclick='ConvertirAFacturaMasivo'>
+                                <i class="bi bi-receipt"></i> Convertir a Factura
+                            </button>
+                        </div>
                     }
-                    <button class="btn-modern-secondary" @onclick="ExportarSeleccionados">
+                <div class="notion-input-group">
+                    <button class="btn-modern" @onclick="ExportarSeleccionados">
                         <i class="bi bi-download"></i> Exportar PDFs
                     </button>
-                </div>
+                 </div>
             </div>
         </div>
     }
@@ -180,7 +190,7 @@
 
     private sealed record EstadoTab(string Etiqueta, string? Valor);
 
-   
+
     private List<AlbaranResponseDto> albaranes = new();
     private HashSet<int> seleccionados = new();
     private string? estadoSeleccionado = null;
@@ -233,7 +243,7 @@
     private void CambiarEstado(string? estado)
     {
         estadoSeleccionado = estado;
-        seleccionados.Clear();
+        seleccionados.Clear(); 
     }
 
     private int ObtenerConteo(string? estado)
@@ -288,6 +298,31 @@
     private void EditarAlbaran(AlbaranResponseDto albaran)
     {
         Navigation.NavigateTo($"/albaranes/editar/{albaran.Id}");
+    }
+
+    private async Task ExportarSeleccionados()
+    {
+        if (!seleccionados.Any()) return;
+
+        try
+        {
+            foreach (var id in seleccionados)
+            {
+                var response = await Http.GetAsync($"api/albaranes/{id}/pdf");
+
+                if (!response.IsSuccessStatusCode) return;
+
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var fileName = $"Albaran_{id}.pdf";
+
+                var base64 = Convert.ToBase64String(fileBytes);
+                await JS.InvokeVoidAsync("downloadFile", fileName, base64);
+            }
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Error downloading PDF: {ex.Message}");
+        }
     }
 
     private async Task DescargarPDF(int id)
@@ -348,15 +383,55 @@
         });
     }
 
-    private void ExportarSeleccionados()
+
+
+    private void MarcarComoEnviado(string nuevoEstado)
     {
         if (!seleccionados.Any()) return;
 
-        foreach (var id in seleccionados)
+        //Verificar que todos los seleccionados estan en estado pendiente
+        var albaranesPendientes = albaranes
+        .Where(a => seleccionados.Contains(a.Id) && a.Estado == "Pendiente")
+        .ToList();
+
+        if (!albaranesPendientes.Any())
         {
-            var url = $"{Navigation.BaseUri}api/albaranes/{id}/pdf";
-            Navigation.NavigateTo(url, forceLoad: true);
+            return;
         }
+
+        var options = new ConfirmDialogOptions(
+            "¿Marcar como entregados",
+            $"Se marcaran {albaranesPendientes.Count} albara(es) como entregados",
+            "Marcar como entregados",
+            "Cancelar"
+        );
+
+        ConfirmDialog.Show(options, async () =>
+     {
+         foreach (var albaran in albaranesPendientes)
+         {
+             try
+             {
+                 var request = new CambiarEstadoAlbaranDto { NuevoEstado = "Entregado" };
+                 var result = await ApiService.PatchAsync<CambiarEstadoAlbaranDto, AlbaranResponseDto>(
+                     $"api/albaranes/{albaran.Id}/estado", request);
+
+                 if (result == null)
+                 {
+                     throw new InvalidOperationException($"Error al cambiar estado del albarán {albaran.Id}");
+                 }
+             }
+             catch (Exception ex)
+             {
+                 throw new InvalidOperationException($"Error en albarán {albaran.Id}: {ex.Message}");
+             }
+         }
+
+         // Recargar lista y limpiar selección
+         await CargarAlbaranesAsync();
+         seleccionados.Clear();
+         await InvokeAsync(StateHasChanged);
+     });
     }
 
     private void EliminarAlbaran(AlbaranResponseDto albaran)

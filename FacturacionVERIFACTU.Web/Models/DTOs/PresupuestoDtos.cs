@@ -158,13 +158,7 @@ public class ModificarLineaDto
     public decimal? PrecioUnitario { get; set; }
 }
 
-public class FacturaResponseDto
-{
-    public int Id { get; set; }
-    public string? Numero { get; set; }
-    public string? Estado { get; set; }
-    public decimal Total { get; set; }
-}
+
 
 public class ConvertirPresupuestosAFacturaDto
 {

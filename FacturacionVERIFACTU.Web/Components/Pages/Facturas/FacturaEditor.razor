@@ -1,0 +1,886 @@
+﻿@page "/facturas/nuevo"
+@page "/facturas/editar/{Id:int}"
+@using FacturacionVERIFACTU.Web.Models.DTOs
+@using Microsoft.AspNetCore.Authorization
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@attribute [Authorize]
+
+<PageTitle>@(Id == 0 ? "Nueva Factura" : "Editar Factura") - FacturacionVERIFACTU</PageTitle>
+
+<div class="notion-content">
+    <div class="notion-breadcrumb">
+        <a href="/facturas">Facturas</a> / @(Id == 0 ? "Nueva" : "Editar")
+    </div>
+
+    <div class="notion-page-header">
+        <div class="header-main">
+            <span class="header-icon">
+                <i class="bi bi-receipt"></i>
+            </span>
+            <div>
+                <h1>@(Id == 0 ? "Nueva factura" : $"Factura {numeroFactura}")</h1>
+                <p>@(Id == 0 ? "Crea una factura con líneas y totales automáticos." : $"Estado actual: {estadoFactura}")</p>
+            </div>
+        </div>
+    </div>
+
+    <EditForm EditContext="editContext" OnValidSubmit="GuardarAsync" OnInvalidSubmit="OnInvalidSubmit" class="notion-form-container">
+        <DataAnnotationsValidator />
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
+                <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success" style="font-size: 13px; border-radius: 8px; border: none; background-color: #f0fff5; color: #0f5132; margin-bottom: 20px; padding: 12px;">
+                <i class="bi bi-check-circle-fill"></i> @successMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(avisoImpuestos))
+        {
+            <div class="alert alert-warning" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff8e6; color: #8a6d3b; margin-bottom: 20px; padding: 12px;">
+                <i class="bi bi-exclamation-triangle-fill"></i> @avisoImpuestos
+            </div>
+        }
+
+        @if (!EsEditable && Id > 0)
+        {
+            <div class="alert alert-warning" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff9e6; color: #8a6d1f; margin-bottom: 20px; padding: 12px;">
+                <i class="bi bi-lock-fill"></i> Esta factura está bloqueada y no se puede editar.
+            </div>
+        }
+
+        @* Información VeriFactu *@
+        @if (Id > 0 && facturaEnviadaVERIFACTU)
+        {
+            <div class="alert alert-success" style="font-size: 13px; border-radius: 8px; border: none; background-color: #dcfce7; color: #166534; margin-bottom: 20px; padding: 12px;">
+                <i class="bi bi-check-circle-fill"></i>
+                <strong>VeriFactu:</strong> Enviada
+                @if (!string.IsNullOrEmpty(tipoFacturaVERIFACTU))
+                {
+                    <span> - Tipo: @tipoFacturaVERIFACTU</span>
+                }
+            </div>
+        }
+
+        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+            <div class="notion-input-group">
+                <label class="notion-label">Cliente *</label>
+                <select class="notion-input-modern"
+                        value="@factura.ClienteId"
+                        @onchange="OnClienteChanged"
+                        disabled="@(!EsEditable)">
+                    <option value="0">Selecciona un cliente</option>
+                    @foreach (var cliente in clientes)
+                    {
+                        <option value="@cliente.ClienteId">@cliente.Nombre (@cliente.NIF)</option>
+                    }
+                </select>
+                <ValidationMessage For="() => factura.ClienteId" class="notion-error" />
+            </div>
+
+            <div class="notion-input-group">
+                <label class="notion-label">Serie *</label>
+                <InputSelect @bind-Value="factura.SerieId" class="notion-input-modern" disabled="@(Id > 0)">
+                    <option value="0">Selecciona una serie</option>
+                    @foreach (var serie in series)
+                    {
+                        <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => factura.SerieId" class="notion-error" />
+            </div>
+
+            <div class="notion-input-group">
+                <label class="notion-label">Fecha Emisión</label>
+                <InputDate @bind-Value="factura.FechaEmision" class="notion-input-modern" disabled="@(!EsEditable)" />
+            </div>
+
+            <div class="notion-input-group">
+                <label class="notion-label">Tipo VeriFactu</label>
+                <select @bind="factura.TipoFacturaVERIFACTU" class="notion-input-modern" disabled="@(!EsEditable)">
+                    <option value="F1">F1 - Normal</option>
+                    <option value="F2">F2 - Simplificada</option>
+                    <option value="F3">F3 - Rectificativa</option>
+                    <option value="R1">R1 - Sin identificación</option>
+                    <option value="R2">R2 - Sustitución</option>
+                    <option value="R3">R3 - Diferencias</option>
+                    <option value="R4">R4 - Rectificativa por descuento</option>
+                </select>
+                <small style="color: #999; font-size: 11px;">Se calcula automáticamente según cliente</small>
+            </div>
+
+            <div class="notion-input-group">
+                <label class="notion-label">Retención (%)</label>
+                <input type="number" @bind="factura.PorcentajeRetencion" class="notion-input-modern"
+                       disabled="@(!EsEditable)" step="0.01" min="0" max="100" />
+            </div>
+
+            <div class="notion-input-group" style="grid-column: span 3;">
+                <label class="notion-label">Observaciones</label>
+                <InputTextArea @bind-Value="factura.Observaciones" class="notion-input-modern" rows="2" placeholder="Notas adicionales" disabled="@(!EsEditable)" />
+            </div>
+        </div>
+
+        <div class="presupuesto-lines-header">
+            <div>
+                <h3>Líneas de factura</h3>
+                <p style="color: rgba(55, 53, 47, 0.6); font-size: 13px; margin: 0;">
+                    Añade productos o líneas manuales y revisa los importes en tiempo real.
+                </p>
+            </div>
+            <div class="lines-actions">
+                <button type="button" class="btn-modern-secondary" @onclick="AbrirModalProductosAsync" disabled="@(!EsEditable)">
+                    <i class="bi bi-box-seam"></i> Añadir producto
+                </button>
+                <button type="button" class="btn-modern-secondary" @onclick="AgregarLineaManual" disabled="@(!EsEditable)">
+                    <i class="bi bi-plus-circle"></i> Línea manual
+                </button>
+            </div>
+        </div>
+
+        <div class="notion-table-wrapper">
+            <table class="notion-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--notion-border);">
+                        <th style="padding: 12px 10px; width: 25%; text-align: left;">DESCRIPCIÓN</th>
+                        <th style="padding: 12px 10px; width: 10%; text-align: right;">CANTIDAD</th>
+                        <th style="padding: 12px 10px; width: 12%; text-align: right;">PRECIO</th>
+                        <th style="padding: 12px 10px; width: 10%; text-align: right; white-space: nowrap;">DTO %</th>
+                        <th style="padding: 12px 10px; width: 16%; text-align: right;">IMPUESTO</th>
+                        <th style="padding: 12px 10px; width: 15%; text-align: right;">TOTAL</th>
+                        <th style="padding: 12px 10px; width: 6%; text-align: center;">ACC.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (factura.Lineas.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="7" style="padding: 20px; text-align: center; color: rgba(55, 53, 47, 0.4);">
+                                Añade líneas para calcular la factura.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        var index = 0;
+                        @foreach (var linea in factura.Lineas)
+                        {
+                            var lineaActual = linea;
+                            var lineaIndex = index++;
+                            <tr key="@lineaIndex">
+                                <td style="padding: 12px 10px;">
+                                    <input type="text"
+                                           class="notion-input-modern"
+                                           placeholder="Descripción"
+                                           @bind="lineaActual.Descripcion"
+                                           @bind:event="oninput"
+                                           disabled="@(!EsEditable)" />
+                                </td>
+                                <td style="padding: 12px 10px;">
+                                    <input type="number"
+                                           class="notion-input-modern"
+                                           style="text-align: right;"
+                                           step="0.01"
+                                           min="0.01"
+                                           @bind="lineaActual.Cantidad"
+                                           @bind:event="oninput"
+                                           disabled="@(!EsEditable)" />
+                                </td>
+                                <td style="padding: 12px 10px;">
+                                    <input type="number"
+                                           class="notion-input-modern"
+                                           style="text-align: right;"
+                                           step="0.01"
+                                           min="0"
+                                           @bind="lineaActual.PrecioUnitario"
+                                           @bind:event="oninput"
+                                           disabled="@(!EsEditable)" />
+                                </td>
+                                <td style="padding: 12px 10px;">
+                                    <input type="number"
+                                           class="notion-input-modern"
+                                           style="text-align: right;"
+                                           step="0.01"
+                                           min="0"
+                                           max="100"
+                                           @bind="lineaActual.PorcentajeDescuento"
+                                           @bind:event="oninput"
+                                           disabled="@(!EsEditable)" />
+                                </td>
+                                <td style="padding: 12px 10px;">
+                                    <select class="notion-input-modern"
+                                            value="@lineaActual.TipoImpuestoId"
+                                            @onchange="@(e => { lineaActual.TipoImpuestoId = e.Value?.ToString() != null ? int.Parse(e.Value.ToString()) : (int?)null; ActualizarImpuestoLinea(lineaActual); StateHasChanged(); })"
+                                            disabled="@(!EsEditable)">
+                                        <option value="">Sin impuesto</option>
+                                        @foreach (var tipo in tiposImpuesto.Where(t => t.Activo))
+                                        {
+                                            <option value="@tipo.Id">@tipo.Nombre (@tipo.PorcentajeIva%)</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td style="padding: 12px 10px; text-align: right; font-weight: 600;">
+                                    @CalcularTotalLinea(lineaActual).ToString("C")
+                                </td>
+                                <td style="padding: 12px 10px; text-align: center;">
+                                    <button type="button"
+                                            class="notion-action-btn delete"
+                                            @onclick="() => EliminarLinea(lineaActual)"
+                                            disabled="@(!EsEditable)">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Totales -->
+        <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
+            <div style="min-width: 300px; border: 1px solid #edeceb; border-radius: 8px; padding: 16px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: #787774;">Base Imponible:</span>
+                    <span style="font-weight: 600;">@TotalBaseImponible.ToString("C")</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: #787774;">Total IVA:</span>
+                    <span style="font-weight: 600;">@TotalIVA.ToString("C")</span>
+                </div>
+                @if (TotalRecargo > 0)
+                {
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #787774;">Total Recargo:</span>
+                        <span style="font-weight: 600;">@TotalRecargo.ToString("C")</span>
+                    </div>
+                }
+                @if (TotalRetencion > 0)
+                {
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #dc2626;">Retención (@factura.PorcentajeRetencion%):</span>
+                        <span style="font-weight: 600; color: #dc2626;">-@TotalRetencion.ToString("C")</span>
+                    </div>
+                }
+                <div style="border-top: 2px solid #edeceb; margin: 12px 0; padding-top: 12px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-size: 16px; font-weight: 600;">TOTAL:</span>
+                        <span style="font-size: 18px; font-weight: 700; color: #dc2626;">@TotalFactura.ToString("C")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
+            @if (EsEditable)
+            {
+                <button type="submit" class="btn-modern" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    else
+                    {
+                        <span><i class="bi bi-save"></i> Guardar</span>
+                    }
+                </button>
+            }
+
+            @if (Id > 0 && !facturaEnviadaVERIFACTU && estadoFactura != "Anulada")
+            {
+                <button type="button" class="btn-modern-secondary" @onclick="EnviarAVerifactu">
+                    <i class="bi bi-send"></i> Enviar a VeriFactu
+                </button>
+            }
+
+            @if (Id > 0 && estadoFactura == "Emitida")
+            {
+                <button type="button" class="btn-modern-secondary" @onclick='() => CambiarEstado("Pagada")'>
+                    <i class="bi bi-cash"></i> Marcar como Pagada
+                </button>
+            }
+
+            @if (Id > 0)
+            {
+                <button type="button" class="btn-modern-secondary" @onclick="DescargarPDF">
+                    <i class="bi bi-file-pdf"></i> Descargar PDF
+                </button>
+            }
+
+            <button type="button" class="btn-modern-secondary" @onclick="Cancelar">
+                Cancelar
+            </button>
+        </div>
+    </EditForm>
+</div>
+
+@* Modal de productos *@
+@if (mostrarModalProductos)
+{
+    <div class="notion-modal-overlay" @onclick="CerrarModalProductos">
+        <div class="notion-modal-productos" @onclick:stopPropagation="true">
+            <div class="notion-modal-header">
+                <h3>Selecciona un producto</h3>
+                <button type="button" class="notion-modal-close" @onclick="CerrarModalProductos" aria-label="Cerrar">×</button>
+            </div>
+            <div class="notion-modal-body">
+                <div class="notion-search-wrapper" style="max-width: 100%; border: 1px solid #edeceb; margin-bottom: 16px;">
+                    <i class="bi bi-search" style="font-size: 14px;"></i>
+                    <input class="notion-search-input"
+                           placeholder="Buscar producto"
+                           value="@busquedaProducto"
+                           @oninput="@(async (ChangeEventArgs e) => { busquedaProducto = e?.Value?.ToString() ?? string.Empty; await CargarProductosAsync(busquedaProducto); })" />
+                </div>
+
+                @if (cargandoProductos)
+                {
+                    <div class="notion-loading">
+                        <div class="spinner-modern"></div>
+                        <span>Buscando productos...</span>
+                    </div>
+                }
+                else if (!productos.Any())
+                {
+                    <div style="padding: 40px; text-align: center; color: #787774;">
+                        <i class="bi bi-inbox" style="font-size: 32px; opacity: 0.3; display: block; margin-bottom: 12px;"></i>
+                        No se encontraron productos
+                    </div>
+                }
+                else
+                {
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <table class="notion-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 12px 10px; text-align: left;">CÓDIGO</th>
+                                    <th style="padding: 12px 10px; text-align: left;">DESCRIPCIÓN</th>
+                                    <th style="padding: 12px 10px; text-align: right;">PRECIO</th>
+                                    <th style="padding: 12px 10px; text-align: center;">ACCIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var producto in productos)
+                                {
+                                    <tr>
+                                        <td style="padding: 12px 10px;">@producto.Codigo</td>
+                                        <td style="padding: 12px 10px;">@producto.Descripcion</td>
+                                        <td style="padding: 12px 10px; text-align: right; font-weight: 600;">@producto.PrecioUnitario.ToString("C")</td>
+                                        <td style="padding: 12px 10px; text-align: center;">
+                                            <button type="button" class="btn-modern-secondary" @onclick="() => AgregarLineaDesdeProducto(producto)">
+                                                <i class="bi bi-plus-lg"></i> Añadir
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    [Inject] private IApiService ApiService { get; set; } = null!;
+    [Inject] private NavigationManager NavManager { get; set; } = null!;
+    [Inject] private ConfirmDialogService ConfirmDialog { get; set; } = null!;
+    [Inject] private IJSRuntime JS { get; set; } = null!;
+    [Inject] private HttpClient Http { get; set; } = null!;
+
+    private EditContext? editContext;
+    private FacturaFormModel factura = new();
+    private List<ClienteDto> clientes = new();
+    private List<SerieDto> series = new();
+    private List<ProductoDto> productos = new();
+    private List<TipoImpuestoListadoDto> tiposImpuesto = new();
+
+    private string numeroFactura = "";
+    private string estadoFactura = "Emitida";
+    private bool facturaEnviadaVERIFACTU = false;
+    private string? tipoFacturaVERIFACTU;
+    private bool mostrarModalProductos;
+    private bool cargandoProductos;
+    private bool isSaving;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private string? avisoImpuestos;
+    private string busquedaProducto = string.Empty;
+    private bool aplicaRecargoEquivalencia;
+
+    private bool EsEditable => Id == 0 || (estadoFactura == "Emitida" && !facturaEnviadaVERIFACTU);
+
+    private decimal TotalBaseImponible => factura.Lineas.Sum(CalcularBase);
+    private decimal TotalIVA => factura.Lineas.Sum(CalcularIVA);
+    private decimal TotalRecargo => factura.Lineas.Sum(CalcularRecargo);
+    private decimal TotalRetencion => TotalBaseImponible * ((factura.PorcentajeRetencion ?? 0) / 100m);
+    private decimal TotalFactura => TotalBaseImponible + TotalIVA + TotalRecargo - TotalRetencion;
+
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(factura);
+        await CargarDatosInicialesAsync();
+
+        if (Id > 0)
+        {
+            await CargarFacturaAsync();
+        }
+        else
+        {
+            factura.FechaEmision = DateTime.Today;
+            factura.TipoFacturaVERIFACTU = "F1";
+        }
+    }
+
+    private async Task CargarDatosInicialesAsync()
+    {
+        try
+        {
+            var responseClientes = await ApiService.GetAsync<PaginatedResponseDto<ClienteDto>>("api/clientes?page=1&pageSize=500");
+            clientes = responseClientes?.Items ?? new();
+
+            var responseSeries = await ApiService.GetAsync<PaginatedResponseDto<SerieDto>>(
+                "api/series?page=1&pageSize=100&tipoDocumento=FACTURA&soloActivas=true");
+            series = responseSeries?.Items ?? new();
+
+            var responseTipos = await ApiService.GetAsync<List<TipoImpuestoListadoDto>>("api/tiposimpuesto");
+            tiposImpuesto = responseTipos ?? new();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar datos: {ex.Message}";
+        }
+    }
+
+    private async Task CargarFacturaAsync()
+    {
+        try
+        {
+            var response = await ApiService.GetAsync<FacturaResponseDto>($"api/facturas/{Id}");
+            if (response == null)
+            {
+                errorMessage = "No se pudo cargar la factura";
+                return;
+            }
+
+            numeroFactura = $"{response.SerieCodigo}-{response.Numero}";
+            estadoFactura = response.Estado;
+            facturaEnviadaVERIFACTU = response.EnviadaVERIFACTU;
+            tipoFacturaVERIFACTU = response.TipoFacturaVERIFACTU;
+
+            factura.ClienteId = response.ClienteId;
+            factura.SerieId = response.SerieId;
+            factura.FechaEmision = response.FechaEmision.Date;
+            factura.Observaciones = response.Observaciones;
+            factura.TipoFacturaVERIFACTU = response.TipoFacturaVERIFACTU ?? "F1";
+            factura.PorcentajeRetencion = response.PorcentajeRetencion;
+
+            factura.Lineas = response.Lineas.Select(l => new LineaFacturaViewModel
+            {
+                Id = l.Id,
+                Descripcion = l.Descripcion,
+                Cantidad = l.Cantidad,
+                PrecioUnitario = l.PrecioUnitario,
+                PorcentajeDescuento = l.PorcentajeDescuento,
+                TipoImpuestoId = l.TipoImpuestoId,
+                ProductoId = l.ProductoId
+            }).ToList();
+
+            ActualizarClienteRecargo();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar factura: {ex.Message}";
+        }
+    }
+
+    private async Task GuardarAsync()
+    {
+        if (!EsEditable)
+        {
+            errorMessage = "Esta factura no se puede editar.";
+            return;
+        }
+
+        if (factura.ClienteId == 0 || factura.SerieId == 0)
+        {
+            errorMessage = "Selecciona cliente y serie antes de guardar.";
+            return;
+        }
+
+        factura.Lineas = factura.Lineas
+            .Where(linea => !string.IsNullOrWhiteSpace(linea.Descripcion) && linea.Cantidad > 0)
+            .ToList();
+
+        if (factura.Lineas.Count == 0)
+        {
+            errorMessage = "Añade al menos una línea válida.";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            if (Id == 0)
+            {
+                var request = new FacturaCreateDto
+                {
+                    ClienteId = factura.ClienteId,
+                    SerieId = factura.SerieId,
+                    FechaEmision = factura.FechaEmision,
+                    Observaciones = factura.Observaciones,
+                    TipoFacturaVERIFACTU = factura.TipoFacturaVERIFACTU,
+                    PorcentajeRetencion = factura.PorcentajeRetencion,
+                    Lineas = factura.Lineas.Select(l => new LineaFacturaDto
+                    {
+                        Descripcion = l.Descripcion,
+                        Cantidad = l.Cantidad,
+                        PrecioUnitario = l.PrecioUnitario,
+                        PorcentajeDescuento = l.PorcentajeDescuento,
+                        TipoImpuestoId = l.TipoImpuestoId,
+                        ProductoId = l.ProductoId
+                    }).ToList()
+                };
+
+                var result = await ApiService.PostAsync<FacturaCreateDto, FacturaResponseDto>("api/facturas", request);
+                if (result == null)
+                {
+                    errorMessage = "No se pudo crear la factura.";
+                    return;
+                }
+
+                NavManager.NavigateTo("/facturas");
+            }
+            else
+            {
+                var request = new FacturaUpdateDto
+                {
+                    ClienteId = factura.ClienteId,
+                    FechaEmision = factura.FechaEmision,
+                    Observaciones = factura.Observaciones,
+                    PorcentajeRetencion = factura.PorcentajeRetencion,
+                    Lineas = factura.Lineas.Select(l => new LineaFacturaDto
+                    {
+                        Id = l.Id,
+                        Descripcion = l.Descripcion,
+                        Cantidad = l.Cantidad,
+                        PrecioUnitario = l.PrecioUnitario,
+                        PorcentajeDescuento = l.PorcentajeDescuento,
+                        TipoImpuestoId = l.TipoImpuestoId,
+                        ProductoId = l.ProductoId
+                    }).ToList()
+                };
+
+                var result = await ApiService.PutAsync<FacturaUpdateDto, FacturaResponseDto>($"api/facturas/{Id}", request);
+                if (result == null)
+                {
+                    errorMessage = "No se pudo actualizar la factura.";
+                    return;
+                }
+
+                successMessage = "Factura actualizada correctamente.";
+                errorMessage = string.Empty;
+                await CargarFacturaAsync();
+                StateHasChanged();
+
+                _ = Task.Delay(3000).ContinueWith(_ =>
+                {
+                    successMessage = string.Empty;
+                    InvokeAsync(StateHasChanged);
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void OnInvalidSubmit()
+    {
+        errorMessage = "Por favor, corrige los errores del formulario antes de guardar.";
+    }
+
+    private void AgregarLineaManual()
+    {
+        if (!EsEditable) return;
+        factura.Lineas.Add(CrearLineaConTipoPorDefecto());
+    }
+
+    private LineaFacturaViewModel CrearLineaConTipoPorDefecto()
+    {
+        var linea = new LineaFacturaViewModel { Cantidad = 1 };
+        var tipoDefault = tiposImpuesto.FirstOrDefault(t => t.Activo && t.Nombre.Equals("General", StringComparison.OrdinalIgnoreCase))
+                          ?? tiposImpuesto.FirstOrDefault(t => t.Activo);
+        if (tipoDefault != null)
+        {
+            linea.TipoImpuestoId = tipoDefault.Id;
+        }
+        return linea;
+    }
+
+    private void EliminarLinea(LineaFacturaViewModel linea)
+    {
+        if (!EsEditable) return;
+
+        var options = new ConfirmDialogOptions(
+            "¿Eliminar línea?",
+            $"La línea \"{linea.Descripcion}\" se eliminará de la factura.",
+            "Eliminar",
+            "Cancelar"
+        );
+
+        ConfirmDialog.Show(options, async () =>
+        {
+            factura.Lineas.Remove(linea);
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private async Task AbrirModalProductosAsync()
+    {
+        mostrarModalProductos = true;
+        await CargarProductosAsync();
+    }
+
+    private void CerrarModalProductos()
+    {
+        mostrarModalProductos = false;
+        busquedaProducto = string.Empty;
+    }
+
+    private async Task CargarProductosAsync(string? search = null)
+    {
+        cargandoProductos = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var endpoint = string.IsNullOrWhiteSpace(search)
+                ? "api/Productos?page=1&pageSize=100"
+                : $"api/Productos?page=1&pageSize=100&search={Uri.EscapeDataString(search)}";
+
+            var response = await ApiService.GetAsync<PaginatedResponseDto<ProductoDto>>(endpoint);
+            productos = response?.Items ?? new();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar productos: {ex.Message}";
+            productos = new();
+        }
+        finally
+        {
+            cargandoProductos = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void AgregarLineaDesdeProducto(ProductoDto producto)
+    {
+        if (!EsEditable) return;
+
+        var linea = new LineaFacturaViewModel
+        {
+            Descripcion = producto.Descripcion,
+            Cantidad = 1,
+            PrecioUnitario = producto.PrecioUnitario,
+            PorcentajeDescuento = 0,
+            ProductoId = producto.ProductoId,
+            TipoImpuestoId = producto.TipoImpuestoId
+        };
+
+        if (producto.TipoImpuestoId.HasValue)
+        {
+            ActualizarImpuestoLinea(linea);
+        }
+        else
+        {
+            var tipoDefault = tiposImpuesto.FirstOrDefault(t => t.Activo);
+            if (tipoDefault != null)
+            {
+                linea.TipoImpuestoId = tipoDefault.Id;
+                ActualizarImpuestoLinea(linea);
+                avisoImpuestos = $"El producto {producto.Codigo} no tiene tipo de impuesto asignado. Se aplicó {tipoDefault.Nombre} por defecto.";
+            }
+        }
+
+        factura.Lineas.Add(linea);
+        CerrarModalProductos();
+        StateHasChanged();
+    }
+
+    private void ActualizarImpuestoLinea(LineaFacturaViewModel linea)
+    {
+        var cliente = clientes.FirstOrDefault(c => c.ClienteId == factura.ClienteId);
+        aplicaRecargoEquivalencia = cliente?.RegimenRecargoEquivalencia ?? false;
+    }
+
+    private void ActualizarClienteRecargo()
+    {
+        var cliente = clientes.FirstOrDefault(c => c.ClienteId == factura.ClienteId);
+        aplicaRecargoEquivalencia = cliente?.RegimenRecargoEquivalencia ?? false;
+    }
+
+    private Task OnClienteChanged(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var clienteId))
+        {
+            factura.ClienteId = clienteId;
+            ActualizarClienteRecargo();
+
+            var cliente = clientes.FirstOrDefault(c => c.ClienteId == clienteId);
+            if (cliente != null)
+            {
+                if (!string.IsNullOrWhiteSpace(cliente.NIF) && cliente.TipoCliente != "B2C")
+                {
+                    factura.TipoFacturaVERIFACTU = "F1";
+                }
+                else
+                {
+                    factura.TipoFacturaVERIFACTU = "F2";
+                }
+
+                factura.PorcentajeRetencion = cliente.PorcentajeRetencionDefecto;
+            }
+
+            foreach (var linea in factura.Lineas)
+            {
+                ActualizarImpuestoLinea(linea);
+            }
+
+            StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private decimal CalcularSubtotal(LineaFacturaViewModel linea) => linea.Cantidad * linea.PrecioUnitario;
+    private decimal CalcularDescuento(LineaFacturaViewModel linea) => CalcularSubtotal(linea) * (linea.PorcentajeDescuento / 100m);
+    private decimal CalcularBase(LineaFacturaViewModel linea) => CalcularSubtotal(linea) - CalcularDescuento(linea);
+
+    private decimal CalcularIVA(LineaFacturaViewModel linea)
+    {
+        var tipo = tiposImpuesto.FirstOrDefault(t => t.Id == linea.TipoImpuestoId);
+        if (tipo == null) return 0;
+        return CalcularBase(linea) * (tipo.PorcentajeIva / 100m);
+    }
+
+    private decimal CalcularRecargo(LineaFacturaViewModel linea)
+    {
+        if (!aplicaRecargoEquivalencia) return 0;
+        var tipo = tiposImpuesto.FirstOrDefault(t => t.Id == linea.TipoImpuestoId);
+        if (tipo == null || !tipo.PorcentajeRecargo.HasValue) return 0;
+        return CalcularBase(linea) * (tipo.PorcentajeRecargo.Value / 100m);
+    }
+
+    private decimal CalcularTotalLinea(LineaFacturaViewModel linea) =>
+        CalcularBase(linea) + CalcularIVA(linea) + CalcularRecargo(linea);
+
+    private void CambiarEstado(string nuevoEstado)
+    {
+        var options = new ConfirmDialogOptions(
+            $"¿Cambiar estado a {nuevoEstado}?",
+            $"La factura pasará de {estadoFactura} a {nuevoEstado}.",
+            "Cambiar",
+            "Cancelar"
+        );
+
+        ConfirmDialog.Show(options, async () =>
+        {
+            await CargarFacturaAsync();
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void EnviarAVerifactu()
+    {
+        var options = new ConfirmDialogOptions(
+            "Enviar a VeriFactu",
+            "¿Deseas enviar esta factura a VeriFactu? Esta acción registrará la factura en el sistema de la AEAT.",
+            "Enviar",
+            "Cancelar"
+        );
+
+        ConfirmDialog.Show(options, async () =>
+        {
+            try
+            {
+                await ApiService.PostAsync<object, object>($"api/facturas/{Id}/enviar-verifactu", new { });
+                await CargarFacturaAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error al enviar a VeriFactu: {ex.Message}";
+                await InvokeAsync(StateHasChanged);
+            }
+        });
+    }
+
+    private async Task DescargarPDF()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/facturas/{Id}/pdf");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = "Error al descargar el PDF";
+                return;
+            }
+
+            var fileBytes = await response.Content.ReadAsByteArrayAsync();
+            var fileName = $"Factura_{Id}.pdf";
+
+            var base64 = Convert.ToBase64String(fileBytes);
+            await JS.InvokeVoidAsync("downloadFile", fileName, base64);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al descargar PDF: {ex.Message}";
+        }
+    }
+
+    private void Cancelar()
+    {
+        NavManager.NavigateTo("/facturas");
+    }
+
+    private sealed class FacturaFormModel
+    {
+        [Required] public int ClienteId { get; set; }
+        [Required] public int SerieId { get; set; }
+        [Required] public DateTime FechaEmision { get; set; } = DateTime.Today;
+        [StringLength(500)] public string? Observaciones { get; set; }
+        [StringLength(2)] public string TipoFacturaVERIFACTU { get; set; } = "F1";
+        [Range(0, 100)] public decimal? PorcentajeRetencion { get; set; } = 0;
+        public List<LineaFacturaViewModel> Lineas { get; set; } = new();
+    }
+
+    private sealed class LineaFacturaViewModel
+    {
+        public int? Id { get; set; }
+        public int? TipoImpuestoId { get; set; }
+        [Required] public string Descripcion { get; set; } = string.Empty;
+        [Range(0.01, double.MaxValue)] public decimal Cantidad { get; set; } = 1;
+        [Range(0, double.MaxValue)] public decimal PrecioUnitario { get; set; }
+        [Range(0, 100)] public decimal PorcentajeDescuento { get; set; }
+        public int? ProductoId { get; set; }
+    }
+}
