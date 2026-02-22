@@ -34,33 +34,78 @@
         </div>
     </div>
 
+
+@*Barra de exportacion masiva*@
+@if (seleccionados.Any())
+{
     <div class="notion-toolbar" style="margin-bottom: 24px;">
-        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 16px; align-items: end;">
+        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; margin-bottom: 12px;">
             <div class="notion-input-group">
-                <label class="notion-label">Serie factura</label>
-                <InputNumber @bind-Value="conversionAgrupada.SerieId" class="notion-input-modern" min="1" />
+                <span style="font-weight: 600;">@seleccionados.Count seleccionado(s)</span>
             </div>
-            <div class="notion-input-group">
-                <label class="notion-label">Fecha emisión</label>
-                <InputDate @bind-Value="conversionAgrupada.FechaEmision" class="notion-input-modern" />
-            </div>
-            <div class="notion-input-group">
-                <label class="notion-label">Tipo VERIFACTU</label>
-                <InputText @bind-Value="conversionAgrupada.TipoFacturaVERIFACTU" class="notion-input-modern" />
-            </div>
-            <div>
-                <button class="btn-modern" @onclick="ExportarFacturaAgrupadaAsync" disabled="@(isConverting || seleccionados.Count == 0)">
-                    @if (isConverting)
-                    {
-                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                    }
-                    else
-                    {
-                        <span><i class="bi bi-receipt"></i> Exportar a Factura (agrupada)</span>
-                    }
+
+            <div class="notion-input-group" style="display:flex; gap:8px; justify-content:flex-end; align-items:flex-end; flex-wrap:wrap;">
+                @if(seleccionados.All(Id => presupuestos.First(p => p.Id == Id).Estado == "Borrador"))
+                {
+                    <div class="notion-input-group">
+                        <button type="button" class="btn-modern bulk-btn" @onclick='() => CambioEstadoMasivo("Enviado","Borrador")'>
+                            <i class="bi bi-check-circle"></i> Marcar como Enviado
+                        </button>
+                    </div>
+                }
+
+                @if (seleccionados.All(Id => presupuestos.First(p => p.Id == Id).Estado == "Enviado"))
+                {
+                    <div class="notion-input-group">
+                        <button type="button" class="btn-modern bulk-btn" @onclick='() => CambioEstadoMasivo("Aceptado", "Enviado")'>
+                            <i class="bi bi-check-circle"></i> Marcar como Aceptado
+                        </button>
+                    </div>
+                    <div class="notion-input-group">
+                        <button type="button" class="btn-modern bulk-btn" @onclick='() => CambioEstadoMasivo("Rechazado", "Enviado")'>
+                            <i class="bi bi-check-circle"></i> Marcar como Rechazado
+                        </button>
+                    </div>
+                }
+                @if (seleccionados.All(Id => presupuestos.First(p => p.Id == Id).Estado == "Rechazado"))
+                {
+                    <div class="notion-input-group">
+                        <button type="button" class="btn-modern bulk-btn" @onclick='() => CambioEstadoMasivo("Borrador", "Rechazado")'>
+                            <i class="bi bi-check-circle"></i> Volver a borrador
+                        </button>
+                    </div>
+                }
+
+                @if (seleccionados.All(Id => presupuestos.First(p => p.Id == Id).Estado == "Aceptado"))
+                {
+                    <div class="notion-input-group bulk-serie" style="width:200px; min-width:180px;">
+                        <label class="notion-label">Serie factura</label>
+                        <InputSelect @bind-Value="conversionAgrupada.SerieId" class="notion-input-modern" style="margin-bottom:0;">
+                            <option value="0">Selecciona serie</option>
+                            @foreach (var serie in seriesFacturas)
+                            {
+                                <option value="@serie.Id">@serie.Descripcion (@serie.Codigo)</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="notion-input-group">
+                        <button type="button" class="btn-modern bulk-btn" @onclick='() => ExportarFacturaAgrupadaAsync()'>
+                            <i class="bi bi-check-circle"></i> Facturar
+                        </button>
+                    </div>
+                }
+
+                <button type="button" class="btn-modern-secondary bulk-btn" @onclick="DescargarPdfMasivo">
+                    <i class="bi bi-trash"></i> Descargar Presupuestos
+                </button>
+
+                <button type="button" class="btn-modern-secondary bulk-btn" @onclick="EliminarSeleccionadosAsync">
+                    <i class="bi bi-trash"></i> Eliminar
                 </button>
             </div>
         </div>
+
+
 
         @if (!string.IsNullOrEmpty(conversionMessage))
         {
@@ -69,6 +114,7 @@
             </div>
         }
     </div>
+}
 
 @if (isLoading)
 {
@@ -133,7 +179,8 @@ else
                                 <span style="font-weight: 600;">@presupuesto.Total.ToString("C")</span>
                             </td>
                             <td style="padding: 16px; text-align: center;">
-                                <span class="notion-badge-info">@presupuesto.Estado</span>
+                                <span class="notion-badge-@ObtenerClaseEstado(presupuesto.Estado)">@presupuesto.Estado</span>
+                                
                             </td>
                             <td style="padding: 16px; text-align: right;">
                                 <div class="notion-actions" style="justify-content: flex-end; gap: 4px;">
@@ -141,10 +188,46 @@ else
                                             @onclick="() => EditarPresupuesto(presupuesto)">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="notion-action-btn delete" title="Eliminar"
-                                            disabled="@(presupuesto.Estado != "Borrador")"
-                                            @onclick="() => EliminarPresupuesto(presupuesto)">
-                                        <i class="bi bi-trash3"></i>
+
+                                    @* Botones de cambio de estado *@
+                                    @if (presupuesto.Estado == "Borrador")
+                                    {
+                                        <button class="notion-action-btn"
+                                                title="Marcar como Enviado"
+                                                @onclick='() => CambiarEstadoIndividual(presupuesto.Id, "Enviado")'>
+                                            <i class="bi bi-send"></i>
+                                        </button>
+                                    }
+
+                                    @if (presupuesto.Estado == "Enviado")
+                                    {
+                                        <button class="notion-action-btn"
+                                                title="Marcar como Aceptado"
+                                                @onclick='() => CambiarEstadoIndividual(presupuesto.Id, "Aceptado")'
+                                                style="color: #28a745;">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
+                                        <button class="notion-action-btn"
+                                                title="Marcar como Rechazado"
+                                                @onclick='() => CambiarEstadoIndividual(presupuesto.Id, "Rechazado")'
+                                                style="color: #dc3545;">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    }
+
+                                    @if(presupuesto.Estado == "Borrador")
+                                    {
+                                        <button class="notion-action-btn delete" title="Eliminar"
+                                                disabled="@(presupuesto.Estado != "Borrador")"
+                                                @onclick="() => EliminarPresupuesto(presupuesto)">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    }
+
+                                    <button class="notion-action-btn"
+                                            title="Descargar PDF"
+                                            @onclick="() => DescargarPDF(presupuesto.Id)">
+                                        <i class="bi bi-file-pdf"></i>
                                     </button>
                                 </div>
                             </td>
@@ -162,6 +245,9 @@ else
 
 
 @code {
+    [Inject] private IJSRuntime JS { get; set; }
+    [Inject] private HttpClient Http{ get; set; }
+
     private sealed record EstadoTab(string Etiqueta, string? Valor);
 
     private readonly IReadOnlyList<EstadoTab> estadosDisponibles =
@@ -175,6 +261,7 @@ else
 
     private List<PresupuestoResponseDto> presupuestos = new();
     private List<PresupuestoResponseDto> presupuestosTodos = new();
+    private List<SerieDto> seriesFacturas = new();
     private readonly HashSet<int> seleccionados = new();
     private string? estadoSeleccionado;
     private bool isLoading = true;
@@ -191,6 +278,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         await CargarPresupuestosAsync();
+        await CargarSeriesFacturasAsync();
     }
 
     private async Task CargarPresupuestosAsync(string? estado = null)
@@ -217,10 +305,31 @@ else
         isLoading = false;
     }
 
+    private async Task CargarSeriesFacturasAsync()
+    {
+        var response = await ApiService.GetAsync<PaginatedResponseDto<SerieDto>>(
+        "api/series?page=1&pageSize=100&tipoDocumento=FACTURA&soloActivas=true");
+        seriesFacturas = response?.Items ?? new List<SerieDto>();
+    }
+
+    private string ObtenerClaseEstado(string estado) => estado switch
+    {
+        "Borrador" => "warning",
+        "Enviados" => "info",
+        "Aceptado" => "success",
+        "Rechazado" => "error",
+        _ => "default"
+    };
+
+
     private Task CambiarEstado (string? estado)
     {
         estadoSeleccionado = estado;
         presupuestos = FiltrarPresupuestos(estadoSeleccionado);
+
+        seleccionados.Clear();
+        conversionMessage = string.Empty;
+
         return Task.CompletedTask;
     }
 
@@ -293,6 +402,12 @@ else
     {
         conversionMessage = string.Empty;
         errorMessage = string.Empty;
+
+        if(conversionAgrupada.SerieId == 0)
+        {
+            conversionMessage = "Selecciona una serie de factura.";
+            return;
+        }
 
         if (seleccionados.Count == 0)
         {
@@ -375,6 +490,187 @@ else
         });
 
         return Task.CompletedTask;
+    }
+
+    private async Task DescargarPDF(int id)
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/presupuestos/{id}/pdf");
+
+            if (!response.IsSuccessStatusCode) return;
+
+            var fileBytes = await response.Content.ReadAsByteArrayAsync();
+            var fileName = $"Presupuesto_{id}.pdf";
+
+            var base64 = Convert.ToBase64String(fileBytes);
+            await JS.InvokeVoidAsync("downloadFile", fileName, base64);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error downloading PDF: {ex.Message}");
+        }
+    }
+
+    private async Task CambiarEstadoIndividual(int presupuestoId, string nuevoEstado)
+    {
+        var presupuesto = presupuestos.FirstOrDefault(p => p.Id == presupuestoId);
+        if(presupuesto == null) return;
+
+        var mensaje = nuevoEstado switch
+        {
+            "Enviado" => $"¿Marcar presupuesto {presupuesto.NumeroPresupuesto} como Enviado?",
+            "Aceptado" => $"¿Marcar presupuesto {presupuesto.NumeroPresupuesto} como Aceptado?\n\nPodrás convertirlo a factura o albarán.",
+            "Rechazado" => $"¿Marcar presupuesto {presupuesto.NumeroPresupuesto} como Rechazado?",
+            _ => $"¿Cambiar estado del presupuesto {presupuesto.NumeroPresupuesto} a {nuevoEstado}?"
+        };
+
+        var options = new ConfirmDialogOptions(
+            $"Cambiar estado a {nuevoEstado}",
+            mensaje,
+            "Confirmar",
+            "Cancelar"
+        );
+
+        confirmDialog.Show(options, async () =>
+        {
+            try
+            {
+                var request = new CambiarEstadoPresupuestoDto { NuevoEstado = nuevoEstado };
+                var result = await ApiService.PatchAsync<CambiarEstadoPresupuestoDto, PresupuestoResponseDto>(
+                $"api/presupuestos/{presupuestoId}/estado", request);
+
+                if(result == null)
+                {
+                    errorMessage = $"No se pudo cambiar el estado del presupuesto {presupuesto.NumeroPresupuesto}";
+                }
+                else
+                {
+                    conversionMessage = $"Presupuesto {presupuesto.NumeroPresupuesto} marcado como {nuevoEstado}";
+                    await CargarPresupuestosAsync(estadoSeleccionado);
+                }
+            }
+            catch(Exception ex)
+            {
+                errorMessage = $"Error al cambiar estado: {ex.Message}";
+            }
+
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    //Acciones masivas
+    private async Task EliminarSeleccionadosAsync()
+    {
+        if(seleccionados.Count ==0) 
+            await Task.CompletedTask;
+
+        var options = new ConfirmDialogOptions(
+            "¿Eliminar presupuestos?",
+            $"Se borraran {seleccionados.Count} presupesto(s) permanentemente.",
+            "Eliminar",
+            "Cancelar"
+        );
+
+        confirmDialog.Show(options, async () =>
+        {
+            var ids = seleccionados.ToList();
+
+            foreach (var id in ids)
+            {
+                var result = await ApiService.DeleteAsyncDetailed($"api/presuestos/{id}");
+                if(!result.Success){
+                    var msg = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                        ? $"No se pudo eliminar el presupuesto {id}"
+                        : result.ErrorMessage;
+
+                    throw new InvalidOperationException(msg);
+                }
+            }
+
+            seleccionados.Clear();
+            await CargarPresupuestosAsync(estadoSeleccionado);
+            await InvokeAsync(StateHasChanged);
+        });
+
+        await Task.CompletedTask;
+    }
+
+    private void LimpiarSeleccion()
+    {
+        seleccionados.Clear();
+        conversionMessage = string.Empty;
+    }
+
+    private async Task CambioEstadoMasivo(string nuevoEstado, string actualEstado)
+    {
+        if (!seleccionados.Any()) return;
+
+        //Verificar que todos los seleccionados estan en estado borrador
+        var presupuestosBorrador = presupuestos
+            .Where(p => seleccionados.Contains(p.Id) && p.Estado == actualEstado)
+            .ToList();
+
+        if (!presupuestosBorrador.Any()) return;
+
+        var options = new ConfirmDialogOptions(
+            $"Marcar como {nuevoEstado}",
+            $"Se marcaran {presupuestosBorrador.Count} presupuesto(s) como {nuevoEstado}",
+            "Cambiar estado",
+            "Cancelar"
+        );
+
+        confirmDialog.Show(options, async () =>
+        {
+            foreach (var presupuesto in presupuestosBorrador)
+            {
+                try
+                {
+                    var request = new CambiarEstadoPresupuestoDto { NuevoEstado = nuevoEstado };
+                    var result = await ApiService.PatchAsync<CambiarEstadoPresupuestoDto, PresupuestoResponseDto>(
+                        $"api/presupuestos/{presupuesto.Id}/estado", request);
+
+                    if (result == null)
+                    {
+                        throw new InvalidOperationException($"Error al cambiar el estado del presupuesto {presupuesto.Id}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Error en presupuesto {presupuesto.Id}: {ex.Message}");
+                }
+            }
+            await CargarPresupuestosAsync(estadoSeleccionado);
+            seleccionados.Clear();
+            await InvokeAsync(StateHasChanged);
+        });
+
+
+    }
+
+    private async Task DescargarPdfMasivo()
+    {
+        if (!seleccionados.Any()) return;
+
+        try
+        {
+            foreach (var id in seleccionados)
+            {
+                var response = await Http.GetAsync($"api/presupuestos/{id}/pdf");
+
+                if (!response.IsSuccessStatusCode) return;
+
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var fileName = $"Presupuesto_{id}.pdf";
+
+                var base64 = Convert.ToBase64String(fileBytes);
+                await JS.InvokeVoidAsync("downloadFile", fileName, base64);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error downloadig PDF: {ex.Message}");
+        }
     }
 
     private sealed class ConversionFacturaAgrupadaModel

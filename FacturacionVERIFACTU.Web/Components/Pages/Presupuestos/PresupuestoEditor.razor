@@ -283,7 +283,8 @@
                 {
                     <button class="btn-modern-secondary"
                             @onclick='() => CambiarEstadoAsync("Enviado")'
-                            disabled="@isCambiandoEstado">
+                            disabled="@isCambiandoEstado"
+                            type="button">
                         <i class="bi bi-send"></i> Marcar como Enviado
                     </button>
                 }
@@ -293,18 +294,21 @@
                     <button class="btn-modern"
                             @onclick='() => CambiarEstadoAsync("Aceptado")'
                             disabled="@isCambiandoEstado"
-                            style="background-color: #28a745; border-color: #28a745;">
+                            style="background-color: #28a745; border-color: #28a745;"
+                            type="button">
                         <i class="bi bi-check-circle"></i> Marcar como Aceptado
                     </button>
                     <button class="btn-modern-secondary"
                             @onclick='() => CambiarEstadoAsync("Rechazado")'
                             disabled="@isCambiandoEstado"
-                            style="background-color: #dc3545; border-color: #dc3545; color: white;">
+                            style="background-color: #dc3545; border-color: #dc3545; color: white;"
+                            type="button">
                         <i class="bi bi-x-circle"></i> Marcar como Rechazado
                     </button>
                     <button class="btn-modern-secondary"
                             @onclick='() => CambiarEstadoAsync("Borrador")'
-                            disabled="@isCambiandoEstado">
+                            disabled="@isCambiandoEstado"
+                            type="button">
                         <i class="bi bi-arrow-counterclockwise"></i> Volver a Borrador
                     </button>
                 }
@@ -313,7 +317,8 @@
                 {
                     <button class="btn-modern-secondary"
                             @onclick='() => CambiarEstadoAsync("Borrador")'
-                            disabled="@isCambiandoEstado">
+                            disabled="@isCambiandoEstado"
+                            type="button">
                         <i class="bi bi-arrow-counterclockwise"></i> Volver a Borrador
                     </button>
                 }
@@ -547,6 +552,7 @@
     [Inject] private IApiService ApiService { get; set; } = null!;
     [Inject] private NavigationManager NavManager { get; set; } = null!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+    [Inject] private ConfirmDialogService confirmDialog { get; set; } = null!;
 
     private bool EsEditable => Id == 0 || estadoPresupuesto == "Borrador";
     private IEnumerable<ClienteDto> ClientesFiltrados => string.IsNullOrWhiteSpace(clienteFiltro)
@@ -905,7 +911,7 @@
 
     private void Cancelar() => NavManager.NavigateTo("/presupuestos");
 
-    private async Task CambiarEstadoAsync(string nuevoEstado)
+    private void CambiarEstadoAsync(string nuevoEstado)
     {
         if (Id == 0)
             return;
@@ -919,45 +925,50 @@
             _ => $"¿Cambiar estado a {nuevoEstado}?"
         };
 
-        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", mensaje);
-        if (!confirm)
-            return;
+        var options = new ConfirmDialogOptions(
+            $"Cambiar estado a {nuevoEstado}",
+            mensaje,
+            "Confirmar",
+            "Cancelar"
+        );
 
-        isCambiandoEstado = true;
-        errorMessage = string.Empty;
-
-        try
+        confirmDialog.Show(options, async () =>
         {
-            var request = new CambiarEstadoPresupuestoDto
-            {
-                NuevoEstado = nuevoEstado,
-                Motivo = motivoCambioEstado
-            };
+            isCambiandoEstado = true;
+            errorMessage = string.Empty;
 
-            // Usar PATCH: el controlador expone [HttpPatch("{id}/estado")]
-            var result = await ApiService.PatchAsync<CambiarEstadoPresupuestoDto, PresupuestoResponseDto>($"api/presupuestos/{Id}/estado", request);
-
-            if (result == null)
+            try
             {
-                errorMessage = "No se pudo cambiar el estado del presupuesto.";
+                var request = new CambiarEstadoPresupuestoDto
+                {
+                    NuevoEstado = nuevoEstado,
+                    Motivo = motivoCambioEstado
+                };
+
+                var result = await ApiService.PatchAsync<CambiarEstadoPresupuestoDto, PresupuestoResponseDto>(
+                    $"api/presupuestos/{Id}/estado", request);
+
+                if (result == null)
+                {
+                    errorMessage = "No se pudo cambiar el estado del presupuesto.";
+                }
+                else
+                {
+                    estadoPresupuesto = result.Estado;
+                    motivoCambioEstado = string.Empty;
+                    StateHasChanged();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                estadoPresupuesto = result.Estado;
-                motivoCambioEstado = string.Empty;
-                // refrescar UI / recalcular permisos
-                StateHasChanged();
+                errorMessage = $"Error al cambiar estado: {ex.Message}";
             }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error al cambiar estado: {ex.Message}";
-        }
-        finally
-        {
-            isCambiandoEstado = false;
-            StateHasChanged();
-        }
+            finally
+            {
+                isCambiandoEstado = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        });
     }
 
     private void AgregarLineaManual()
@@ -975,14 +986,19 @@
             return;
         }
 
-        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", "¿Eliminar esta línea del presupuesto?");
-        if (!confirm)
-        {
-            return;
-        }
+        var options = new ConfirmDialogOptions(
+             "Eliminar línea",
+             "¿Estás seguro de eliminar esta línea del presupuesto?",
+             "Eliminar",
+             "Cancelar"
+         );
 
-        presupuesto.Lineas.Remove(linea);
-        StateHasChanged();
+        confirmDialog.Show(options, () =>
+        {
+            presupuesto.Lineas.Remove(linea);
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     private async Task AbrirModalProductosAsync()
