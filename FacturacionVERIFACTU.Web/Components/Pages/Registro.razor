@@ -1,0 +1,296 @@
+﻿@page "/registro"
+@using FacturacionVERIFACTU.Web.Models.DTOs
+@using FacturacionVERIFACTU.Web.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Crear cuenta – FacturaVERIFACTU</PageTitle>
+
+<div class="login-container">
+    <div class="login-card" style="max-width: 480px;">
+
+        
+        <div class="login-header">
+            <i class="bi bi-building-add" style="font-size: 2rem; color: #000;"></i>
+            <h1>Crear cuenta</h1>
+            <p>Registro de nueva empresa en FacturaVERIFACTU</p>
+        </div>
+
+        
+        <div style="display:flex; align-items:center; justify-content:center; margin-bottom: 24px; gap: 0;">
+            <StepIndicator Numero="1" Titulo="Empresa" Activo="@(pasoActual == 1)" Completado="@(pasoActual > 1)" />
+            <div style="width:40px; height:2px; background:@(pasoActual > 1 ? "#000" : "#e0e0e0"); margin-top:-14px;"></div>
+            <StepIndicator Numero="2" Titulo="Acceso" Activo="@(pasoActual == 2)" Completado="@(pasoActual > 2)" />
+            <div style="width:40px; height:2px; background:@(pasoActual > 2 ? "#000" : "#e0e0e0"); margin-top:-14px;"></div>
+            <StepIndicator Numero="3" Titulo="Confirmar" Activo="@(pasoActual == 3)" Completado="@(pasoActual > 3)" />
+        </div>
+
+        
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" style="font-size:13px; border-radius:8px; border:none; background:#fff0f0; color:#e03e3e; margin-bottom:16px; padding:12px;">
+                <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
+            </div>
+        }
+
+        
+        @if (pasoActual == 1)
+        {
+            <EditForm Model="paso1" OnValidSubmit="IrPaso2">
+                <DataAnnotationsValidator />
+
+                <div class="notion-input-group">
+                    <label class="notion-label">Nombre / Razón Social *</label>
+                    <InputText @bind-Value="paso1.NombreEmpresa"
+                               class="notion-input-modern"
+                               placeholder="Ej: Ferretería García S.L."
+                               autofocus />
+                    <ValidationMessage For="() => paso1.NombreEmpresa" class="notion-error" />
+                </div>
+
+                <div class="notion-input-group">
+                    <label class="notion-label">NIF / CIF *</label>
+                    <InputText @bind-Value="paso1.NIF"
+                               class="notion-input-modern"
+                               placeholder="Ej: B12345678" />
+                    <ValidationMessage For="() => paso1.NIF" class="notion-error" />
+                    <span style="font-size:11px; color:#9b9a97;">
+                        Formato: B12345678 (sociedad) o 12345678Z (autónomo)
+                    </span>
+                </div>
+
+                <button type="submit" class="btn-modern" style="margin-top: 8px;">
+                    Siguiente <i class="bi bi-arrow-right ms-1"></i>
+                </button>
+
+                <div style="text-align:center; margin-top:16px; font-size:13px; color:#787774;">
+                    ¿Ya tienes cuenta?
+                    <a href="/login" style="color:#000; font-weight:600; text-decoration:none;">Iniciar sesión</a>
+                </div>
+            </EditForm>
+        }
+
+        
+        @if (pasoActual == 2)
+        {
+            <EditForm Model="paso2" OnValidSubmit="IrPaso3">
+                <DataAnnotationsValidator />
+
+                <div class="notion-input-group">
+                    <label class="notion-label">Nombre completo *</label>
+                    <InputText @bind-Value="paso2.NombreCompleto"
+                               class="notion-input-modern"
+                               placeholder="Tu nombre y apellidos"
+                               autofocus />
+                    <ValidationMessage For="() => paso2.NombreCompleto" class="notion-error" />
+                </div>
+
+                <div class="notion-input-group">
+                    <label class="notion-label">Email de acceso *</label>
+                    <InputText @bind-Value="paso2.Email"
+                               class="notion-input-modern"
+                               type="email"
+                               placeholder="nombre@empresa.com" />
+                    <ValidationMessage For="() => paso2.Email" class="notion-error" />
+                </div>
+
+                <div class="notion-input-group">
+                    <label class="notion-label">Contraseña *</label>
+                    <div style="position: relative;">
+                        <InputText @bind-Value="paso2.Password"
+                                   class="notion-input-modern"
+                                   type="@(mostrarPassword ? "text" : "password")"
+                                   placeholder="Mínimo 8 caracteres" />
+                        <button type="button"
+                                @onclick="() => mostrarPassword = !mostrarPassword"
+                                style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:#787774; padding:0;">
+                            <i class="bi @(mostrarPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                        </button>
+                    </div>
+                    <ValidationMessage For="() => paso2.Password" class="notion-error" />
+                    <PasswordStrengthBar Password="@paso2.Password" />
+                </div>
+
+                <div class="notion-input-group">
+                    <label class="notion-label">Confirmar contraseña *</label>
+                    <InputText @bind-Value="paso2.ConfirmarPassword"
+                               class="notion-input-modern"
+                               type="@(mostrarPassword ? "text" : "password")"
+                               placeholder="Repite la contraseña" />
+                    <ValidationMessage For="() => paso2.ConfirmarPassword" class="notion-error" />
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:8px;">
+                    <button type="button" class="btn-modern-secondary" @onclick="VolverPaso1" style="flex:0 0 auto;">
+                        <i class="bi bi-arrow-left me-1"></i> Atrás
+                    </button>
+                    <button type="submit" class="btn-modern" style="flex:1;">
+                        Siguiente <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </div>
+            </EditForm>
+        }
+
+        
+        @if (pasoActual == 3)
+        {
+            <div style="background:#f7f6f3; border-radius:10px; padding:20px; margin-bottom:20px;">
+                <p style="font-size:12px; color:#9b9a97; margin-bottom:12px; text-transform:uppercase; letter-spacing:.05em; font-weight:600;">
+                    Resumen del registro
+                </p>
+                <div style="display:grid; gap:10px;">
+                    <ResumenItem Icono="bi-building" Etiqueta="Empresa" Valor="@paso1.NombreEmpresa" OnEditar="() => pasoActual = 1" />
+                    <ResumenItem Icono="bi-card-text" Etiqueta="NIF/CIF" Valor="@paso1.NIF" OnEditar="() => pasoActual = 1" />
+                    <ResumenItem Icono="bi-person" Etiqueta="Nombre" Valor="@paso2.NombreCompleto" OnEditar="() => pasoActual = 2" />
+                    <ResumenItem Icono="bi-envelope" Etiqueta="Email" Valor="@paso2.Email" OnEditar="() => pasoActual = 2" />
+                </div>
+            </div>
+
+            <div style="background:#f0f9f0; border:1px solid #c3e6cb; border-radius:8px; padding:12px; margin-bottom:20px; font-size:12px; color:#2d6a2d;">
+                <i class="bi bi-check2-circle me-2"></i>
+                Al registrarte se crearán automáticamente: <strong>series de numeración</strong>,
+                <strong>tipos de IVA</strong> (21%, 10%, 4%, 0%) y el <strong>ejercicio @DateTime.Now.Year</strong>.
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <button type="button" class="btn-modern-secondary" @onclick="VolverPaso2" style="flex:0 0 auto;" disabled="@isLoading">
+                    <i class="bi bi-arrow-left me-1"></i> Atrás
+                </button>
+                <button type="button" class="btn-modern" style="flex:1;" @onclick="RegistrarAsync" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span>Creando cuenta...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-rocket-takeoff me-1"></i>
+                        <span>Crear cuenta</span>
+                    }
+                </button>
+            </div>
+        }
+
+    </div>
+</div>
+
+@code {
+
+    // ── Modelos separados por paso (la clave del fix) ──────────────────────
+    private Paso1Model paso1 = new();
+    private Paso2Model paso2 = new();
+
+    private int pasoActual = 1;
+    private string errorMessage = string.Empty;
+    private bool isLoading = false;
+    private bool mostrarPassword = false;
+
+    // ── Modelos de validación por paso ─────────────────────────────────────
+
+    public class Paso1Model
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "El nombre de la empresa es obligatorio")]
+        [System.ComponentModel.DataAnnotations.MinLength(3, ErrorMessage = "Mínimo 3 caracteres")]
+        [System.ComponentModel.DataAnnotations.MaxLength(100, ErrorMessage = "Máximo 100 caracteres")]
+        public string NombreEmpresa { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "El NIF/CIF es obligatorio")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(
+            @"^[A-Za-z]\d{8}$|^\d{8}[A-Za-z]$",
+            ErrorMessage = "NIF inválido (ejemplos: B12345678 o 12345678Z)")]
+        public string NIF { get; set; } = string.Empty;
+    }
+
+    public class Paso2Model
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "El nombre completo es obligatorio")]
+        [System.ComponentModel.DataAnnotations.MinLength(3, ErrorMessage = "Mínimo 3 caracteres")]
+        public string NombreCompleto { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "El email es obligatorio")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Email inválido")]
+        public string Email { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "La contraseña es obligatoria")]
+        [System.ComponentModel.DataAnnotations.MinLength(8, ErrorMessage = "Mínimo 8 caracteres")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(
+            @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$",
+            ErrorMessage = "Debe contener mayúsculas, minúsculas, números y un carácter especial (@$!%*?&)")]
+        public string Password { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Confirma la contraseña")]
+        [System.ComponentModel.DataAnnotations.Compare(nameof(Password), ErrorMessage = "Las contraseñas no coinciden")]
+        public string ConfirmarPassword { get; set; } = string.Empty;
+    }
+
+    // ── Ciclo de vida ──────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+            Nav.NavigateTo("/");
+    }
+
+    // ── Navegación entre pasos ─────────────────────────────────────────────
+
+    private void IrPaso2()
+    {
+        // Normalizar NIF a mayúsculas al avanzar
+        paso1.NIF = paso1.NIF.Trim().ToUpperInvariant();
+        errorMessage = string.Empty;
+        pasoActual = 2;
+    }
+
+    private void IrPaso3()
+    {
+        errorMessage = string.Empty;
+        pasoActual = 3;
+    }
+
+    private void VolverPaso1() { errorMessage = string.Empty; pasoActual = 1; }
+    private void VolverPaso2() { errorMessage = string.Empty; pasoActual = 2; }
+
+    // ── Registro final ─────────────────────────────────────────────────────
+
+    private async Task RegistrarAsync()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            // Construir el DTO final combinando los dos pasos
+            var request = new RegisterRequest
+            {
+                NombreEmpresa = paso1.NombreEmpresa,
+                NIF = paso1.NIF,
+                NombreCompleto = paso2.NombreCompleto,
+                Email = paso2.Email,
+                Password = paso2.Password,
+                ConfirmarPassword = paso2.ConfirmarPassword
+            };
+
+            var result = await AuthService.RegisterAsync(request);
+
+            if (result == null)
+            {
+                errorMessage = "No se pudo crear la cuenta. Comprueba que el NIF y el email no estén ya registrados.";
+                pasoActual = 1;
+                return;
+            }
+
+            Nav.NavigateTo("/", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error de conexión: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

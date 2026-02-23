@@ -48,7 +48,7 @@ namespace FacturacionVERIFACTU.API.Data
                     .ToLower();
 
                 //Limitar a 20 caracteres
-                if (nifLimpio.Length < 20)
+                if (nifLimpio.Length > 20)
                     nifLimpio = nifLimpio.Substring(0, 20);
 
                 var schemaBase = $"tenant_{nifLimpio}";

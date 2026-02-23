@@ -7,6 +7,8 @@
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
 
+<PageTitle>Login - FacturacionVERIFACTU</PageTitle>
+
 <div class="login-container">
     <div class="login-card">
         <div class="login-header">
@@ -48,8 +50,16 @@
                 }
             </button>
         </EditForm>
+        <div style="text-align:center; margin-top:16px; font-size:13px; color:#787774; border-top: 1px solid #e9e9e7; padding-top: 16px;">
+            ¿No tienes cuenta?
+            <a href="/registro" style="color:#000; font-weight:600; text-decoration:none;">
+                Crear empresa nueva
+            </a>
+        </div>
     </div>
 </div>
+
+
 
 @code {
     private LoginRequest loginModel = new();

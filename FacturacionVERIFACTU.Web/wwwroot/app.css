@@ -620,6 +620,37 @@ input[type=number] {
     font-weight: 500;
 }
 
+/* Badges específicos de facturas */
+.notion-badge.estado-emitida {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.notion-badge.estado-pagada {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.notion-badge.estado-anulada {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.notion-badge.tipo-f1 {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.notion-badge.tipo-f2 {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.notion-badge.tipo-rectificativa {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
 /* ========================================
    RESET Y LIMPIEZA ANTI-AZUL
    ======================================== */

@@ -104,15 +104,7 @@
 
             <div class="notion-input-group">
                 <label class="notion-label">Tipo VeriFactu</label>
-                <select @bind="factura.TipoFacturaVERIFACTU" class="notion-input-modern" disabled="@(!EsEditable)">
-                    <option value="F1">F1 - Normal</option>
-                    <option value="F2">F2 - Simplificada</option>
-                    <option value="F3">F3 - Rectificativa</option>
-                    <option value="R1">R1 - Sin identificación</option>
-                    <option value="R2">R2 - Sustitución</option>
-                    <option value="R3">R3 - Diferencias</option>
-                    <option value="R4">R4 - Rectificativa por descuento</option>
-                </select>
+                <input type="text" value="@factura.TipoFacturaVERIFACTU" class="notion-input-modern" disabled style="background: #f8fafc;" />
                 <small style="color: #999; font-size: 11px;">Se calcula automáticamente según cliente</small>
             </div>
 
@@ -128,14 +120,14 @@
             </div>
         </div>
 
-        <div class="presupuesto-lines-header">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #edeceb;">
             <div>
-                <h3>Líneas de factura</h3>
-                <p style="color: rgba(55, 53, 47, 0.6); font-size: 13px; margin: 0;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Líneas de factura</h3>
+                <p style="color: rgba(55, 53, 47, 0.6); font-size: 13px; margin: 4px 0 0 0;">
                     Añade productos o líneas manuales y revisa los importes en tiempo real.
                 </p>
             </div>
-            <div class="lines-actions">
+            <div style="display: flex; gap: 8px;">
                 <button type="button" class="btn-modern-secondary" @onclick="AbrirModalProductosAsync" disabled="@(!EsEditable)">
                     <i class="bi bi-box-seam"></i> Añadir producto
                 </button>
@@ -390,6 +382,7 @@
 }
 
 @code {
+
     [Parameter] public int Id { get; set; }
 
     [Inject] private IApiService ApiService { get; set; } = null!;
@@ -592,14 +585,17 @@
 
                 successMessage = "Factura actualizada correctamente.";
                 errorMessage = string.Empty;
-                await CargarFacturaAsync();
                 StateHasChanged();
+
+              
 
                 _ = Task.Delay(3000).ContinueWith(_ =>
                 {
                     successMessage = string.Empty;
                     InvokeAsync(StateHasChanged);
                 });
+
+                NavManager.NavigateTo("/facturas");
             }
         }
         catch (Exception ex)
@@ -803,8 +799,43 @@
 
         ConfirmDialog.Show(options, async () =>
         {
-            await CargarFacturaAsync();
-            await InvokeAsync(StateHasChanged);
+            try
+            {
+                if (nuevoEstado == "Pagada")
+                {
+                    // Marcar como pagada
+                    var dto = new MarcarComoPagadaDto
+                    {
+                        FechaPago = DateTime.Now,
+                        Importe = TotalFactura,
+                        FormaPago = "Transferencia"
+                    };
+
+                    await ApiService.PatchAsync<MarcarComoPagadaDto, FacturaResponseDto>($"api/facturas/{Id}/marcar-pagada", dto);
+
+                }
+                else if (nuevoEstado == "Anulada")
+                {
+                    // Anular
+                    var dto = new AnularFacturaDto { Motivo = "Anulación manual" };
+                    await ApiService.PostAsync<AnularFacturaDto, object>($"api/facturas/{Id}/anular", dto);
+                }
+
+                await CargarFacturaAsync();
+                successMessage = $"Estado cambiado a {nuevoEstado} correctamente.";
+                await InvokeAsync(StateHasChanged);
+
+                _ = Task.Delay(3000).ContinueWith(_ =>
+                {
+                    successMessage = string.Empty;
+                    InvokeAsync(StateHasChanged);
+                });
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error al cambiar estado: {ex.Message}";
+                await InvokeAsync(StateHasChanged);
+            }
         });
     }
 
