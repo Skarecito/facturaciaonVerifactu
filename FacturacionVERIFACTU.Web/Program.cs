@@ -47,7 +47,8 @@ builder.Services.AddScoped<TokenHandler>();
 builder.Services.AddHttpClient("VerifactuApi", client =>
 {
     // Asegúrate de que este puerto coincide con tu Backend
-    client.BaseAddress = new Uri("http://localhost:5121/");
+    var baseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5121/";
+    client.BaseAddress = new Uri(baseUrl);
 })
 .AddHttpMessageHandler<TokenHandler>() // Inyecta el token en cada petición
 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
@@ -60,7 +61,8 @@ builder.Services.AddHttpClient("VerifactuApi", client =>
 // IMPORTANTE: Este NO lleva TokenHandler porque el login no necesita token
 builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5121/");
+    var baseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5121/";
+    client.BaseAddress = new Uri(baseUrl);
 })
 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 {
