@@ -182,10 +182,16 @@ if (app.Environment.IsDevelopment())
     app.UseCors("AllowAll");
 }
 
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 // ⚠️ ORDEN CRÍTICO ⚠️
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors("AllowBlazor");
 app.UseAuthentication();   // 1️⃣ Valida JWT
 app.UseTenantMiddleware();  // 2️⃣ Extrae tenant_id
