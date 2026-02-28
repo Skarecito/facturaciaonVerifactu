@@ -19,13 +19,13 @@
             <i class="bi bi-plus-lg"></i> Nuevo Presupuesto
         </button>
     </div>
-</div>
 
-    <div class="notion-toolbar" style="border-bottom: 1px solid #edecbd; margin-bottom 24px;">
+    <!-- Tabs de estado -->
+    <div class="notion-toolbar" style="border-bottom: 1px solid #edeceb; margin-bottom: 24px;">
         <div class="notion-tabs">
             @foreach (var estado in estadosDisponibles)
             {
-                <button class="btn-modern-secondary @(estado.Valor == estadoSeleccionado ? "active" : string.Empty)"
+                <button class="notion-tab @(estado.Valor == estadoSeleccionado ? "active" : string.Empty)"
                         @onclick="() => CambiarEstado(estado.Valor)">
                     <span>@estado.Etiqueta</span>
                     <span class="tab-count">@ObtenerConteo(estado.Valor)</span>
@@ -34,156 +34,156 @@
         </div>
     </div>
 
+    @* Barra de exportacion masiva *@
+    @if (seleccionados.Any())
+    {
+        <div class="ui-card" style="padding: 14px; margin-bottom: 24px;">
+            <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; margin-bottom: 12px;">
+                <div class="notion-input-group">
+                    <span style="font-weight: 600;">@seleccionados.Count seleccionado(s)</span>
+                </div>
 
-@*Barra de exportacion masiva*@
-@if (seleccionados.Any())
-{
-    <div class="notion-toolbar" style="margin-bottom: 24px;">
-        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; margin-bottom: 12px;">
-            <div class="notion-input-group">
-                <span style="font-weight: 600;">@seleccionados.Count seleccionado(s)</span>
-            </div>
-
-            <div class="notion-input-group" style="display:flex; gap:8px; justify-content:flex-end; align-items:flex-end; flex-wrap:wrap;">
-                @if(seleccionados.All(Id => presupuestos.First(p => p.Id == Id).Estado == "Borrador"))
-                {
-                    <div class="notion-input-group">
-                        <button type="button" class="btn-modern bulk-btn" @onclick='() => CambioEstadoMasivo("Enviado","Borrador")'>
+                <div class="notion-input-group bulk-actions" style="justify-content:flex-end; align-items:flex-end;">
+                    @if (seleccionados.All(Id => presupuestos.First(p => p.Id == Id).Estado == "Borrador"))
+                    {
+                        <button type="button" class="btn-modern bulk-btn" @onclick='() => CambioEstadoMasivo("Enviado", "Borrador")'>
                             <i class="bi bi-check-circle"></i> Marcar como Enviado
                         </button>
-                    </div>
-                }
+                    }
 
-                @if (seleccionados.All(Id => presupuestos.First(p => p.Id == Id).Estado == "Enviado"))
-                {
-                    <div class="notion-input-group">
+                    @if (seleccionados.All(Id => presupuestos.First(p => p.Id == Id).Estado == "Enviado"))
+                    {
                         <button type="button" class="btn-modern bulk-btn" @onclick='() => CambioEstadoMasivo("Aceptado", "Enviado")'>
                             <i class="bi bi-check-circle"></i> Marcar como Aceptado
                         </button>
-                    </div>
-                    <div class="notion-input-group">
+
                         <button type="button" class="btn-modern bulk-btn" @onclick='() => CambioEstadoMasivo("Rechazado", "Enviado")'>
-                            <i class="bi bi-check-circle"></i> Marcar como Rechazado
+                            <i class="bi bi-x-circle"></i> Marcar como Rechazado
                         </button>
-                    </div>
-                }
-                @if (seleccionados.All(Id => presupuestos.First(p => p.Id == Id).Estado == "Rechazado"))
-                {
-                    <div class="notion-input-group">
+                    }
+
+                    @if (seleccionados.All(Id => presupuestos.First(p => p.Id == Id).Estado == "Rechazado"))
+                    {
                         <button type="button" class="btn-modern bulk-btn" @onclick='() => CambioEstadoMasivo("Borrador", "Rechazado")'>
-                            <i class="bi bi-check-circle"></i> Volver a borrador
+                            <i class="bi bi-arrow-counterclockwise"></i> Volver a borrador
                         </button>
-                    </div>
-                }
+                    }
 
-                @if (seleccionados.All(Id => presupuestos.First(p => p.Id == Id).Estado == "Aceptado"))
-                {
-                    <div class="notion-input-group bulk-serie" style="width:200px; min-width:180px;">
-                        <label class="notion-label">Serie factura</label>
-                        <InputSelect @bind-Value="conversionAgrupada.SerieId" class="notion-input-modern" style="margin-bottom:0;">
-                            <option value="0">Selecciona serie</option>
-                            @foreach (var serie in seriesFacturas)
-                            {
-                                <option value="@serie.Id">@serie.Descripcion (@serie.Codigo)</option>
-                            }
-                        </InputSelect>
-                    </div>
-                    <div class="notion-input-group">
-                        <button type="button" class="btn-modern bulk-btn" @onclick='() => ExportarFacturaAgrupadaAsync()'>
-                            <i class="bi bi-check-circle"></i> Facturar
+                    @if (seleccionados.All(Id => presupuestos.First(p => p.Id == Id).Estado == "Aceptado"))
+                    {
+                        <div class="notion-input-group bulk-serie" style="width:200px; min-width:180px;">
+                            <label class="notion-label">Serie factura</label>
+                            <InputSelect @bind-Value="conversionAgrupada.SerieId" class="notion-input-modern" style="margin-bottom:0;">
+                                <option value="0">Selecciona serie</option>
+                                @foreach (var serie in seriesFacturas)
+                                {
+                                    <option value="@serie.Id">@serie.Descripcion (@serie.Codigo)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <button type="button" class="btn-modern bulk-btn" @onclick="ExportarFacturaAgrupadaAsync">
+                            <i class="bi bi-receipt"></i> Facturar
                         </button>
-                    </div>
-                }
+                    }
 
-                <button type="button" class="btn-modern-secondary bulk-btn" @onclick="DescargarPdfMasivo">
-                    <i class="bi bi-trash"></i> Descargar Presupuestos
-                </button>
+                    <button type="button" class="btn-modern-secondary bulk-btn" @onclick="DescargarPdfMasivo">
+                        <i class="bi bi-download"></i> Descargar Presupuestos
+                    </button>
 
-                <button type="button" class="btn-modern-secondary bulk-btn" @onclick="EliminarSeleccionadosAsync">
-                    <i class="bi bi-trash"></i> Eliminar
-                </button>
+                    <button type="button" class="btn-modern-secondary bulk-btn" @onclick="EliminarSeleccionadosAsync">
+                        <i class="bi bi-trash3"></i> Eliminar
+                    </button>
+                </div>
             </div>
+
+            @if (!string.IsNullOrEmpty(conversionMessage))
+            {
+                <div class="alert alert-info" style="margin-top: 12px; font-size: 13px; border-radius: 12px; border: 1px solid rgba(79,124,255,.18); background-color: rgba(79,124,255,.10); color: #2b5cff; padding: 12px;">
+                    <i class="bi bi-info-circle"></i> @conversionMessage
+                </div>
+            }
         </div>
+    }
 
-
-
-        @if (!string.IsNullOrEmpty(conversionMessage))
-        {
-            <div class="alert alert-info" style="margin-top: 12px; font-size: 13px; border-radius: 8px; border: none; background-color: #f0f7ff; color: #1b64b0; padding: 12px;">
-                <i class="bi bi-info-circle"></i> @conversionMessage
-            </div>
-        }
-    </div>
-}
-
-@if (isLoading)
-{
-    <div class="notion-loading">
-        <div class="spinner-modern"></div>
-        <span>Cargando presupuestos ....</span>
-    </div>
-}
-else if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
-        <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
-    </div>
-}
-else if(presupuestos == null || !presupuestos.Any())
-{
-    <div class="notion-empty-state" style="padding: 80px 0; text-align: center;">
-        <i class="bi bi-file-earmark-text" style="font-size: 48px; color: #edeceb; margin-bottom: 16px; display: block;"></i>
-        <h4 style="font-weight: 600; margin-bottom: 8px;">No hay presupuestos</h4>
-        <p style="color: #787774; font-size: 14px; margin-bottom: 24px;">
-            Empieza creando tu primer presupuesto para formalizar propuestas.
-        </p>
-        <button class="btn-modern-secondary" @onclick="NuevoPresupuesto">Crear presupuesto</button>
-    </div>
-}
-else
-{
+    @if (isLoading)
+    {
+        <div class="notion-loading">
+            <div class="spinner-modern"></div>
+            <span>Cargando presupuestos ....</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" style="font-size: 13px; border-radius: 12px; border: 1px solid rgba(239,68,68,.18); background-color: rgba(239,68,68,.10); color: #b91c1c; margin-bottom: 20px; padding: 12px;">
+            <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
+        </div>
+    }
+    else if (presupuestos == null || !presupuestos.Any())
+    {
+        <div class="notion-empty-state" style="padding: 80px 0; text-align: center;">
+            <i class="bi bi-file-earmark-text" style="font-size: 48px; color: #edeceb; margin-bottom: 16px; display: block;"></i>
+            <h4 style="font-weight: 600; margin-bottom: 8px;">No hay presupuestos</h4>
+            <p style="color: #787774; font-size: 14px; margin-bottom: 24px;">
+                Empieza creando tu primer presupuesto para formalizar propuestas.
+            </p>
+            <button class="btn-modern-secondary" @onclick="NuevoPresupuesto">Crear presupuesto</button>
+        </div>
+    }
+    else
     {
         <div class="notion-table-wrapper">
-            <table class="notion-table" style="width: 100%; border-collapse: collapse;">
+            <table class="notion-table">
                 <thead>
-                    <tr style="border-bottom: 1px solid var(--notion-border);">
-                        <th style="padding: 12px 16px; width: 4%; text-align: center;">
+                    <tr>
+                        <th style="width: 4%; text-align: center;">
                             <input type="checkbox" @onchange="ToggleSeleccionarTodos" checked="@TodosSeleccionados" />
                         </th>
-                        <th style="padding: 12px 16px; width: 18%; text-align: left;">NÚMERO</th>
-                        <th style="padding: 12px 16px; width: 28%; text-align: left;">CLIENTE</th>
-                        <th style="padding: 12px 16px; width: 16%; text-align: left;">EMISIÓN</th>
-                        <th style="padding: 12px 16px; width: 14%; text-align: right;">TOTAL</th>
-                        <th style="padding: 12px 16px; width: 10%; text-align: center;">ESTADO</th>
-                        <th style="padding: 12px 16px; width: 10%; text-align: right;">ACCIONES</th>
+                        <th style="width: 18%; text-align: left;">NÚMERO</th>
+                        <th style="width: 28%; text-align: left;">CLIENTE</th>
+                        <th style="width: 16%; text-align: left;">EMISIÓN</th>
+                        <th style="width: 14%; text-align: right;">TOTAL</th>
+                        <th style="width: 10%; text-align: center;">ESTADO</th>
+                        <th style="width: 10%; text-align: right;">ACCIONES</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var presupuesto in presupuestos)
                     {
                         <tr>
-                            <td style="padding: 16px; text-align: center;">
-                                <input type="checkbox" checked="@seleccionados.Contains(presupuesto.Id)" @onchange="(e) => ToggleSeleccion(presupuesto, e)" />
+                            <td style="text-align: center;">
+                                <input type="checkbox"
+                                       checked="@seleccionados.Contains(presupuesto.Id)"
+                                       @onchange="(e) => ToggleSeleccion(presupuesto, e)" />
                             </td>
-                            <td style="padding: 16px;">
+
+                            <td>
                                 <div class="notion-cell-title">@presupuesto.NumeroPresupuesto</div>
                                 <div class="notion-cell-desc">Ejercicio @presupuesto.Ejercicio</div>
                             </td>
-                            <td style="padding: 16px;">
+
+                            <td>
                                 <div class="notion-cell-title">@presupuesto.ClienteNombre</div>
                             </td>
-                            <td style="padding: 16px;">
-                                <span style="color: #787774; font-size: 14px;">@presupuesto.FechaEmision.ToString("dd/MM/yyyy")</span>
+
+                            <td>
+                                <span style="color: rgba(15,23,42,.65); font-size: 14px;">
+                                    @presupuesto.FechaEmision.ToString("dd/MM/yyyy")
+                                </span>
                             </td>
-                            <td style="padding: 16px; text-align: right;">
-                                <span style="font-weight: 600;">@presupuesto.Total.ToString("C")</span>
+
+                            <td style="text-align: right;">
+                                <span style="font-weight: 700;">@presupuesto.Total.ToString("C")</span>
                             </td>
-                            <td style="padding: 16px; text-align: center;">
-                                <span class="notion-badge-@ObtenerClaseEstado(presupuesto.Estado)">@presupuesto.Estado</span>
-                                
+
+                            <td style="text-align: center;">
+                                <span class="notion-badge badge-@ObtenerClaseEstado(presupuesto.Estado)">
+                                    @presupuesto.Estado
+                                </span>
                             </td>
-                            <td style="padding: 16px; text-align: right;">
-                                <div class="notion-actions" style="justify-content: flex-end; gap: 4px;">
+
+                            <td style="text-align: right;">
+                                <div class="notion-actions" style="justify-content: flex-end; gap: 6px;">
                                     <button class="notion-action-btn" title="Editar"
                                             @onclick="() => EditarPresupuesto(presupuesto)">
                                         <i class="bi bi-pencil"></i>
@@ -203,22 +203,20 @@ else
                                     {
                                         <button class="notion-action-btn"
                                                 title="Marcar como Aceptado"
-                                                @onclick='() => CambiarEstadoIndividual(presupuesto.Id, "Aceptado")'
-                                                style="color: #28a745;">
+                                                @onclick='() => CambiarEstadoIndividual(presupuesto.Id, "Aceptado")'>
                                             <i class="bi bi-check-circle"></i>
                                         </button>
+
                                         <button class="notion-action-btn"
                                                 title="Marcar como Rechazado"
-                                                @onclick='() => CambiarEstadoIndividual(presupuesto.Id, "Rechazado")'
-                                                style="color: #dc3545;">
+                                                @onclick='() => CambiarEstadoIndividual(presupuesto.Id, "Rechazado")'>
                                             <i class="bi bi-x-circle"></i>
                                         </button>
                                     }
 
-                                    @if(presupuesto.Estado == "Borrador")
+                                    @if (presupuesto.Estado == "Borrador")
                                     {
                                         <button class="notion-action-btn delete" title="Eliminar"
-                                                disabled="@(presupuesto.Estado != "Borrador")"
                                                 @onclick="() => EliminarPresupuesto(presupuesto)">
                                             <i class="bi bi-trash3"></i>
                                         </button>
@@ -237,11 +235,11 @@ else
             </table>
         </div>
 
-        <div class="notion-table-footer" style="margin-top: 20px; border-top: 1px solid #edeceb; padding-top: 12px; color: rgba(55, 53, 47, 0.4); font-size: 12px;">
+        <div class="notion-table-footer" style="margin-top: 14px; color: rgba(15,23,42,.50); font-size: 12px;">
             <span>Total: @presupuestos.Count presupuestos</span>
         </div>
-}
-}
+    }
+</div>
 
 
 @code {

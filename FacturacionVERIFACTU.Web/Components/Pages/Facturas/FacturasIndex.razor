@@ -18,59 +18,52 @@
             </div>
         </div>
         <button class="btn-modern-secondary" @onclick="NuevaFactura">
-            <i class="bi bi-receipt"></i>Nueva Factura
+            <i class="bi bi-plus-lg"></i> Nueva Factura
         </button>
     </div>
 
-    
-    @* Tabs de estado como Presupuestos *@
+    @* Tabs de estado *@
     <div class="notion-toolbar" style="border-bottom: 1px solid #edeceb; margin-bottom: 24px;">
-    <div class="notion-tabs">
-        @foreach (var tab in estadosTabs)
-        {
-            <button class="btn-modern-secondary @(tab.Estado == estadoSeleccionado ? "active" : string.Empty)"
-                    @onclick="() => CambiarEstadoTab(tab.Estado)">
-                <span>@tab.Etiqueta</span>
-                <span class="tab-count">@ObtenerConteo(tab.Estado)</span>
-            </button>
-        }
+        <div class="notion-tabs">
+            @foreach (var tab in estadosTabs)
+            {
+                <button class="notion-tab @(tab.Estado == estadoSeleccionado ? "active" : string.Empty)"
+                        @onclick="() => CambiarEstadoTab(tab.Estado)">
+                    <span>@tab.Etiqueta</span>
+                    <span class="tab-count">@ObtenerConteo(tab.Estado)</span>
+                </button>
+            }
+        </div>
     </div>
-</div>
 
     @* Barra de acciones masivas *@
-    @* Barra de acciones - Solo visible cuando hay selección Y facturas en ese estado permiten acciones *@
-@if (seleccionados.Any())
+    @if (seleccionados.Any())
     {
-        <div class="notion-toolbar" style="margin-bottom: 24px;">
-            <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 16px; align-items: end;">
+        <div class="ui-card" style="padding: 14px; margin-bottom: 24px;">
+            <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; margin-bottom: 0;">
                 <div class="notion-input-group">
                     <span style="font-weight: 600;">@seleccionados.Count seleccionado(s)</span>
                 </div>
-                @if (PuedenEnviarseAVerifactu())
-                {
-                    <div class="notion-input-group">
-                    <button class="btn-modern" @onclick="EnviarMasivoAVerifactu">
-                        <i class="bi bi-send"></i> Enviar a VeriFactu
-                    </button>
-                    </div>
-                }
-                @if (PuedenMarcarseComoPagadas())
-                {
-                    <div class="notion-input-group">
-                    <button class="btn-modern" @onclick="MarcarMasivoComoPagadas">
-                        <i class="bi bi-cash"></i> Pagadas
-                    </button>
-                    </div>
-                }
-                @if (seleccionados.Any())
-                {
-                    <div class="notion-input-group">
-                    <button class="btn-modern-secondary" @onclick="DescargarPDFsMasivo">
+
+                <div class="notion-input-group bulk-actions" style="justify-content: flex-end; align-items: flex-end;">
+                    @if (PuedenEnviarseAVerifactu())
+                    {
+                        <button type="button" class="btn-modern bulk-btn" @onclick="EnviarMasivoAVerifactu">
+                            <i class="bi bi-send"></i> Enviar a VeriFactu
+                        </button>
+                    }
+
+                    @if (PuedenMarcarseComoPagadas())
+                    {
+                        <button type="button" class="btn-modern bulk-btn" @onclick="MarcarMasivoComoPagadas">
+                            <i class="bi bi-cash"></i> Marcar como Pagadas
+                        </button>
+                    }
+
+                    <button type="button" class="btn-modern-secondary bulk-btn" @onclick="DescargarPDFsMasivo">
                         <i class="bi bi-file-pdf"></i> Descargar PDFs
                     </button>
-                    </div>
-                }
-
+                </div>
             </div>
         </div>
     }
@@ -79,127 +72,147 @@
     {
         <div class="notion-loading">
             <div class="spinner-modern"></div>
-            <span>Cargando Facturas...</span>
+            <span>Cargando facturas...</span>
         </div>
     }
     else if (!string.IsNullOrEmpty(errorMessage))
     {
-        <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
+        <div class="alert alert-danger" style="font-size: 13px; border-radius: 12px; border: 1px solid rgba(239,68,68,.18); background-color: rgba(239,68,68,.10); color: #b91c1c; margin-bottom: 20px; padding: 12px;">
             <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
         </div>
     }
     else if (facturasAMostrar == null || !facturasAMostrar.Any())
     {
-        <div style="text-align: center; padding: 80px 20px; color: rgba(55, 53, 47, 0.4);">
+        <div class="notion-empty-state" style="padding: 80px 0; text-align: center;">
             <i class="bi bi-receipt" style="font-size: 48px; color: #edeceb; margin-bottom: 16px; display: block;"></i>
             <h4 style="font-weight: 600; margin-bottom: 8px;">No hay facturas</h4>
-            <p style="color: #787774; font-size: 14px; margin-bottom: 24px;">Crea tu primera factura</p>
+            <p style="color: #787774; font-size: 14px; margin-bottom: 24px;">
+                Empieza creando tu primera factura para registrar tus ventas.
+            </p>
             <button class="btn-modern-secondary" @onclick="NuevaFactura">Crear factura</button>
         </div>
     }
     else
     {
         <div class="notion-table-wrapper">
-            <table class="notion-table" style="width: 100%; border-collapse: collapse;">
+            <table class="notion-table">
                 <thead>
-                    <tr style="border-bottom: 1px solid var(--notion-border);">
-                        <th style="padding: 12px 16px; width: 4%; text-align: center;">
+                    <tr>
+                        <th style="width: 4%; text-align: center;">
                             <input type="checkbox" @onchange="ToggleSeleccionarTodos" checked="@TodosSeleccionados" />
                         </th>
-                        <th style="padding: 12px 16px; width: 20%; text-align: left;">Número</th>
-                        <th style="padding: 12px 16px; width: 14%; text-align: left;">Fecha</th>
-                        <th style="padding: 12px 16px; width: 24%; text-align: left;">Cliente</th>
-                        <th style="padding: 12px 16px; width: 17%; text-align: right;">Total</th>
-                        <th style="padding: 12px 16px; width: 10%; text-align: left;">Estado</th>
-                        <th style="padding: 12px 16px; width: 5%; text-align: left;">VeriFactu</th>
-                        <th style="padding: 12px 16px; width: 10%; text-align: left;">Acciones</th>
+                        <th style="width: 18%; text-align: left;">NÚMERO</th>
+                        <th style="width: 14%; text-align: left;">FECHA</th>
+                        <th style="width: 24%; text-align: left;">CLIENTE</th>
+                        <th style="width: 14%; text-align: right;">TOTAL</th>
+                        <th style="width: 8%; text-align: center;">ESTADO</th>
+                        <th style="width: 10%; text-align: center;">VERIFACTU</th>
+                        <th style="width: 8%; text-align: right;">ACCIONES</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var factura in facturasAMostrar)
                     {
-                       <tr>
-                           <td style="padding: 16px; text-align: center;">
+                        <tr>
+                            <td style="text-align: center;">
                                 <input type="checkbox"
                                        checked="@seleccionados.Contains(factura.Id)"
                                        @onchange="(e) => ToggleSeleccion(factura, e)" />
                             </td>
-                            <td style="padding: 16px;">
+
+                            <td>
                                 <div class="notion-cell-title">@factura.SerieCodigo-@factura.Numero</div>
                                 <div class="notion-cell-desc">Ejercicio @factura.Ejercicio</div>
                             </td>
-                            <td style="padding: 16px;">
-                                <span style="color: #787774; font-size: 14px;">@factura.FechaEmision.ToString("dd/MM/yyyy")</span>
+
+                            <td>
+                                <span style="color: rgba(15,23,42,.65); font-size: 14px;">
+                                    @factura.FechaEmision.ToString("dd/MM/yyyy")
+                                </span>
                             </td>
-                            <td style="padding: 16px;">
-                                        <div class="notion-cell-title">@factura.ClienteNombre</div>
+
+                            <td style="max-width: 0;">
+                                <div class="notion-cell-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@factura.ClienteNombre</div>
                             </td>
-                            
-                        
-                    
-                             <td style="padding: 16px; text-align: right;">
-                                <span style="font-weight: 600;">@factura.Total.ToString("C")</span>
+
+                            <td style="text-align: right;">
+                                <span style="font-weight: 700;">@factura.Total.ToString("C")</span>
                             </td>
-                            <td style="padding: 16px; text-align: center;">
-                                <span class="notion-badge-@GetEstadoClass(factura.Estado)">@factura.Estado</span>
+
+                            <td style="text-align: center;">
+                                <span class="notion-badge @GetEstadoClass(factura.Estado)">
+                                    @factura.Estado
+                                </span>
                             </td>
-                    
-                            <td style="padding: 16px; text-align: center;">
+
+                            <td style="text-align: center; white-space: nowrap;">
                                 @if (factura.EnviadaVERIFACTU)
                                 {
-                                    <span class="notion-badge" style="background: #dcfce7; color: #166534;">
+                                    <span class="notion-badge badge-success" style="white-space: nowrap;">
                                         <i class="bi bi-check-circle-fill"></i> Enviada
                                     </span>
                                 }
                                 else
                                 {
-                                    <span class="notion-badge" style="background: #fef3c7; color: #92400e;">
+                                    <span class="notion-badge badge-warning" style="white-space: nowrap;">
                                         <i class="bi bi-clock"></i> Pendiente
                                     </span>
                                 }
                             </td>
-                            <td style="padding: 16px; text-align: right;">
-                                <div class="notion-actions" style="justify-content: flex-end; gap: 4px;">
+
+                            <td style="text-align: right;">
+                                <div class="notion-actions" style="justify-content: flex-end; gap: 6px;">
                                     @if (!factura.Bloqueada && factura.Estado != "Anulada")
                                     {
-                                        <button class="notion-action-btn" @onclick="() => EditarFactura(factura.Id)" title="Editar">
+                                        <button class="notion-action-btn" title="Editar"
+                                                @onclick="() => EditarFactura(factura.Id)">
                                             <i class="bi bi-pencil"></i>
                                         </button>
                                     }
-                                    <button class="notion-action-btn" @onclick="() => DescargarPDF(factura.Id)" title="PDF">
+
+                                    <button class="notion-action-btn" title="Descargar PDF"
+                                            @onclick="() => DescargarPDF(factura.Id)">
                                         <i class="bi bi-file-pdf"></i>
                                     </button>
+
                                     @if (!factura.EnviadaVERIFACTU && factura.Estado != "Anulada")
                                     {
-                                        <button class="notion-action-btn" style="color: #0ea5e9;" @onclick="() => EnviarAVerifactu(factura.Id)" title="Enviar VeriFactu">
+                                        <button class="notion-action-btn" title="Enviar a VeriFactu"
+                                                @onclick="() => EnviarAVerifactu(factura.Id)">
                                             <i class="bi bi-send"></i>
                                         </button>
                                     }
-                                    @if (factura.Estado != "Anulada" && !factura.Bloqueada)
-                                    {
-                                        <button class="notion-action-btn delete" @onclick="() => AnularFactura(factura.Id)" title="Anular">
-                                            <i class="bi bi-x-circle"></i>
-                                        </button>
-                                    }
+
                                     @if (factura.Estado == "Emitida")
                                     {
-                                        <button class="notion-action-btn" style="color: #16a34a;" @onclick="() => MarcarComoPagada(factura.Id)" title="Marcar como pagada">
+                                        <button class="notion-action-btn" title="Marcar como Pagada"
+                                                @onclick="() => MarcarComoPagada(factura.Id)">
                                             <i class="bi bi-cash"></i>
+                                        </button>
+                                    }
+
+                                    @if (factura.Estado != "Anulada" && !factura.Bloqueada)
+                                    {
+                                        <button class="notion-action-btn delete" title="Anular"
+                                                @onclick="() => AnularFactura(factura.Id)">
+                                            <i class="bi bi-x-circle"></i>
                                         </button>
                                     }
                                 </div>
                             </td>
-                     </tr> 
+                        </tr>
                     }
                 </tbody>
             </table>
         </div>
 
-        <div class="notion-table-footer" style="margin-top: 20px; border-top: 1px solid #edeceb; padding-top: 12px; color: rgba(55, 53, 47, 0.4); font-size: 12px;">
-            <span>Mostrando @facturasAMostrar.Count facturas</span>
+        <div class="notion-table-footer" style="margin-top: 14px; color: rgba(15,23,42,.50); font-size: 12px;">
+            <span>Total: @facturasAMostrar.Count facturas</span>
         </div>
     }
 </div>
+
+
 
 @code {
     [Inject] private IJSRuntime JS { get; set; } = null!;

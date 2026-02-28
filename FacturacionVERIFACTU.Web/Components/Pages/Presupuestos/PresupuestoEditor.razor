@@ -5,19 +5,21 @@
 @using Microsoft.AspNetCore.Components.Forms
 @attribute [Authorize]
 
-<div class="notion-content">
-    <div class="notion-breadcrumb">
-        <a href="/presupuestos">Presupuestos</a> / @(Id == 0 ? "Nuevo" : "Editar")
-    </div>
+<div class="notion-content presupuesto-editor">
+    <div class="editor-card">
+        <div class="notion-breadcrumb">
+            <a href="/presupuestos">Presupuestos</a> / @(Id == 0 ? "Nuevo" : "Editar")
+        </div>
 
-    <div class="notion-page-header">
-        <div class="header-main">
-            <span class="header-icon">
-                <i class="bi bi-file-earmark-text"></i>
-            </span>
-            <div>
-                <h1>@(Id == 0 ? "Nuevo presupuesto" : $"Presupuesto {numeroPresupuesto}")</h1>
-                <p>@(Id == 0 ? "Crea una propuesta comercial con líneas y totales automáticos." : $"Estado actual: {estadoPresupuesto}")</p>
+        <div class="notion-page-header">
+            <div class="header-main">
+                <span class="header-icon">
+                    <i class="bi bi-file-earmark-text"></i>
+                </span>
+                <div>
+                    <h1>@(Id == 0 ? "Nuevo presupuesto" : $"Presupuesto {numeroPresupuesto}")</h1>
+                    <p>@(Id == 0 ? "Crea una propuesta comercial con líneas y totales automáticos." : $"Estado actual: {estadoPresupuesto}")</p>
+                </div>
             </div>
         </div>
     </div>
@@ -72,7 +74,7 @@
                     <option value="0">Selecciona una serie</option>
                     @foreach (var serie in SeriesPresupuestos)
                     {
-                        <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio)</option>
+                        <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio</option>
                     }
                 </InputSelect>
             </div>
@@ -106,25 +108,27 @@
             </div>
         </div>
 
-        <div class="presupuesto-lines-header">
-            <div>
-                <h3>Líneas del presupuesto</h3>
-                <p style="color: rgba(55, 53, 47, 0.6); font-size: 13px; margin: 0;">
-                    Añade productos o líneas manuales y revisa los importes en tiempo real.
-                </p>
-            </div>
-            <div class="lines-actions">
-                <button type="button" class="btn-modern-secondary" @onclick="AbrirModalProductosAsync" disabled="@(!EsEditable)">
-                    <i class="bi bi-box-seam"></i> Añadir producto
-                </button>
-                <button type="button" class="btn-modern-secondary" @onclick="AgregarLineaManual" disabled="@(!EsEditable)">
-                    <i class="bi bi-plus-circle"></i> Línea manual
-                </button>
+        <div class="editor-card editor-card-lines">
+            <div class="presupuesto-lines-header">
+                <div>
+                    <h3>Líneas del presupuesto</h3>
+                    <p style="color: rgba(55, 53, 47, 0.6); font-size: 13px; margin: 0;">
+                        Añade productos o líneas manuales y revisa los importes en tiempo real.
+                    </p>
+                </div>
+                <div class="lines-action">
+                    <button type="button" class="btn-modern-secondary" @onclick="AbrirModalProductosAsync" disabled="@(!EsEditable)">
+                        <i class="bi bi-box-seam"></i> Añadir producto
+                    </button>
+                    <button type="button" class="btn-modern-secondary" @onclick="AgregarLineaManual" disabled="@(!EsEditable)">
+                        <i class="bi bi-plus-circle"></i> Línea manual
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div class="notion-table-wrapper">
-            <table class="notion-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+        <div class="notion-table-wrapper editor-table-card">
+            <table class="notion-table presupuesto-lines-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
                 <thead>
                     <tr style="border-bottom: 1px solid var(--notion-border);">
                         <th style="padding: 12px 10px; width: 25%; text-align: left;">DESCRIPCIÓN</th>
@@ -274,7 +278,7 @@
 
     @if (Id > 0)
     {
-        <div class="convertir-factura" style="margin-top: 24px;">
+        <div class="convertir-factura estado-panel" style="margin-top: 24px;">
             <h3>Cambiar estado del presupuesto</h3>
             <p>Estado actual: <strong>@estadoPresupuesto</strong></p>
 
@@ -336,7 +340,7 @@
 
     @if (Id > 0 && estadoPresupuesto == "Aceptado")
     {
-        <div class="convertir-factura">
+        <div class="convertir-factura estado-panel">
             <h3>Convertir a factura</h3>
             <p>Genera la factura desde este presupuesto aceptado.</p>
 
@@ -383,7 +387,7 @@
 
     @if (Id > 0 && estadoPresupuesto == "Aceptado")
     {
-        <div class="convertir-factura" style="margin-top: 24px;">
+        <div class="convertir-factura estado-panel" style="margin-top: 24px;">
             <h3>Convertir a albarán</h3>
             <p>Genera un albarán desde este presupuesto aceptado.</p>
 
@@ -886,7 +890,7 @@
             };
 
             var result = await ApiService.PostAsync<ConvertirPresupuestoAAlbaranDto, AlbaranResponseDto>(
-                $"api/albaranes/desde-prespuesto/{Id}", request);
+                $"api/albaranes/desde-presupuesto/{Id}", request);
 
             if (result == null)
             {

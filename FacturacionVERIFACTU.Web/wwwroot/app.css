@@ -1965,3 +1965,1323 @@ h1:focus, h2:focus, h3:focus, .login-header h1:focus {
     }
 }
 
+/* NUEVO STILO*/
+/* =========================================================
+   FACTURACIONVERIFACTU - ADMIN CLEAN UI LAYER
+   Pegar al FINAL de app.css (override controlado)
+   Inspirado en admin modernos (Dass) + tu estilo Notion
+   ========================================================= */
+
+/* ---------- Variables de tema ---------- */
+:root {
+    --ui-bg: #ffffff;
+    --ui-page: #f6f7fb;
+    --ui-card: #ffffff;
+    --ui-text: #0f172a;
+    --ui-muted: rgba(15, 23, 42, .60);
+    --ui-border: rgba(15, 23, 42, .08);
+    --ui-border-strong: rgba(15, 23, 42, .14);
+    --ui-shadow: 0 10px 30px rgba(15, 23, 42, .06);
+    --ui-shadow-soft: 0 6px 18px rgba(15, 23, 42, .06);
+    --ui-radius: 14px;
+    --ui-radius-sm: 10px;
+    --ui-primary: #4f7cff; /* azul suave admin */
+    --ui-primary-weak: rgba(79, 124, 255, .12);
+    --ui-success: #22c55e;
+    --ui-success-weak: rgba(34, 197, 94, .12);
+    --ui-warning: #f59e0b;
+    --ui-warning-weak: rgba(245, 158, 11, .14);
+    --ui-danger: #ef4444;
+    --ui-danger-weak: rgba(239, 68, 68, .12);
+    --ui-info: #06b6d4;
+    --ui-info-weak: rgba(6, 182, 212, .14);
+    --ui-focus: 0 0 0 3px rgba(79,124,255,.18);
+}
+
+/* ---------- Fondo general tipo admin ---------- */
+body, .notion-body-reset {
+    background: var(--ui-page) !important;
+    color: var(--ui-text) !important;
+}
+
+/* ---------- Contenedor principal (tu layout Notion) ---------- */
+.notion-app {
+    background: var(--ui-page) !important;
+}
+
+/* Mantén tu main blanco si quieres; si prefieres look admin,
+   usa page bg y cards encima */
+.notion-main {
+    background: transparent !important;
+}
+
+/* Content: menos “centrado Notion”, más “admin” */
+.notion-content {
+    max-width: 1200px;
+    padding: 28px 28px;
+}
+
+/* ---------- SIDEBAR tipo admin ---------- */
+.notion-sidebar {
+    width: 270px !important;
+    min-width: 270px !important;
+    background: var(--ui-bg) !important;
+    border-right: 1px solid var(--ui-border) !important;
+    box-shadow: 8px 0 24px rgba(15, 23, 42, .03);
+}
+
+.notion-sidebar-header {
+    padding: 18px 16px !important;
+    border-bottom: 1px solid var(--ui-border) !important;
+    background: var(--ui-bg);
+}
+
+.sidebar-logo {
+    gap: 12px;
+    font-size: 16px;
+    color: var(--ui-text);
+}
+
+    .sidebar-logo .logo-badge {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--ui-primary-weak);
+        color: var(--ui-primary);
+        font-weight: 800;
+    }
+
+.nav-section-label {
+    padding: 14px 12px 8px 12px;
+    color: rgba(15, 23, 42, .45);
+    letter-spacing: .08em;
+}
+
+.nav-link, .nav-item-link {
+    border-radius: 12px;
+    padding: 10px 12px !important;
+    font-weight: 500;
+    color: rgba(15, 23, 42, .86) !important;
+    transition: background .18s ease, transform .18s ease, color .18s ease;
+}
+
+    .nav-link i, .nav-item-link i {
+        color: rgba(15, 23, 42, .55);
+    }
+
+    .nav-link:hover, .nav-item-link:hover {
+        background: rgba(15, 23, 42, .045) !important;
+    }
+
+    .nav-link.active, .nav-item-link.active {
+        background: var(--ui-primary-weak) !important;
+        color: var(--ui-primary) !important;
+    }
+
+        .nav-link.active i, .nav-item-link.active i {
+            color: var(--ui-primary) !important;
+        }
+
+/* Logout más elegante */
+.logout-btn {
+    color: var(--ui-danger) !important;
+}
+
+    .logout-btn i {
+        color: var(--ui-danger) !important;
+    }
+
+/* ---------- TOPBAR (si tienes barra superior o breadcrumb) ---------- */
+/* Puedes envolver breadcrumb + acciones en un div con class "ui-topbar" */
+.ui-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius);
+    padding: 12px 14px;
+    box-shadow: var(--ui-shadow-soft);
+    margin-bottom: 16px;
+}
+
+.ui-topbar-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 240px;
+}
+
+.ui-topbar-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ui-text);
+}
+
+.ui-topbar-subtitle {
+    font-size: 12px;
+    color: var(--ui-muted);
+}
+
+.ui-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Search topbar */
+.ui-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(15, 23, 42, .04);
+    border: 1px solid rgba(15, 23, 42, .06);
+    border-radius: 999px;
+    padding: 10px 12px;
+    min-width: 320px;
+}
+
+    .ui-search i {
+        color: rgba(15, 23, 42, .55);
+    }
+
+    .ui-search input {
+        border: none;
+        outline: none;
+        background: transparent;
+        width: 100%;
+        font-size: 13px;
+        color: var(--ui-text);
+    }
+
+/* ---------- Header de página (título + botón) ---------- */
+.notion-header {
+    background: transparent;
+    margin-bottom: 16px;
+}
+
+.header-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, .04);
+    border: 1px solid var(--ui-border);
+    font-size: 20px;
+}
+
+.notion-header h1 {
+    color: var(--ui-text);
+}
+
+/* ---------- Botones (admin) ---------- */
+.btn-modern,
+.btn-modern-secondary {
+    border-radius: 12px !important;
+    padding: 10px 14px !important;
+    font-weight: 600 !important;
+    transition: transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease;
+}
+
+.btn-modern {
+    background: var(--ui-primary) !important;
+    color: #fff !important;
+    box-shadow: 0 10px 22px rgba(79,124,255,.18);
+}
+
+    .btn-modern:hover {
+        transform: translateY(-1px);
+    }
+
+.btn-modern-secondary {
+    background: var(--ui-bg) !important;
+    border: 1px solid var(--ui-border) !important;
+    color: rgba(15, 23, 42, .88) !important;
+}
+
+    .btn-modern-secondary:hover {
+        border-color: var(--ui-border-strong) !important;
+        box-shadow: var(--ui-shadow-soft);
+        transform: translateY(-1px);
+    }
+
+/* Botón peligro */
+.btn-danger-soft {
+    background: var(--ui-danger-weak);
+    border: 1px solid rgba(239,68,68,.22);
+    color: var(--ui-danger);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-weight: 700;
+}
+
+    .btn-danger-soft:hover {
+        transform: translateY(-1px);
+    }
+
+/* ---------- Inputs / selects (admin clean) ---------- */
+.notion-input-modern,
+.notion-input,
+input[type="text"], input[type="email"], input[type="password"],
+input[type="number"], select, textarea {
+    border-radius: 12px !important;
+    border: 1px solid rgba(15, 23, 42, .10) !important;
+    background: #fff !important;
+    padding: 10px 12px !important;
+    font-size: 14px !important;
+    color: var(--ui-text) !important;
+}
+
+    .notion-input-modern:focus,
+    .notion-input:focus,
+    input:focus, select:focus, textarea:focus {
+        outline: none !important;
+        border-color: rgba(79,124,255,.55) !important;
+        box-shadow: var(--ui-focus) !important;
+    }
+
+    /* Placeholder */
+    input::placeholder, textarea::placeholder {
+        color: rgba(15, 23, 42, .35) !important;
+    }
+
+/* ---------- Cards / paneles ---------- */
+.ui-card,
+.notion-card,
+.dashboard-kpi,
+.convertir-factura,
+.totales-container,
+.notion-modal,
+.modal-panel {
+    background: var(--ui-card) !important;
+    border: 1px solid var(--ui-border) !important;
+    border-radius: var(--ui-radius) !important;
+    box-shadow: var(--ui-shadow-soft);
+}
+
+    .notion-card:hover {
+        border-color: var(--ui-border-strong) !important;
+    }
+
+/* ---------- Dashboard KPI (más “admin”) ---------- */
+.dashboard-kpi {
+    padding: 16px 16px !important;
+}
+
+.dashboard-kpi-title {
+    color: rgba(15, 23, 42, .55) !important;
+}
+
+.dashboard-kpi-value {
+    font-size: 24px !important;
+}
+
+/* ---------- Tabs estilo admin ---------- */
+.notion-tabs {
+    gap: 10px;
+}
+
+.notion-tab {
+    border-radius: 999px;
+    border: 1px solid rgba(15,23,42,.10);
+    background: rgba(15,23,42,.03);
+    padding: 8px 14px;
+    font-weight: 600;
+}
+
+    .notion-tab.active {
+        background: var(--ui-primary) !important;
+        border-color: var(--ui-primary) !important;
+        color: #fff !important;
+    }
+
+    .notion-tab .tab-count {
+        background: rgba(255,255,255,.18);
+    }
+
+/* ---------- Tablas (look admin) ---------- */
+.notion-table,
+.table-lineas {
+    width: 100%;
+    border-collapse: separate !important;
+    border-spacing: 0;
+    overflow: hidden;
+    border-radius: var(--ui-radius) !important;
+    background: var(--ui-card);
+    border: 1px solid var(--ui-border);
+    box-shadow: var(--ui-shadow-soft);
+}
+
+    /* Cabecera */
+    .notion-table thead th,
+    .table-lineas thead th {
+        background: rgba(15, 23, 42, .03) !important;
+        border-bottom: 1px solid var(--ui-border) !important;
+        color: rgba(15, 23, 42, .55) !important;
+        font-size: 12px !important;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        padding: 14px 12px !important;
+        white-space: nowrap;
+    }
+
+    /* Filas */
+    .notion-table tbody td,
+    .table-lineas tbody td {
+        padding: 14px 12px !important;
+        border-bottom: 1px solid rgba(15, 23, 42, .06);
+        vertical-align: middle;
+    }
+
+    .notion-table tbody tr:hover,
+    .table-lineas tbody tr:hover {
+        background: rgba(15, 23, 42, .025);
+    }
+
+/* Botones de acción (iconitos) */
+.notion-action-btn {
+    border-radius: 12px !important;
+    padding: 8px !important;
+    color: rgba(15, 23, 42, .55) !important;
+}
+
+    .notion-action-btn:hover {
+        background: rgba(15, 23, 42, .06) !important;
+        color: rgba(15, 23, 42, .85) !important;
+    }
+
+    .notion-action-btn.delete:hover {
+        background: var(--ui-danger-weak) !important;
+        color: var(--ui-danger) !important;
+    }
+
+/* ---------- Badges (estado / tipo) estilo “pill” ---------- */
+.notion-badge {
+    border-radius: 999px !important;
+    padding: 5px 10px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    border: 1px solid rgba(15,23,42,.08);
+}
+
+    /* Estados genéricos */
+    .notion-badge.active {
+        background: var(--ui-success-weak) !important;
+        color: #15803d !important;
+        border-color: rgba(34,197,94,.18);
+    }
+
+    .notion-badge.inactive {
+        background: rgba(15,23,42,.05) !important;
+        color: rgba(15,23,42,.60) !important;
+    }
+
+    /* Facturas (ya tenías, aquí quedan más “admin”) */
+    .notion-badge.estado-emitida {
+        background: var(--ui-primary-weak) !important;
+        color: var(--ui-primary) !important;
+        border-color: rgba(79,124,255,.18);
+    }
+
+    .notion-badge.estado-pagada {
+        background: var(--ui-success-weak) !important;
+        color: #15803d !important;
+        border-color: rgba(34,197,94,.18);
+    }
+
+    .notion-badge.estado-anulada {
+        background: var(--ui-danger-weak) !important;
+        color: #b91c1c !important;
+        border-color: rgba(239,68,68,.18);
+    }
+
+    /* VeriFactu */
+    .notion-badge.tipo-f1 {
+        background: var(--ui-success-weak) !important;
+        color: #15803d !important;
+        border-color: rgba(34,197,94,.18);
+    }
+
+    .notion-badge.tipo-f2 {
+        background: var(--ui-warning-weak) !important;
+        color: #92400e !important;
+        border-color: rgba(245,158,11,.20);
+    }
+
+    .notion-badge.tipo-rectificativa {
+        background: var(--ui-danger-weak) !important;
+        color: #b91c1c !important;
+        border-color: rgba(239,68,68,.18);
+    }
+
+/* ---------- Breadcrumb más “admin” ---------- */
+.notion-breadcrumb {
+    color: rgba(15, 23, 42, .55) !important;
+}
+
+    .notion-breadcrumb a:hover {
+        color: var(--ui-primary) !important;
+    }
+
+/* ---------- Login estilo admin ---------- */
+.login-container {
+    background: var(--ui-page) !important;
+}
+
+.login-card {
+    background: var(--ui-bg) !important;
+    border: 1px solid var(--ui-border) !important;
+    border-radius: 18px !important;
+    box-shadow: var(--ui-shadow);
+}
+
+.login-logo h1 {
+    color: var(--ui-text) !important;
+}
+
+/* ---------- Modales (más pro) ---------- */
+div.notion-modal-overlay {
+    background: rgba(15, 23, 42, .45) !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+div.notion-modal,
+.notion-modal-productos {
+    border-radius: 18px !important;
+    border: 1px solid rgba(15, 23, 42, .10) !important;
+    box-shadow: var(--ui-shadow) !important;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+    .notion-content {
+        padding: 18px 16px;
+    }
+
+    .ui-search {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .ui-topbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ui-topbar-right {
+        justify-content: space-between;
+    }
+}
+
+/* =========================================================
+   EXTRAS para integrar Index (tabs + filtros + badges)
+   ========================================================= */
+
+/* Selects en barra de filtros (Facturas) */
+.notion-select-filter {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, .10);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: rgba(15, 23, 42, .88);
+    min-width: 180px;
+}
+
+    .notion-select-filter:focus {
+        outline: none;
+        border-color: rgba(79,124,255,.55);
+        box-shadow: 0 0 0 3px rgba(79,124,255,.18);
+    }
+
+/* Tabs: cuando uses .notion-tab en vez de btn-modern-secondary */
+.notion-tabs .notion-tab {
+    border-radius: 999px;
+}
+
+    .notion-tabs .notion-tab .tab-count {
+        margin-left: 8px;
+    }
+
+/* Badges genéricos para Albaranes (warning/info/success/error/default) */
+.notion-badge.badge-warning {
+    background: rgba(245, 158, 11, .14);
+    border-color: rgba(245, 158, 11, .20);
+    color: #92400e;
+}
+
+.notion-badge.badge-info {
+    background: rgba(6, 182, 212, .14);
+    border-color: rgba(6, 182, 212, .20);
+    color: #0e7490;
+}
+
+.notion-badge.badge-success {
+    background: rgba(34, 197, 94, .12);
+    border-color: rgba(34, 197, 94, .18);
+    color: #166534;
+}
+
+.notion-badge.badge-error {
+    background: rgba(239, 68, 68, .12);
+    border-color: rgba(239, 68, 68, .18);
+    color: #b91c1c;
+}
+
+.notion-badge.badge-default {
+    background: rgba(15, 23, 42, .05);
+    border-color: rgba(15, 23, 42, .08);
+    color: rgba(15, 23, 42, .65);
+}
+
+/* Badges para Presupuestos */
+.notion-badge.badge-draft {
+    background: rgba(15, 23, 42, .05);
+    border-color: rgba(15, 23, 42, .08);
+    color: rgba(15, 23, 42, .65);
+}
+
+.notion-badge.badge-sent {
+    background: rgba(79, 124, 255, .12);
+    border-color: rgba(79, 124, 255, .18);
+    color: #2b5cff;
+}
+
+.notion-badge.badge-accepted {
+    background: rgba(34, 197, 94, .12);
+    border-color: rgba(34, 197, 94, .18);
+    color: #166534;
+}
+
+.notion-badge.badge-rejected {
+    background: rgba(239, 68, 68, .12);
+    border-color: rgba(239, 68, 68, .18);
+    color: #b91c1c;
+}
+
+.notion-badge.badge-neutral {
+    background: rgba(15, 23, 42, .05);
+    border-color: rgba(15, 23, 42, .08);
+    color: rgba(15, 23, 42, .65);
+}
+
+/* =========================================================
+   FIX: barra de acciones masivas -> botones en una sola fila
+   ========================================================= */
+.bulk-actions,
+.bulk-actions .bulk-btn,
+.bulk-actions .btn-modern,
+.bulk-actions .btn-modern-secondary {
+    width: auto !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+    /* opcional: que no rompan por icono + texto */
+    .bulk-actions .bulk-btn i {
+        margin-right: 6px;
+    }
+
+/* si aun así se baja a otra fila por falta de espacio, permite scroll horizontal */
+.bulk-actions {
+    display: flex !important;
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    padding-bottom: 6px; /* para que el scroll no “corte” */
+}
+
+    .bulk-actions::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .bulk-actions::-webkit-scrollbar-thumb {
+        background: rgba(55, 53, 47, 0.18);
+        border-radius: 999px;
+    }
+
+        .bulk-actions::-webkit-scrollbar-thumb:hover {
+            background: rgba(55, 53, 47, 0.28);
+        }
+
+
+/* =========================================================
+   PRESUPUESTOS - Colores exactos estilo demo (suaves)
+   Pegar al final del app.css
+   ========================================================= */
+
+.notion-badge.badge-warning {
+    background: rgba(245, 158, 11, 0.16) !important;
+    border-color: rgba(245, 158, 11, 0.22) !important;
+    color: #92400e !important;
+}
+
+.notion-badge.badge-info {
+    background: rgba(79, 124, 255, 0.14) !important; /* azul suave */
+    border-color: rgba(79, 124, 255, 0.22) !important;
+    color: #2b5cff !important;
+}
+
+.notion-badge.badge-success {
+    background: rgba(34, 197, 94, 0.14) !important;
+    border-color: rgba(34, 197, 94, 0.22) !important;
+    color: #166534 !important;
+}
+
+.notion-badge.badge-error {
+    background: rgba(239, 68, 68, 0.14) !important;
+    border-color: rgba(239, 68, 68, 0.22) !important;
+    color: #b91c1c !important;
+}
+
+.notion-badge.badge-default {
+    background: rgba(15, 23, 42, 0.06) !important;
+    border-color: rgba(15, 23, 42, 0.10) !important;
+    color: rgba(15, 23, 42, 0.72) !important;
+}
+
+/* =========================================================
+   PATCH FINAL (sin limpiar app.css)
+   Objetivo: NO romper nada, solo corregir lo necesario.
+   ========================================================= */
+
+/* 1) Barra de acciones masivas SIEMPRE en una fila */
+.bulk-actions {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    justify-content: flex-end !important;
+    align-items: flex-end !important;
+    overflow-x: auto !important;
+    padding-bottom: 6px !important;
+}
+
+    /* Evita que un wrapper interno te rompa a 2 filas */
+    .bulk-actions > .notion-input-group {
+        display: inline-flex !important;
+        flex: 0 0 auto !important;
+        margin: 0 !important;
+    }
+
+    /* 2) Anular el width:100% global de .btn-modern SOLO dentro de bulk */
+    .bulk-actions .btn-modern,
+    .bulk-actions .btn-modern-secondary,
+    .bulk-actions .bulk-btn {
+        width: auto !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        white-space: nowrap !important;
+    }
+
+    /* Asegura mismo alto para input y botones */
+    .bulk-actions .bulk-btn,
+    .bulk-actions .btn-modern,
+    .bulk-actions .btn-modern-secondary {
+        height: 38px !important;
+        min-height: 38px !important;
+        padding: 0 14px !important;
+    }
+
+    /* Selector de serie compacto y sin margin-bottom heredado */
+    .bulk-actions .bulk-serie {
+        width: 170px !important;
+        min-width: 150px !important;
+    }
+
+        .bulk-actions .bulk-serie .notion-input-modern,
+        .bulk-actions .bulk-serie select,
+        .bulk-actions .bulk-serie input {
+            height: 38px !important;
+            margin-bottom: 0 !important;
+        }
+
+    /* Scrollbar discreto (opcional) */
+    .bulk-actions::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .bulk-actions::-webkit-scrollbar-thumb {
+        background: rgba(55, 53, 47, 0.18);
+        border-radius: 999px;
+    }
+
+        .bulk-actions::-webkit-scrollbar-thumb:hover {
+            background: rgba(55, 53, 47, 0.28);
+        }
+
+/* 3) Unificar badges (compatibilidad con clases viejas y nuevas) */
+.notion-badge-warning,
+.notion-badge.badge-warning {
+    background: #fef3c7 !important;
+    color: #92400e !important;
+    border: 1px solid rgba(245,158,11,.25) !important;
+    border-radius: 999px !important;
+    padding: 5px 10px !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+}
+
+.notion-badge-info,
+.notion-badge.badge-info {
+    background: #dbeafe !important;
+    color: #1e40af !important;
+    border: 1px solid rgba(59,130,246,.25) !important;
+    border-radius: 999px !important;
+    padding: 5px 10px !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+}
+
+.notion-badge-success,
+.notion-badge.badge-success {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+    border: 1px solid rgba(34,197,94,.25) !important;
+    border-radius: 999px !important;
+    padding: 5px 10px !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+}
+
+.notion-badge-error,
+.notion-badge.badge-error {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+    border: 1px solid rgba(239,68,68,.25) !important;
+    border-radius: 999px !important;
+    padding: 5px 10px !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+}
+
+.notion-badge-default,
+.notion-badge.badge-default {
+    background: #f1f1f0 !important;
+    color: #787774 !important;
+    border: 1px solid rgba(55,53,47,.12) !important;
+    border-radius: 999px !important;
+    padding: 5px 10px !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+}
+
+/* =========================================================
+   PATCH FINAL - ALBARANES (sin limpiar app.css)
+   Objetivo: acciones masivas 1 fila + badges consistentes
+   ========================================================= */
+
+/* Barra de acciones masivas albaranes (una sola fila) */
+.bulk-actions-albaranes {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    justify-content: flex-end !important;
+    align-items: flex-end !important;
+    overflow-x: auto !important;
+    padding-bottom: 6px !important;
+}
+
+    .bulk-actions-albaranes > * {
+        flex: 0 0 auto !important;
+    }
+
+    /* anular width:100% de .btn-modern SOLO dentro de bulk albaranes */
+    .bulk-actions-albaranes .btn-modern,
+    .bulk-actions-albaranes .btn-modern-secondary,
+    .bulk-actions-albaranes .bulk-btn {
+        width: auto !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        white-space: nowrap !important;
+    }
+
+    /* altura uniforme */
+    .bulk-actions-albaranes .btn-modern,
+    .bulk-actions-albaranes .btn-modern-secondary,
+    .bulk-actions-albaranes .bulk-btn {
+        height: 38px !important;
+        min-height: 38px !important;
+        padding: 0 14px !important;
+    }
+
+    /* scrollbar discreto */
+    .bulk-actions-albaranes::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .bulk-actions-albaranes::-webkit-scrollbar-thumb {
+        background: rgba(55, 53, 47, 0.18);
+        border-radius: 999px;
+    }
+
+        .bulk-actions-albaranes::-webkit-scrollbar-thumb:hover {
+            background: rgba(55, 53, 47, 0.28);
+        }
+
+/* Badges (compatibilidad viejo + nuevo) */
+.notion-badge-warning,
+.notion-badge.badge-warning {
+    background: #fef3c7 !important;
+    color: #92400e !important;
+    border: 1px solid rgba(245,158,11,.25) !important;
+    border-radius: 999px !important;
+    padding: 5px 10px !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+}
+
+.notion-badge-info,
+.notion-badge.badge-info {
+    background: #dbeafe !important;
+    color: #1e40af !important;
+    border: 1px solid rgba(59,130,246,.25) !important;
+    border-radius: 999px !important;
+    padding: 5px 10px !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+}
+
+.notion-badge-success,
+.notion-badge.badge-success {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+    border: 1px solid rgba(34,197,94,.25) !important;
+    border-radius: 999px !important;
+    padding: 5px 10px !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+}
+
+.notion-badge-error,
+.notion-badge.badge-error {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+    border: 1px solid rgba(239,68,68,.25) !important;
+    border-radius: 999px !important;
+    padding: 5px 10px !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+}
+
+.notion-badge-default,
+.notion-badge.badge-default {
+    background: #f1f1f0 !important;
+    color: #787774 !important;
+    border: 1px solid rgba(55,53,47,.12) !important;
+    border-radius: 999px !important;
+    padding: 5px 10px !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+}
+
+/* =========================================================
+   PATCH - Presupuesto Editor (sin limpiar app.css)
+   Objetivo: mismo look que Index + alineaciones + tabla líneas
+   ========================================================= */
+
+/* Header del editor (icono como pill) */
+.notion-page-header .header-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15,23,42,.04);
+    border: 1px solid rgba(15,23,42,.08);
+    font-size: 20px;
+}
+
+/* Grid del formulario: mejor respiración (sin romper tus inline) */
+.notion-form-container .notion-form-grid {
+    row-gap: 16px;
+}
+
+/* Labels consistentes */
+.notion-form-container .notion-label {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: rgba(55,53,47,.60) !important;
+}
+
+/* Inputs: sin margin-bottom global dentro del editor */
+.notion-form-container .notion-input-modern {
+    margin-bottom: 0 !important;
+}
+
+/* Hint */
+.notion-hint {
+    color: rgba(55,53,47,.55) !important;
+}
+
+/* Acciones del header de líneas: una sola fila + derecha + scroll si no cabe */
+.lines-actions.bulk-actions {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    overflow-x: auto !important;
+    padding-bottom: 6px !important;
+}
+
+    .lines-actions.bulk-actions .btn-modern,
+    .lines-actions.bulk-actions .btn-modern-secondary {
+        width: auto !important;
+        white-space: nowrap !important;
+    }
+
+/* Tabla de líneas: look limpio y columnas fijas */
+table.presupuesto-lineas-table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    border: 1px solid rgba(15,23,42,.08) !important;
+    border-radius: 14px !important;
+    overflow: hidden;
+    background: #fff;
+}
+
+    /* Head */
+    table.presupuesto-lineas-table thead th {
+        background: rgba(15,23,42,.03) !important;
+        border-bottom: 1px solid rgba(15,23,42,.08) !important;
+        color: rgba(55,53,47,.55) !important;
+        font-size: 11px !important;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+    }
+
+    /* Body rows */
+    table.presupuesto-lineas-table tbody td {
+        border-bottom: 1px solid rgba(15,23,42,.06) !important;
+    }
+
+    table.presupuesto-lineas-table tbody tr:hover {
+        background: rgba(15,23,42,.02) !important;
+    }
+
+    /* Inputs dentro de tabla: compactos y sin “estirar” */
+    table.presupuesto-lineas-table .notion-input-modern,
+    table.presupuesto-lineas-table input,
+    table.presupuesto-lineas-table select {
+        border-radius: 10px !important;
+        padding: 8px 10px !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        font-size: 13px !important;
+    }
+
+    /* Select impuesto: que no “baile” */
+    table.presupuesto-lineas-table select {
+        cursor: pointer;
+    }
+
+    /* Total columna: no partir */
+    table.presupuesto-lineas-table td span {
+        white-space: nowrap;
+    }
+
+    /* Botón borrar de línea: mismo look que index */
+    table.presupuesto-lineas-table .notion-action-btn {
+        border-radius: 10px !important;
+        padding: 8px !important;
+    }
+
+        table.presupuesto-lineas-table .notion-action-btn.delete:hover {
+            background: rgba(239,68,68,.12) !important;
+            color: #b91c1c !important;
+        }
+
+/* Totales: tarjeta limpia (sin cambiar tu estructura) */
+.presupuesto-totales {
+    background: #fff !important;
+    border: 1px solid rgba(15,23,42,.08) !important;
+    border-radius: 14px !important;
+    padding: 18px !important;
+    box-shadow: 0 6px 18px rgba(15,23,42,.06) !important;
+}
+
+    .presupuesto-totales .totales-item span {
+        color: rgba(55,53,47,.55) !important;
+        font-weight: 600 !important;
+    }
+
+    .presupuesto-totales .totales-item strong {
+        color: #37352f !important;
+    }
+
+/* Botonera final: derecha y consistente */
+.notion-form-actions {
+    justify-content: flex-start;
+}
+
+    .notion-form-actions .btn-modern,
+    .notion-form-actions .btn-modern-secondary {
+        width: auto !important;
+        height: 40px !important;
+        padding: 0 16px !important;
+        border-radius: 12px !important;
+    }
+
+/* Modal productos: asegurar que el overlay no se “come” el ancho */
+.notion-modal-productos {
+    max-width: 900px !important;
+}
+
+/* =========================================================
+   OPCIÓN 1 (MEJOR) - Presupuesto Editor en “cards”
+   Pegar al final de app.css
+   ========================================================= */
+
+/* --- Card base reutilizable --- */
+.editor-card {
+    background: #fff !important;
+    border: 1px solid rgba(15,23,42,.08) !important;
+    border-radius: 16px !important;
+    padding: 18px 18px 14px !important;
+    box-shadow: 0 6px 18px rgba(15,23,42,.06) !important;
+    margin-bottom: 16px !important;
+}
+
+    /* Card específica de líneas: un poco más “aire” */
+    .editor-card.editor-card-lines {
+        padding: 16px !important;
+    }
+
+    /* Breadcrumb más limpio dentro de card */
+    .editor-card .notion-breadcrumb {
+        margin-bottom: 10px !important;
+        color: rgba(55,53,47,.55) !important;
+    }
+
+    /* Icono del header con un toque de color (menos gris) */
+    .editor-card .header-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(79,124,255,.10) !important; /* toque azul suave */
+        border: 1px solid rgba(79,124,255,.18) !important;
+        font-size: 20px;
+    }
+
+    /* Header del editor dentro de card: sin margen excesivo */
+    .editor-card .notion-page-header {
+        margin-bottom: 0 !important;
+    }
+
+/* --- Acciones de líneas: una fila, derecha, scroll si no cabe --- */
+.lines-actions.bulk-actions {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    overflow-x: auto !important;
+    padding-bottom: 6px !important;
+}
+
+    .lines-actions.bulk-actions .btn-modern,
+    .lines-actions.bulk-actions .btn-modern-secondary {
+        width: auto !important;
+        white-space: nowrap !important;
+    }
+
+/* --- Card visual de tabla --- */
+.editor-table-card {
+    background: transparent !important;
+    border: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Tabla de líneas: look clean (menos gris) */
+table.presupuesto-lineas-table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    border: 1px solid rgba(15,23,42,.08) !important;
+    border-radius: 14px !important;
+    overflow: hidden;
+    background: #fff;
+}
+
+    /* Cabecera más blanca (adiós gris fuerte) */
+    table.presupuesto-lineas-table thead th {
+        background: #fbfbfa !important;
+        border-bottom: 1px solid rgba(15,23,42,.08) !important;
+        color: rgba(55,53,47,.55) !important;
+        font-size: 11px !important;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+    }
+
+    /* Hover sutil */
+    table.presupuesto-lineas-table tbody tr:hover {
+        background: rgba(15,23,42,.015) !important;
+    }
+
+    /* Inputs dentro de tabla: compactos */
+    table.presupuesto-lineas-table .notion-input-modern,
+    table.presupuesto-lineas-table input,
+    table.presupuesto-lineas-table select {
+        border-radius: 10px !important;
+        padding: 8px 10px !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        font-size: 13px !important;
+        border: 1px solid rgba(15,23,42,.10) !important;
+        background: #fff !important;
+    }
+
+    /* Botón borrar de línea */
+    table.presupuesto-lineas-table .notion-action-btn {
+        border-radius: 10px !important;
+        padding: 8px !important;
+    }
+
+        table.presupuesto-lineas-table .notion-action-btn.delete:hover {
+            background: rgba(239,68,68,.12) !important;
+            color: #b91c1c !important;
+        }
+
+/* Totales como card limpia */
+.presupuesto-totales {
+    background: #fff !important;
+    border: 1px solid rgba(15,23,42,.08) !important;
+    border-radius: 16px !important;
+    padding: 18px !important;
+    box-shadow: 0 6px 18px rgba(15,23,42,.06) !important;
+}
+
+/* Panel inferior de estado: limitar ancho para que no “se estire” */
+.estado-panel {
+    max-width: 720px !important;
+    width: 100% !important;
+    margin-left: 0 !important; /* si lo quieres centrado: auto */
+    margin-right: auto !important;
+}
+
+    /* Botones del panel: que no ocupen 100% */
+    .estado-panel .btn-modern,
+    .estado-panel .btn-modern-secondary {
+        width: auto !important;
+    }
+
+/* =========================================================
+   Presupuesto Editor (SCOPED) - no afecta al resto
+   ========================================================= */
+
+.presupuesto-editor .editor-card {
+    background: #fff;
+    border: 1px solid rgba(15,23,42,.08);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 6px 18px rgba(15,23,42,.06);
+    margin-bottom: 16px;
+}
+
+    .presupuesto-editor .editor-card .notion-breadcrumb {
+        margin-bottom: 10px;
+    }
+
+.presupuesto-editor .header-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(79,124,255,.10);
+    border: 1px solid rgba(79,124,255,.18);
+    font-size: 20px;
+}
+
+/* Bloque líneas (tu editor-card-lines) */
+.presupuesto-editor .editor-card-lines {
+    margin-top: 18px;
+}
+
+/* Botones de líneas a la derecha en UNA fila */
+.presupuesto-editor .presupuesto-lines-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.presupuesto-editor .lines-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+    .presupuesto-editor .lines-actions .btn-modern,
+    .presupuesto-editor .lines-actions .btn-modern-secondary {
+        width: auto !important;
+        white-space: nowrap;
+    }
+
+/* Tabla de líneas como tarjeta (tu editor-table-card) */
+.presupuesto-editor .editor-table-card {
+    background: #fff;
+    border: 1px solid rgba(15,23,42,.08);
+    border-radius: 16px;
+    padding: 10px;
+    box-shadow: 0 6px 18px rgba(15,23,42,.06);
+}
+
+/* Cabecera suave */
+.presupuesto-editor table.presupuesto-lines-table thead th {
+    background: #fbfbfa !important;
+}
+
+/* Inputs compactos dentro de tabla */
+.presupuesto-editor table.presupuesto-lines-table .notion-input-modern,
+.presupuesto-editor table.presupuesto-lines-table input,
+.presupuesto-editor table.presupuesto-lines-table select {
+    height: 36px;
+    min-height: 36px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    margin-bottom: 0 !important;
+}
+
+/* Totales como tarjeta blanca */
+.presupuesto-editor .presupuesto-totales {
+    background: #fff;
+    border: 1px solid rgba(15,23,42,.08);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 6px 18px rgba(15,23,42,.06);
+}
+
+/* Panel inferior (estado/convertir) menos ancho */
+.presupuesto-editor .estado-panel {
+    max-width: 720px;
+    width: 100%;
+}
+
+    .presupuesto-editor .estado-panel .btn-modern,
+    .presupuesto-editor .estado-panel .btn-modern-secondary {
+        width: auto !important;
+    }
