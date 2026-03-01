@@ -4,103 +4,107 @@
 @attribute [Authorize]
 
 
-<div class="notion-content">
-    <div class="notion-breadcrumb">
-        <a href="/productos">Productos</a> / @(Id == 0 ? "Nuevo" : "Editar")
-    </div>
+<div class="notion-content editor-page">
+    <div class="editor-card">
+        <div class="notion-breadcrumb">
+            <a href="/productos">Productos</a> / @(Id == 0 ? "Nuevo" : "Editar")
+        </div>
 
-    <div class="notion-page-header">
-        <div class="header-main">
-            <span class="header-icon">
-                <i class="bi bi-archive"></i>
-            </span>
-            <div>
-                <h1>@(Id == 0 ? "Nuevo producto" : "Editar producto")</h1>
+        <div class="notion-page-header">
+            <div class="header-main">
+                <span class="header-icon">
+                    <i class="bi bi-archive"></i>
+                </span>
+                <div>
+                    <h1>@(Id == 0 ? "Nuevo producto" : "Editar producto")</h1>
+                </div>
             </div>
         </div>
-    </div>
 
-    @if (!string.IsNullOrEmpty(errorMessage))
-    {
-        <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
-            <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
-        </div>
-    }
-
-    <EditForm Model="producto" OnValidSubmit="GuardarAsync" class="notion-form-container">
-        <DataAnnotationsValidator />
-
-        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-
-            @* Fila 1: Código (Principal) *@
-            <div class="notion-input-group" style="grid-column: span 1;">
-                <label class="notion-label">Código del Producto</label>
-                <InputText @bind-Value="producto.Codigo" class="notion-input-modern" disabled="@(Id > 0)" placeholder="Ej: REF-001" />
-                <ValidationMessage For="() => producto.Codigo" class="notion-error" />
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
+                <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
             </div>
+        }
 
-            <div class="notion-input-group" style="grid-column: span 1;">
-                <label class="notion-label">Unidad de Medida</label>
-                <InputText @bind-Value="producto.Unidad" class="notion-input-modern" placeholder="Ud, Horas, Kg..." />
-            </div>
+        <EditForm Model="producto" OnValidSubmit="GuardarAsync" class="notion-form-container">
+            <DataAnnotationsValidator />
 
-            @* Fila 2: Descripción (Ancho completo) *@
-            <div class="notion-input-group" style="grid-column: span 2;">
-                <label class="notion-label">Descripción</label>
-                <InputText @bind-Value="producto.Descripcion" class="notion-input-modern" placeholder="Nombre o descripción detallada del servicio" />
-                <ValidationMessage For="() => producto.Descripcion" class="notion-error" />
-            </div>
+            <div class="editor-card">
+                <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
 
-            @* Fila 3: Valores Económicos *@
-            <div class="notion-input-group">
-                <label class="notion-label">Precio Unitario (€)</label>
-                <InputNumber @bind-Value="producto.PrecioUnitario" class="notion-input-modern" step="0.01" />
-                <ValidationMessage For="() => producto.PrecioUnitario" class="notion-error" />
-            </div>
-
-            <div class="notion-input-group">
-                <label class="notion-label">Tipo de impuesto</label>
-                <InputSelect @bind-Value="producto.TipoImpuestoId" class="notion-input-modern">
-                    <option value="">Selecciona un tipo</option>
-                    @foreach (var tipo in tiposImpuesto.Where(tipo => tipo.Activo))
-                    {
-                        <option value="@tipo.Id">@tipo.Nombre (@tipo.PorcentajeIva.ToString("N2")% IVA@(tipo.PorcentajeRecargo.HasValue ? $" + {tipo.PorcentajeRecargo.Value.ToString("N2")}% RE" : string.Empty))</option>
-                    }
-                </InputSelect>
-                <ValidationMessage For="() => producto.TipoImpuestoId" class="notion-error" />
-                @if (!string.IsNullOrWhiteSpace(avisoTipoImpuesto))
-                {
-                    <div class="notion-hint" style="margin-top: 6px; font-size: 12px; color: #8b8b8b;">
-                        <i class="bi bi-exclamation-triangle"></i> @avisoTipoImpuesto
+                    @* Fila 1: Código (Principal) *@
+                    <div class="notion-input-group" style="grid-column: span 1;">
+                        <label class="notion-label">Código del Producto</label>
+                        <InputText @bind-Value="producto.Codigo" class="notion-input-modern" disabled="@(Id > 0)" placeholder="Ej: REF-001" />
+                        <ValidationMessage For="() => producto.Codigo" class="notion-error" />
                     </div>
-                }
+
+                    <div class="notion-input-group" style="grid-column: span 1;">
+                        <label class="notion-label">Unidad de Medida</label>
+                        <InputText @bind-Value="producto.Unidad" class="notion-input-modern" placeholder="Ud, Horas, Kg..." />
+                    </div>
+
+                    @* Fila 2: Descripción (Ancho completo) *@
+                    <div class="notion-input-group" style="grid-column: span 2;">
+                        <label class="notion-label">Descripción</label>
+                        <InputText @bind-Value="producto.Descripcion" class="notion-input-modern" placeholder="Nombre o descripción detallada del servicio" />
+                        <ValidationMessage For="() => producto.Descripcion" class="notion-error" />
+                    </div>
+
+                    @* Fila 3: Valores Económicos *@
+                    <div class="notion-input-group">
+                        <label class="notion-label">Precio Unitario (€)</label>
+                        <InputNumber @bind-Value="producto.PrecioUnitario" class="notion-input-modern" step="0.01" />
+                        <ValidationMessage For="() => producto.PrecioUnitario" class="notion-error" />
+                    </div>
+
+                    <div class="notion-input-group">
+                        <label class="notion-label">Tipo de impuesto</label>
+                        <InputSelect @bind-Value="producto.TipoImpuestoId" class="notion-input-modern">
+                            <option value="">Selecciona un tipo</option>
+                            @foreach (var tipo in tiposImpuesto.Where(tipo => tipo.Activo))
+                            {
+                                <option value="@tipo.Id">@tipo.Nombre (@tipo.PorcentajeIva.ToString("N2")% IVA@(tipo.PorcentajeRecargo.HasValue ? $" + {tipo.PorcentajeRecargo.Value.ToString("N2")}% RE" : string.Empty))</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => producto.TipoImpuestoId" class="notion-error" />
+                        @if (!string.IsNullOrWhiteSpace(avisoTipoImpuesto))
+                        {
+                            <div class="notion-hint" style="margin-top: 6px; font-size: 12px; color: #8b8b8b;">
+                                <i class="bi bi-exclamation-triangle"></i> @avisoTipoImpuesto
+                            </div>
+                        }
+                    </div>
+
+                    @* Fila 4: Estado *@
+                    <div class="notion-input-group" style="grid-column: span 2; display: flex; align-items: center; gap: 10px; padding: 10px 0;">
+                        <InputCheckbox @bind-Value="producto.Activo" id="chkActivo" style="width: 18px; height: 18px; accent-color: #000; cursor: pointer;" />
+                        <label for="chkActivo" style="font-size: 14px; font-weight: 500; cursor: pointer; margin-bottom: 0;">Producto disponible para la venta</label>
+                    </div>
+                </div>
             </div>
 
-            @* Fila 4: Estado *@
-            <div class="notion-input-group" style="grid-column: span 2; display: flex; align-items: center; gap: 10px; padding: 10px 0;">
-                <InputCheckbox @bind-Value="producto.Activo" id="chkActivo" style="width: 18px; height: 18px; accent-color: #000; cursor: pointer;" />
-                <label for="chkActivo" style="font-size: 14px; font-weight: 500; cursor: pointer; margin-bottom: 0;">Producto disponible para la venta</label>
+            @* --- ACCIONES ESTILO LOGIN --- *@
+            <div class="notion-form-actions editor-actions">
+                <button type="submit" class="btn-modern" style="min-width: 140px;" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    else
+                    {
+                        <span>Guardar producto</span>
+                    }
+                </button>
+
+                <button type="button" class="btn-modern-secondary" style="min-width: 140px;" @onclick="Cancelar">
+                    Cancelar
+                </button>
             </div>
-        </div>
-
-        @* --- ACCIONES ESTILO LOGIN --- *@
-        <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
-            <button type="submit" class="btn-modern" style="min-width: 140px;" disabled="@isSaving">
-                @if (isSaving)
-                {
-                    <span class="spinner-border spinner-border-sm" role="status"></span>
-                }
-                else
-                {
-                    <span>Guardar producto</span>
-                }
-            </button>
-
-            <button type="button" class="btn-modern-secondary" style="min-width: 140px;" @onclick="Cancelar">
-                Cancelar
-            </button>
-        </div>
-    </EditForm>
+        </EditForm>
+    </div>
 </div>
 
 @code {

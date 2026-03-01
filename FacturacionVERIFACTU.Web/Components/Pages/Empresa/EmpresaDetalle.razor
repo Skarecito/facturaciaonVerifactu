@@ -1,17 +1,28 @@
 ﻿@page "/empresa"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using System.ComponentModel.DataAnnotations
 @attribute [Authorize]
 
-<PageTitle>Mi empresa - FacturaVERIFACTU</PageTitle>
+<PageTitle>Mi empresa - FacturacionVERIFACTU</PageTitle>
 
-<div class="notion-content">
-    <div class="notion-header">
-        <div class="header-main">
-            <span class="header-icon">
-                <i class="bi bi-building"></i>
-            </span>
-            <div>
-                <h1>Mi empresa</h1>
+<div class="notion-content editor-page">
+
+    <!-- HEADER -->
+    <div class="editor-card">
+        <div class="notion-breadcrumb">
+            Configuración / Mi empresa
+        </div>
+
+        <div class="notion-page-header">
+            <div class="header-main">
+                <span class="header-icon">
+                    <i class="bi bi-building"></i>
+                </span>
+                <div>
+                    <h1>Mi empresa</h1>
+                    <p>Datos de tu empresa para documentos y facturación.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -42,151 +53,155 @@
         <EditForm Model="model" OnValidSubmit="GuardarAsync" class="notion-form-container">
             <DataAnnotationsValidator />
 
-            <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div class="notion-input-group" style="grid-column: span 2;">
-                    <label class="notion-label">Razón social</label>
-                    <InputText @bind-Value="model.RazonSocial" class="notion-input-modern" />
-                    <ValidationMessage For="() => model.RazonSocial" class="notion-error" />
-                </div>
+            <!-- DATOS EMPRESA -->
+            <div class="editor-card">
+                <h3 style="margin: 0 0 8px 0;">Datos de la empresa</h3>
 
-                <div class="notion-input-group">
-                    <label class="notion-label">NIF</label>
-                    <InputText @bind-Value="model.NIF" class="notion-input-modern" />
-                    <ValidationMessage For="() => model.NIF" class="notion-error" />
-                </div>
+                <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="notion-input-group" style="grid-column: span 2;">
+                        <label class="notion-label">Razón social</label>
+                        <InputText @bind-Value="model.RazonSocial" class="notion-input-modern" />
+                        <ValidationMessage For="() => model.RazonSocial" class="notion-error" />
+                    </div>
 
-                <div class="notion-input-group">
-                    <label class="notion-label">Email</label>
-                    <InputText @bind-Value="model.Email" class="notion-input-modern" type="email" />
-                    <ValidationMessage For="() => model.Email" class="notion-error" />
-                </div>
+                    <div class="notion-input-group">
+                        <label class="notion-label">NIF</label>
+                        <InputText @bind-Value="model.NIF" class="notion-input-modern" />
+                        <ValidationMessage For="() => model.NIF" class="notion-error" />
+                    </div>
 
-                <div class="notion-input-group" style="grid-column: span 2;">
-                    <label class="notion-label">Dirección</label>
-                    <InputText @bind-Value="model.Direccion" class="notion-input-modern" />
-                </div>
+                    <div class="notion-input-group">
+                        <label class="notion-label">Email</label>
+                        <InputText @bind-Value="model.Email" class="notion-input-modern" type="email" />
+                        <ValidationMessage For="() => model.Email" class="notion-error" />
+                    </div>
 
-                <div class="notion-input-group">
-                    <label class="notion-label">Código postal</label>
-                    <InputText @bind-Value="model.CodigoPostal" class="notion-input-modern" />
-                </div>
+                    <div class="notion-input-group" style="grid-column: span 2;">
+                        <label class="notion-label">Dirección</label>
+                        <InputText @bind-Value="model.Direccion" class="notion-input-modern" />
+                    </div>
 
-                <div class="notion-input-group">
-                    <label class="notion-label">Población</label>
-                    <InputText @bind-Value="model.Poblacion" class="notion-input-modern" />
-                </div>
+                    <div class="notion-input-group">
+                        <label class="notion-label">Código postal</label>
+                        <InputText @bind-Value="model.CodigoPostal" class="notion-input-modern" />
+                    </div>
 
-                <div class="notion-input-group">
-                    <label class="notion-label">Provincia</label>
-                    <InputText @bind-Value="model.Provincia" class="notion-input-modern" />
-                </div>
+                    <div class="notion-input-group">
+                        <label class="notion-label">Población</label>
+                        <InputText @bind-Value="model.Poblacion" class="notion-input-modern" />
+                    </div>
 
-                <div class="notion-input-group">
-                    <label class="notion-label">Teléfono</label>
-                    <InputText @bind-Value="model.Telefono" class="notion-input-modern" />
-                </div>
-            </div>
+                    <div class="notion-input-group">
+                        <label class="notion-label">Provincia</label>
+                        <InputText @bind-Value="model.Provincia" class="notion-input-modern" />
+                    </div>
 
-            <div class="notion-page-header" style="margin-top: 30px;">
-                <div class="header-main">
-                    <span class="header-icon">📄</span>
-                    <div>
-                        <h2>Registro mercantil</h2>
-                        <p>Datos opcionales para facturación y documentos legales.</p>
+                    <div class="notion-input-group">
+                        <label class="notion-label">Teléfono</label>
+                        <InputText @bind-Value="model.Telefono" class="notion-input-modern" />
                     </div>
                 </div>
             </div>
 
-            <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div class="notion-input-group" style="grid-column: span 2;">
-                    <label class="notion-label">Registro mercantil</label>
-                    <InputText @bind-Value="model.RegistroMercantil" class="notion-input-modern" />
-                </div>
+            <!-- REGISTRO MERCANTIL -->
+            <div class="editor-card">
+                <h3 style="margin: 0 0 6px 0;">Registro mercantil</h3>
+                <p style="margin: 0 0 14px 0; color: rgba(55,53,47,.65); font-size: 13px;">
+                    Datos opcionales para facturación y documentos legales.
+                </p>
 
-                <div class="notion-input-group">
-                    <label class="notion-label">Tomo</label>
-                    <InputText @bind-Value="model.Tomo" class="notion-input-modern" />
-                </div>
+                <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="notion-input-group" style="grid-column: span 2;">
+                        <label class="notion-label">Registro mercantil</label>
+                        <InputText @bind-Value="model.RegistroMercantil" class="notion-input-modern" />
+                    </div>
 
-                <div class="notion-input-group">
-                    <label class="notion-label">Libro</label>
-                    <InputText @bind-Value="model.Libro" class="notion-input-modern" />
-                </div>
+                    <div class="notion-input-group">
+                        <label class="notion-label">Tomo</label>
+                        <InputText @bind-Value="model.Tomo" class="notion-input-modern" />
+                    </div>
 
-                <div class="notion-input-group">
-                    <label class="notion-label">Folio</label>
-                    <InputText @bind-Value="model.Folio" class="notion-input-modern" />
-                </div>
+                    <div class="notion-input-group">
+                        <label class="notion-label">Libro</label>
+                        <InputText @bind-Value="model.Libro" class="notion-input-modern" />
+                    </div>
 
-                <div class="notion-input-group">
-                    <label class="notion-label">Sección</label>
-                    <InputText @bind-Value="model.Seccion" class="notion-input-modern" />
-                </div>
+                    <div class="notion-input-group">
+                        <label class="notion-label">Folio</label>
+                        <InputText @bind-Value="model.Folio" class="notion-input-modern" />
+                    </div>
 
-                <div class="notion-input-group">
-                    <label class="notion-label">Hoja</label>
-                    <InputText @bind-Value="model.Hoja" class="notion-input-modern" />
-                </div>
+                    <div class="notion-input-group">
+                        <label class="notion-label">Sección</label>
+                        <InputText @bind-Value="model.Seccion" class="notion-input-modern" />
+                    </div>
 
-                <div class="notion-input-group">
-                    <label class="notion-label">Inscripción</label>
-                    <InputText @bind-Value="model.Inscripcion" class="notion-input-modern" />
-                </div>
-            </div>
+                    <div class="notion-input-group">
+                        <label class="notion-label">Hoja</label>
+                        <InputText @bind-Value="model.Hoja" class="notion-input-modern" />
+                    </div>
 
-            <div class="notion-page-header" style="margin-top: 30px;">
-                <div class="header-main">
-                    <span class="header-icon">🖼️</span>
-                    <div>
-                        <h2>Logo corporativo</h2>
-                        <p>Sube una imagen PNG o JPG (máximo 2MB).</p>
+                    <div class="notion-input-group">
+                        <label class="notion-label">Inscripción</label>
+                        <InputText @bind-Value="model.Inscripcion" class="notion-input-modern" />
                     </div>
                 </div>
             </div>
 
-            <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div class="notion-input-group" style="grid-column: span 2;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <InputFile OnChange="SeleccionarLogo" accept=".png,.jpg,.jpeg" />
-                        @if (tenantTieneLogo)
-                        {
-                            <span class="notion-badge active">Logo cargado</span>
-                        }
-                        else
-                        {
-                            <span class="notion-badge inactive">Sin logo</span>
-                        }
+            <!-- LOGO -->
+            <div class="editor-card">
+                <h3 style="margin: 0 0 6px 0;">Logo corporativo</h3>
+                <p style="margin: 0 0 14px 0; color: rgba(55,53,47,.65); font-size: 13px;">
+                    Sube una imagen PNG o JPG (máximo 2MB).
+                </p>
+
+                <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="notion-input-group" style="grid-column: span 2;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <InputFile OnChange="SeleccionarLogo" accept=".png,.jpg,.jpeg" />
+                            @if (tenantTieneLogo)
+                            {
+                                <span class="notion-badge active">Logo cargado</span>
+                            }
+                            else
+                            {
+                                <span class="notion-badge inactive">Sin logo</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="notion-input-group" style="grid-column: span 2;">
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button type="button" class="btn-modern-secondary" disabled="@(!puedeSubirLogo || isUploadingLogo)" @onclick="SubirLogoAsync">
+                                @if (isUploadingLogo)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                }
+                                else
+                                {
+                                    <span>Subir logo</span>
+                                }
+                            </button>
+
+                            <button type="button" class="btn-modern-secondary" disabled="@(!tenantTieneLogo || isUploadingLogo)" @onclick="EliminarLogoAsync">
+                                Eliminar logo
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="notion-input-group" style="grid-column: span 2; display: flex; gap: 10px;">
-                    <button type="button" class="btn-modern-secondary" disabled="@(!puedeSubirLogo || isUploadingLogo)" @onclick="SubirLogoAsync">
-                        @if (isUploadingLogo)
+                <div class="notion-form-actions editor-actions">
+                    <button type="submit" class="btn-modern" disabled="@isSaving">
+                        @if (isSaving)
                         {
                             <span class="spinner-border spinner-border-sm" role="status"></span>
                         }
                         else
                         {
-                            <span>Subir logo</span>
+                            <span>Guardar cambios</span>
                         }
                     </button>
-                    <button type="button" class="btn-modern-secondary" disabled="@(!tenantTieneLogo || isUploadingLogo)" @onclick="EliminarLogoAsync">
-                        Eliminar logo
-                    </button>
                 </div>
-            </div>
-
-            <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
-                <button type="submit" class="btn-modern" style="min-width: 140px;" disabled="@isSaving">
-                    @if (isSaving)
-                    {
-                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                    }
-                    else
-                    {
-                        <span>Guardar cambios</span>
-                    }
-                </button>
             </div>
         </EditForm>
     }

@@ -5,13 +5,13 @@
 @using Microsoft.AspNetCore.Components.Forms
 @attribute [Authorize]
 
-<div class="notion-content presupuesto-editor">
+<div class="notion-content editor-page">
     <div class="editor-card">
         <div class="notion-breadcrumb">
             <a href="/presupuestos">Presupuestos</a> / @(Id == 0 ? "Nuevo" : "Editar")
         </div>
 
-        <div class="notion-page-header">
+        <div class="notion-page-header" style="max-width: 900px;">
             <div class="header-main">
                 <span class="header-icon">
                     <i class="bi bi-file-earmark-text"></i>
@@ -49,62 +49,64 @@
             </div>
         }
 
-        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
-            <div class="notion-input-group" style="grid-column: span 2;">
-                <label class="notion-label">Cliente</label>
-                <input class="notion-input-modern" placeholder="Filtrar clientes..." @bind="clienteFiltro" @bind:event="oninput" disabled="@(!EsEditable)" />
-                <InputSelect @bind-Value="presupuesto.ClienteId" class="notion-input-modern" @onchange="OnClienteChanged" disabled="@(!EsEditable)">
-                    <option value="0">Selecciona un cliente</option>
-                    @foreach (var cliente in ClientesFiltrados)
+        <div class="editor-card">
+            <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                <div class="notion-input-group" style="grid-column: span 2;">
+                    <label class="notion-label">Cliente</label>
+                    <input class="notion-input-modern" placeholder="Filtrar clientes..." @bind="clienteFiltro" @bind:event="oninput" disabled="@(!EsEditable)" />
+                    <InputSelect @bind-Value="presupuesto.ClienteId" class="notion-input-modern" @onchange="OnClienteChanged" disabled="@(!EsEditable)">
+                        <option value="0">Selecciona un cliente</option>
+                        @foreach (var cliente in ClientesFiltrados)
+                        {
+                            <option value="@cliente.ClienteId">@cliente.Nombre (@cliente.NIF)</option>
+                        }
+                    </InputSelect>
+                    @if (aplicaRecargoEquivalencia)
                     {
-                        <option value="@cliente.ClienteId">@cliente.Nombre (@cliente.NIF)</option>
+                        <div class="notion-hint" style="margin-top: 6px; font-size: 12px; color: #8b8b8b;">
+                            Cliente en régimen de recargo de equivalencia.
+                        </div>
                     }
-                </InputSelect>
-                @if (aplicaRecargoEquivalencia)
-                {
-                    <div class="notion-hint" style="margin-top: 6px; font-size: 12px; color: #8b8b8b;">
-                        Cliente en régimen de recargo de equivalencia.
-                    </div>
-                }
-            </div>
+                </div>
 
-            <div class="notion-input-group">
-                <label class="notion-label">Serie</label>
-                <InputSelect @bind-Value="presupuesto.SerieId" class="notion-input-modern" disabled="@(Id > 0)">
-                    <option value="0">Selecciona una serie</option>
-                    @foreach (var serie in SeriesPresupuestos)
-                    {
-                        <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio</option>
-                    }
-                </InputSelect>
-            </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Serie</label>
+                    <InputSelect @bind-Value="presupuesto.SerieId" class="notion-input-modern" disabled="@(Id > 0)">
+                        <option value="0">Selecciona una serie</option>
+                        @foreach (var serie in SeriesPresupuestos)
+                        {
+                            <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio</option>
+                        }
+                    </InputSelect>
+                </div>
 
-            <div class="notion-input-group">
-                <label class="notion-label">Fecha emisión</label>
-                <InputDate @bind-Value="presupuesto.FechaEmision" class="notion-input-modern" disabled="@(!EsEditable)" />
-            </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Fecha emisión</label>
+                    <InputDate @bind-Value="presupuesto.FechaEmision" class="notion-input-modern" disabled="@(!EsEditable)" />
+                </div>
 
-            <div class="notion-input-group">
-                <label class="notion-label">Fecha validez</label>
-                <InputDate @bind-Value="presupuesto.FechaValidez" class="notion-input-modern" disabled="@(!EsEditable)" />
-            </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Fecha validez</label>
+                    <InputDate @bind-Value="presupuesto.FechaValidez" class="notion-input-modern" disabled="@(!EsEditable)" />
+                </div>
 
-            <div class="notion-input-group">
-                <label class="notion-label">Retención (%)</label>
-                <InputNumber TValue="decimal?"
-                             Value="presupuesto.PorcentajeRetencion"
-                             ValueChanged="@((decimal? v) => { presupuesto.PorcentajeRetencion = v; StateHasChanged(); })"
-                             ValueExpression="() => presupuesto.PorcentajeRetencion"
-                             class="notion-input-modern"
-                             step="1.00"
-                             min="0"
-                             max="100"
-                             disabled="@(!EsEditable)" />
-            </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Retención (%)</label>
+                    <InputNumber TValue="decimal?"
+                                 Value="presupuesto.PorcentajeRetencion"
+                                 ValueChanged="@((decimal? v) => { presupuesto.PorcentajeRetencion = v; StateHasChanged(); })"
+                                 ValueExpression="() => presupuesto.PorcentajeRetencion"
+                                 class="notion-input-modern"
+                                 step="1.00"
+                                 min="0"
+                                 max="100"
+                                 disabled="@(!EsEditable)" />
+                </div>
 
-            <div class="notion-input-group" style="grid-column: span 3;">
-                <label class="notion-label">Observaciones</label>
-                <InputTextArea @bind-Value="presupuesto.Observaciones" class="notion-input-modern" rows="3" placeholder="Notas adicionales para el cliente" disabled="@(!EsEditable)" />
+                <div class="notion-input-group" style="grid-column: span 3;">
+                    <label class="notion-label">Observaciones</label>
+                    <InputTextArea @bind-Value="presupuesto.Observaciones" class="notion-input-modern" rows="3" placeholder="Notas adicionales para el cliente" disabled="@(!EsEditable)" />
+                </div>
             </div>
         </div>
 
@@ -116,7 +118,7 @@
                         Añade productos o líneas manuales y revisa los importes en tiempo real.
                     </p>
                 </div>
-                <div class="lines-action">
+                <div class="lines-actions">
                     <button type="button" class="btn-modern-secondary" @onclick="AbrirModalProductosAsync" disabled="@(!EsEditable)">
                         <i class="bi bi-box-seam"></i> Añadir producto
                     </button>
@@ -125,10 +127,12 @@
                     </button>
                 </div>
             </div>
+
+          
         </div>
 
         <div class="notion-table-wrapper editor-table-card">
-            <table class="notion-table presupuesto-lines-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+            <table class="notion-table presupuesto-lines-table" style="width: 100%; table-layout: fixed;">
                 <thead>
                     <tr style="border-bottom: 1px solid var(--notion-border);">
                         <th style="padding: 12px 10px; width: 25%; text-align: left;">DESCRIPCIÓN</th>
@@ -232,48 +236,39 @@
             </table>
         </div>
 
-        <div class="presupuesto-totales">
-            <div class="totales-item">
-                <span>Base imponible</span>
-                <strong>@TotalBaseImponible.ToString("C")</strong>
-            </div>
-            <div class="totales-item">
-                <span>IVA</span>
-                <strong>@TotalIVA.ToString("C")</strong>
-            </div>
-            @if (aplicaRecargoEquivalencia)
-            {
+        <div class="editor-card">
+            <div class="presupuesto-totales">
                 <div class="totales-item">
-                    <span>Recargo equivalencia</span>
-                    <strong>@TotalRecargo.ToString("C")</strong>
+                    <span>Base imponible</span>
+                    <strong>@TotalBaseImponible.ToString("C")</strong>
                 </div>
-            }
-            <div class="totales-item">
-                <span>Retención</span>
-                <strong>-@TotalRetencion.ToString("C")</strong>
-            </div>
-            <div class="totales-item highlight">
-                <span>Total</span>
-                <strong>@TotalConRetencion.ToString("C")</strong>
+                <div class="totales-item">
+                    <span>IVA</span>
+                    <strong>@TotalIVA.ToString("C")</strong>
+                </div>
+                @if (aplicaRecargoEquivalencia)
+                {
+                    <div class="totales-item">
+                        <span>Recargo equivalencia</span>
+                        <strong>@TotalRecargo.ToString("C")</strong>
+                    </div>
+                }
+                @if ((presupuesto.PorcentajeRetencion ?? 0m) > 0m)
+                {
+                    <div class="totales-item">
+                        <span>Retención</span>
+                        <strong>-@TotalRetencion.ToString("C")</strong>
+                    </div>
+                }
+
+                <div class="totales-item highlight">
+                    <span>Total</span>
+                    <strong>@TotalConRetencion.ToString("C")</strong>
+                </div>
             </div>
         </div>
 
-        <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
-            <button type="submit" class="btn-modern" style="min-width: 140px;" disabled="@(isSaving || !EsEditable)">
-                @if (isSaving)
-                {
-                    <span class="spinner-border spinner-border-sm" role="status"></span>
-                }
-                else
-                {
-                    <span>Guardar</span>
-                }
-            </button>
-
-            <button type="button" class="btn-modern-secondary" style="min-width: 140px;" @onclick="Cancelar">
-                Cancelar
-            </button>
-        </div>
+       
     </EditForm>
 
     @if (Id > 0)
@@ -283,6 +278,18 @@
             <p>Estado actual: <strong>@estadoPresupuesto</strong></p>
 
             <div class="notion-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 16px;">
+                <button type="submit" class="btn-modern" style="min-width: 140px;" disabled="@(isSaving || !EsEditable)">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    else
+                    {
+                        <span>Guardar</span>
+                    }
+                </button>
+
+            
                 @if (estadoPresupuesto == "Borrador")
                 {
                     <button class="btn-modern-secondary"
@@ -316,6 +323,10 @@
                         <i class="bi bi-arrow-counterclockwise"></i> Volver a Borrador
                     </button>
                 }
+                
+                <button type="button" class="btn-modern-secondary" style="min-width: 140px;" @onclick="Cancelar">
+                    Cancelar
+                </button>
 
                 @if (estadoPresupuesto == "Rechazado")
                 {
@@ -340,7 +351,7 @@
 
     @if (Id > 0 && estadoPresupuesto == "Aceptado")
     {
-        <div class="convertir-factura estado-panel">
+        <div class="convertir-factura estado-panel" style="margin-top: 24px;">
             <h3>Convertir a factura</h3>
             <p>Genera la factura desde este presupuesto aceptado.</p>
 
@@ -497,7 +508,7 @@
                                         <td style="padding: 12px 10px; text-align: right; font-size: 14px; font-weight: 600;">@producto.PrecioUnitario.ToString("C")</td>
                                         <td style="padding: 12px 10px; text-align: right; font-size: 13px; color: rgba(55, 53, 47, 0.7);">@ObtenerDescripcionImpuesto(producto)</td>
                                         <td style="padding: 12px 10px; text-align: center;">
-                                            <button type="button" class="btn-modern-secondary" @onclick="() => AgregarLineaDesdeProducto(producto)">
+                                            <button type="button" class="btn-modern" @onclick="() => AgregarLineaDesdeProducto(producto)">
                                                 <i class="bi bi-plus-lg"></i> Añadir
                                             </button>
                                         </td>

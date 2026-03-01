@@ -8,22 +8,25 @@
 
 <PageTitle>@(Id == 0 ? "Nuevo Albarán" : "Editar Albarán") - FacturacionVERIFACTU</PageTitle>
 
-<div class="notion-content">
-    <div class="notion-breadcrumb">
-        <a href="/albaranes">Albaranes</a> / @(Id == 0 ? "Nuevo" : "Editar")
-    </div>
+<div class="notion-content editor-page">
+    <div class="editor-card">
+        <div class="notion-breadcrumb">
+            <a href="/albaranes">Albaranes</a> / @(Id == 0 ? "Nuevo" : "Editar")
+        </div>
+   
 
-    <div class="notion-page-header">
-        <div class="header-main">
-            <span class="header-icon">
-                <i class="bi bi-truck"></i>
-            </span>
-            <div>
-                <h1>@(Id == 0 ? "Nuevo albarán" : $"Albarán {numeroAlbaran}")</h1>
-                <p>@(Id == 0 ? "Crea un albarán de entrega con líneas y totales automáticos." : $"Estado actual: {estadoAlbaran}")</p>
+        <div class="notion-page-header">
+            <div class="header-main">
+                <span class="header-icon">
+                    <i class="bi bi-truck"></i>
+                </span>
+                <div>
+                    <h1>@(Id == 0 ? "Nuevo albarán" : $"Albarán {numeroAlbaran}")</h1>
+                    <p>@(Id == 0 ? "Crea un albarán de entrega con líneas y totales automáticos." : $"Estado actual: {estadoAlbaran}")</p>
+                </div>
             </div>
         </div>
-    </div>
+     </div>
 
     <EditForm EditContext="editContext" OnValidSubmit="GuardarAsync" OnInvalidSubmit="OnInvalidSubmit" class="notion-form-container">
         <DataAnnotationsValidator />
@@ -56,69 +59,73 @@
             </div>
         }
 
-        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
-            <div class="notion-input-group">
-                <label class="notion-label">Cliente *</label>
-                <select class="notion-input-modern"
-                        value="@albaran.ClienteId"
-                        @onchange="OnClienteChanged"
-                        disabled="@(!EsEditable)">
-                    <option value="0">Selecciona un cliente</option>
-                    @foreach (var cliente in clientes)
-                    {
-                        <option value="@cliente.ClienteId">@cliente.Nombre (@cliente.NIF)</option>
-                    }
-                </select>
-                <ValidationMessage For="() => albaran.ClienteId" class="notion-error" />
-            </div>
+        <div class="editor-card">
+            <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                <div class="notion-input-group">
+                    <label class="notion-label">Cliente *</label>
+                    <select class="notion-input-modern"
+                            value="@albaran.ClienteId"
+                            @onchange="OnClienteChanged"
+                            disabled="@(!EsEditable)">
+                        <option value="0">Selecciona un cliente</option>
+                        @foreach (var cliente in clientes)
+                        {
+                            <option value="@cliente.ClienteId">@cliente.Nombre (@cliente.NIF)</option>
+                        }
+                    </select>
+                    <ValidationMessage For="() => albaran.ClienteId" class="notion-error" />
+                </div>
 
-            <div class="notion-input-group">
-                <label class="notion-label">Serie *</label>
-                <InputSelect @bind-Value="albaran.SerieId" class="notion-input-modern" disabled="@(Id > 0)">
-                    <option value="0">Selecciona una serie</option>
-                    @foreach (var serie in series)
-                    {
-                        <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio</option>
-                    }
-                </InputSelect>
-                <ValidationMessage For="() => albaran.SerieId" class="notion-error" />
-            </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Serie *</label>
+                    <InputSelect @bind-Value="albaran.SerieId" class="notion-input-modern" disabled="@(Id > 0)">
+                        <option value="0">Selecciona una serie</option>
+                        @foreach (var serie in series)
+                        {
+                            <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => albaran.SerieId" class="notion-error" />
+                </div>
 
-            <div class="notion-input-group">
-                <label class="notion-label">Fecha Emisión</label>
-                <InputDate @bind-Value="albaran.FechaEmision" class="notion-input-modern" disabled="@(!EsEditable)" />
-            </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Fecha Emisión</label>
+                    <InputDate @bind-Value="albaran.FechaEmision" class="notion-input-modern" disabled="@(!EsEditable)" />
+                </div>
 
-            <div class="notion-input-group">
-                <label class="notion-label">Fecha Entrega</label>
-                <InputDate @bind-Value="albaran.FechaEntrega" class="notion-input-modern" disabled="@(!EsEditable)" />
-            </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Fecha Entrega</label>
+                    <InputDate @bind-Value="albaran.FechaEntrega" class="notion-input-modern" disabled="@(!EsEditable)" />
+                </div>
 
-            <div class="notion-input-group" style="grid-column: span 2;">
-                <label class="notion-label">Dirección Entrega</label>
-                <InputText @bind-Value="albaran.DireccionEntrega" class="notion-input-modern" placeholder="Dirección de entrega" disabled="@(!EsEditable)" />
-            </div>
+                <div class="notion-input-group" style="grid-column: span 2;">
+                    <label class="notion-label">Dirección Entrega</label>
+                    <InputText @bind-Value="albaran.DireccionEntrega" class="notion-input-modern" placeholder="Dirección de entrega" disabled="@(!EsEditable)" />
+                </div>
 
-            <div class="notion-input-group" style="grid-column: span 3;">
-                <label class="notion-label">Observaciones</label>
-                <InputTextArea @bind-Value="albaran.Observaciones" class="notion-input-modern" rows="2" placeholder="Notas adicionales" disabled="@(!EsEditable)" />
+                <div class="notion-input-group" style="grid-column: span 3;">
+                    <label class="notion-label">Observaciones</label>
+                    <InputTextArea @bind-Value="albaran.Observaciones" class="notion-input-modern" rows="2" placeholder="Notas adicionales" disabled="@(!EsEditable)" />
+                </div>
             </div>
         </div>
 
-        <div class="presupuesto-lines-header">
-            <div>
-                <h3>Líneas del albarán</h3>
-                <p style="color: rgba(55, 53, 47, 0.6); font-size: 13px; margin: 0;">
-                    Añade productos o líneas manuales y revisa los importes en tiempo real.
-                </p>
-            </div>
-            <div class="lines-actions">
-                <button type="button" class="btn-modern-secondary" @onclick="AbrirModalProductosAsync" disabled="@(!EsEditable)">
-                    <i class="bi bi-box-seam"></i> Añadir producto
-                </button>
-                <button type="button" class="btn-modern-secondary" @onclick="AgregarLineaManual" disabled="@(!EsEditable)">
-                    <i class="bi bi-plus-circle"></i> Línea manual
-                </button>
+        <div class="editor-card editor-card-lines">
+            <div class="presupuesto-lines-header">
+                <div>
+                    <h3>Líneas del albarán</h3>
+                    <p style="color: rgba(55, 53, 47, 0.6); font-size: 13px; margin: 0;">
+                        Añade productos o líneas manuales y revisa los importes en tiempo real.
+                    </p>
+                </div>
+                <div class="lines-actions">
+                    <button type="button" class="btn-modern-secondary" @onclick="AbrirModalProductosAsync" disabled="@(!EsEditable)">
+                        <i class="bi bi-box-seam"></i> Añadir producto
+                    </button>
+                    <button type="button" class="btn-modern-secondary" @onclick="AgregarLineaManual" disabled="@(!EsEditable)">
+                        <i class="bi bi-plus-circle"></i> Línea manual
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -222,73 +229,64 @@
         </div>
 
         <!-- Totales -->
-        <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
-            <div style="min-width: 300px; border: 1px solid #edeceb; border-radius: 8px; padding: 16px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="color: #787774;">Base Imponible:</span>
-                    <span style="font-weight: 600;">@TotalBaseImponible.ToString("C")</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="color: #787774;">Total IVA:</span>
-                    <span style="font-weight: 600;">@TotalIVA.ToString("C")</span>
-                </div>
-                @if (TotalRecargo > 0)
+        <div class="editor-card">
+          <div class="totales-stack">
+            <div class="totales-row"><span>Base imponible</span><strong>@TotalBaseImponible.ToString("C")</strong></div>
+            <div class="totales-row"><span>IVA</span><strong>@TotalIVA.ToString("C")</strong></div>
+            <div class="totales-row total-final"><span>Total</span><strong>@TotalAlbaran.ToString("C")</strong></div>
+          </div>
+        </div>
+       
+
+        <!-- Botones de acción -->
+        <div class="convertir-factura estado-panel" style="margin-top: 24px;">
+            <h3>Cambiar estado del albaran</h3>
+            <p>Estado actual: <strong>@estadoAlbaran</strong></p>
+            
+           <div class="notion-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 16px;">
+                @if (EsEditable)
                 {
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #787774;">Total Recargo:</span>
-                        <span style="font-weight: 600;">@TotalRecargo.ToString("C")</span>
-                    </div>
+                    <button type="submit" class="btn-modern" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                        }
+                        else
+                        {
+                            <span><i class="bi bi-save"></i> Guardar</span>
+                        }
+                    </button>
                 }
-                <div style="border-top: 2px solid #edeceb; margin: 12px 0; padding-top: 12px;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-size: 16px; font-weight: 600;">TOTAL:</span>
-                        <span style="font-size: 18px; font-weight: 700; color: #2563eb;">@TotalAlbaran.ToString("C")</span>
-                    </div>
-                </div>
+
+                @if (Id > 0 && estadoAlbaran == "Pendiente")
+                {
+                    <button type="button" class="btn-modern-secondary" @onclick='() => CambiarEstado("Entregado")'>
+                        <i class="bi bi-check-circle"></i> Marcar como Entregado
+                    </button>
+                }
+
+                @if (Id > 0 && estadoAlbaran == "Entregado" && !albaranFacturado)
+                {
+                    <button type="button" class="btn-modern-secondary" @onclick="ConvertirAFactura">
+                        <i class="bi bi-receipt"></i> Convertir a Factura
+                    </button>
+                }
+
+                @if (Id > 0)
+                {
+                    <button type="button" class="btn-modern-secondary" @onclick="DescargarPDF">
+                        <i class="bi bi-file-pdf"></i> Descargar PDF
+                    </button>
+                }
+
+                <button type="button" class="btn-modern-secondary" @onclick="Cancelar">
+                    Cancelar
+                </button>
             </div>
         </div>
 
-        <!-- Botones de acción -->
-        <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
-            @if (EsEditable)
-            {
-                <button type="submit" class="btn-modern" disabled="@isSaving">
-                    @if (isSaving)
-                    {
-                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                    }
-                    else
-                    {
-                        <span><i class="bi bi-save"></i> Guardar</span>
-                    }
-                </button>
-            }
-
-            @if (Id > 0 && estadoAlbaran == "Pendiente")
-            {
-                <button type="button" class="btn-modern-secondary" @onclick='() => CambiarEstado("Entregado")'>
-                    <i class="bi bi-check-circle"></i> Marcar como Entregado
-                </button>
-            }
-
-            @if (Id > 0 && estadoAlbaran == "Entregado" && !albaranFacturado)
-            {
-                <button type="button" class="btn-modern-secondary" @onclick="ConvertirAFactura">
-                    <i class="bi bi-receipt"></i> Convertir a Factura
-                </button>
-            }
-
-            @if (Id > 0)
-            {
-                <button type="button" class="btn-modern-secondary" @onclick="DescargarPDF">
-                    <i class="bi bi-file-pdf"></i> Descargar PDF
-                </button>
-            }
-
-            <button type="button" class="btn-modern-secondary" @onclick="Cancelar">
-                Cancelar
-            </button>
-        </div>
+       
+        
     </EditForm>
 </div>
 
@@ -344,7 +342,7 @@
                                         <td style="padding: 12px 10px;">@producto.Descripcion</td>
                                         <td style="padding: 12px 10px; text-align: right; font-weight: 600;">@producto.PrecioUnitario.ToString("C")</td>
                                         <td style="padding: 12px 10px; text-align: center;">
-                                            <button type="button" class="btn-modern-secondary" @onclick="() => AgregarLineaDesdeProducto(producto)">
+                                            <button type="button" class="btn-modern" @onclick="() => AgregarLineaDesdeProducto(producto)">
                                                 <i class="bi bi-plus-lg"></i> Añadir
                                             </button>
                                         </td>
@@ -781,6 +779,7 @@
 
     private void ConvertirAFactura()
     {
+
         NavManager.NavigateTo($"/facturas/desde-albaran/{Id}");
     }
 

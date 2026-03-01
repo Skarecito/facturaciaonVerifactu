@@ -3,148 +3,152 @@
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 
-<div class="notion-content">
-    <div class="notion-breadcrumb">
-        <a href="/clientes">Clientes</a> / @(Id == 0 ? "Nuevo" : "Editar")
-    </div>
+<div class="notion-content editor-page">
+    <div class="editor-card">
+        <div class="notion-breadcrumb">
+            <a href="/clientes">Clientes</a> / @(Id == 0 ? "Nuevo" : "Editar")
+        </div>
 
-    <div class="notion-page-header">
-        <div class="header-main">
+        <div class="notion-page-header">
+            <div class="header-main">
             
-            <span class="header-icon">
-                <i class="bi bi-people-fill"></i>
-            </span>
-            <div>
-                <h1>@(Id == 0 ? "Nuevo cliente" : "Editar cliente")</h1>
+                <span class="header-icon">
+                    <i class="bi bi-people-fill"></i>
+                </span>
+                <div>
+                    <h1>@(Id == 0 ? "Nuevo cliente" : "Editar cliente")</h1>
                 
+                </div>
             </div>
         </div>
+
+        <EditForm Model="cliente" OnValidSubmit="GuardarAsync" class="notion-form-container">
+            <DataAnnotationsValidator />
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
+                    <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
+                </div>
+            }
+
+            @* --- CUADRÍCULA DE CAMPOS ESTILO LOGIN --- *@
+            <div class="editor-card">
+                <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+
+                    @* Fila 1: Nombre y NIF *@
+                    <div class="notion-input-group" style="grid-column: span 1;">
+                        <label class="notion-label">Nombre / Razón Social</label>
+                        <InputText @bind-Value="cliente.Nombre" class="notion-input-modern" placeholder="Nombre completo" />
+                        <ValidationMessage For="() => cliente.Nombre" class="notion-error" />
+                    </div>
+
+                    <div class="notion-input-group" style="grid-column: span 1;">
+                        <label class="notion-label">NIF / CIF</label>
+                        <InputText @bind-Value="cliente.NIF" class="notion-input-modern" disabled="@(Id > 0)" placeholder="Ej: B12345678" />
+                        <ValidationMessage For="() => cliente.NIF" class="notion-error" />
+                    </div>
+
+                    @* Fila 2: Email y Teléfono *@
+                    <div class="notion-input-group">
+                        <label class="notion-label">Email</label>
+                        <InputText @bind-Value="cliente.Email" class="notion-input-modern" type="email" placeholder="correo@ejemplo.com" />
+                        <ValidationMessage For="() => cliente.Email" class="notion-error" />
+                    </div>
+
+                    <div class="notion-input-group">
+                        <label class="notion-label">Teléfono</label>
+                        <InputText @bind-Value="cliente.Telefono" class="notion-input-modern" placeholder="600 000 000" />
+                    </div>
+
+                    @* Fila 3: Dirección Completa *@
+                    <div class="notion-input-group" style="grid-column: span 2;">
+                        <label class="notion-label">Dirección</label>
+                        <InputText @bind-Value="cliente.Direccion" class="notion-input-modern" placeholder="Calle, número, piso..." />
+                    </div>
+
+                    @* Fila 4: Población y CP *@
+                    <div class="notion-input-group">
+                        <label class="notion-label">Población</label>
+                        <InputText @bind-Value="cliente.Poblacion" class="notion-input-modern" placeholder="Ciudad o municipio" />
+                    </div>
+
+                    <div class="notion-input-group">
+                        <label class="notion-label">Código Postal</label>
+                        <InputText @bind-Value="cliente.CodigoPostal" class="notion-input-modern" placeholder="28001" />
+                    </div>
+
+                    @* Fila 5: Provincia y País *@
+                    <div class="notion-input-group">
+                        <label class="notion-label">Provincia</label>
+                        <InputText @bind-Value="cliente.Provincia" class="notion-input-modern" />
+                    </div>
+
+                    <div class="notion-input-group">
+                        <label class="notion-label">País</label>
+                        <InputText @bind-Value="cliente.Pais" class="notion-input-modern" />
+                    </div>
+
+                    @* Fila 6: Estado Activo *@
+                    <div class="notion-input-group" style="grid-column: span 2; display: flex; align-items: center; gap: 10px; padding: 10px 0;">
+                        <InputCheckbox @bind-Value="cliente.Activo" id="chkActivo" style="width: 18px; height: 18px; accent-color: #000;" />
+                        <label for="chkActivo" style="font-size: 14px; font-weight: 500; cursor: pointer;">Cliente activo</label>
+                    </div>
+
+                    @*Fila 7: Configuracion fiscal*@
+                    <div class="notion-input-group">
+                        <label class="notion-label">Tipo de Cliente</label>
+                        <InputSelect @bind-Value="cliente.TipoCliente" class="notion-input-modern">
+                            <option value="B2B">B2B</option>
+                            <option value="B2C">B2C</option>
+                            <option value="Profesional">Profesional</option>
+                            <option value="Minorista">Minorista</option>
+                        </InputSelect>
+                    </div>
+
+                    <div class="notion-input-group">
+                        <label class="notion-label">Retencion por defecto</label>
+                        <InputNumber @bind-Value="cliente.PorcentajeRetencionDefecto"
+                            class="notion-input-modern"
+                            step="1.00"
+                            onforminput="0"
+                            placeholder="0,00"/>
+                    </div>
+
+                    <div class="notion-input-group" style="grid-column: span 2; display:flex; align-items:center; gap:10px; padding:10px 0;">
+                        <InputCheckbox @bind-Value="cliente.RegimenRecargoEquivalencia" id="chkRecargo" style="width: 18px; height: 18px; accent-color: #000;" />
+                        <label for="chkRecargo" style="font-size: 14px; font-weight: 500; cursor:pointer;">Recargo de equivalencia</label>
+                    </div>
+
+
+                    <div class="notion-input-group" style="grid-column: span 2;">
+                        <label class="notion-label">Notas fiscales</label>
+                        <InputTextArea @bind-Value="cliente.NotasFiscales" class="notion-input-modern" rows="4" placeholder="Observaciones fiscales del cliente" />
+                    </div>
+                </div>
+            </div>
+
+
+
+            @* --- ACCIONES --- *@
+            <div class="notion-form-actions editor-actions">
+                <button type="submit" class="btn-modern" style="min-width: 140px;" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    else
+                    {
+                        <span>Guardar</span>
+                    }
+                </button>
+
+                <button type="button" class="btn-modern-secondary" style="min-width: 140px;" @onclick="Cancelar">
+                    Cancelar
+                </button>
+            </div>
+        </EditForm>
     </div>
-
-    <EditForm Model="cliente" OnValidSubmit="GuardarAsync" class="notion-form-container">
-        <DataAnnotationsValidator />
-
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
-                <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
-            </div>
-        }
-
-        @* --- CUADRÍCULA DE CAMPOS ESTILO LOGIN --- *@
-        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-
-            @* Fila 1: Nombre y NIF *@
-            <div class="notion-input-group" style="grid-column: span 1;">
-                <label class="notion-label">Nombre / Razón Social</label>
-                <InputText @bind-Value="cliente.Nombre" class="notion-input-modern" placeholder="Nombre completo" />
-                <ValidationMessage For="() => cliente.Nombre" class="notion-error" />
-            </div>
-
-            <div class="notion-input-group" style="grid-column: span 1;">
-                <label class="notion-label">NIF / CIF</label>
-                <InputText @bind-Value="cliente.NIF" class="notion-input-modern" disabled="@(Id > 0)" placeholder="Ej: B12345678" />
-                <ValidationMessage For="() => cliente.NIF" class="notion-error" />
-            </div>
-
-            @* Fila 2: Email y Teléfono *@
-            <div class="notion-input-group">
-                <label class="notion-label">Email</label>
-                <InputText @bind-Value="cliente.Email" class="notion-input-modern" type="email" placeholder="correo@ejemplo.com" />
-                <ValidationMessage For="() => cliente.Email" class="notion-error" />
-            </div>
-
-            <div class="notion-input-group">
-                <label class="notion-label">Teléfono</label>
-                <InputText @bind-Value="cliente.Telefono" class="notion-input-modern" placeholder="600 000 000" />
-            </div>
-
-            @* Fila 3: Dirección Completa *@
-            <div class="notion-input-group" style="grid-column: span 2;">
-                <label class="notion-label">Dirección</label>
-                <InputText @bind-Value="cliente.Direccion" class="notion-input-modern" placeholder="Calle, número, piso..." />
-            </div>
-
-            @* Fila 4: Población y CP *@
-            <div class="notion-input-group">
-                <label class="notion-label">Población</label>
-                <InputText @bind-Value="cliente.Poblacion" class="notion-input-modern" placeholder="Ciudad o municipio" />
-            </div>
-
-            <div class="notion-input-group">
-                <label class="notion-label">Código Postal</label>
-                <InputText @bind-Value="cliente.CodigoPostal" class="notion-input-modern" placeholder="28001" />
-            </div>
-
-            @* Fila 5: Provincia y País *@
-            <div class="notion-input-group">
-                <label class="notion-label">Provincia</label>
-                <InputText @bind-Value="cliente.Provincia" class="notion-input-modern" />
-            </div>
-
-            <div class="notion-input-group">
-                <label class="notion-label">País</label>
-                <InputText @bind-Value="cliente.Pais" class="notion-input-modern" />
-            </div>
-
-            @* Fila 6: Estado Activo *@
-            <div class="notion-input-group" style="grid-column: span 2; display: flex; align-items: center; gap: 10px; padding: 10px 0;">
-                <InputCheckbox @bind-Value="cliente.Activo" id="chkActivo" style="width: 18px; height: 18px; accent-color: #000;" />
-                <label for="chkActivo" style="font-size: 14px; font-weight: 500; cursor: pointer;">Cliente activo</label>
-            </div>
-
-            @*Fila 7: Configuracion fiscal*@
-            <div class="notion-input-group">
-                <label class="notion-label">Tipo de Cliente</label>
-                <InputSelect @bind-Value="cliente.TipoCliente" class="notion-input-modern">
-                    <option value="B2B">B2B</option>
-                    <option value="B2C">B2C</option>
-                    <option value="Profesional">Profesional</option>
-                    <option value="Minorista">Minorista</option>
-                </InputSelect>
-            </div>
-
-            <div class="notion-input-group">
-                <label class="notion-label">Retencion por defecto</label>
-                <InputNumber @bind-Value="cliente.PorcentajeRetencionDefecto"
-                    class="notion-input-modern"
-                    step="1.00"
-                    onforminput="0"
-                    placeholder="0,00"/>
-            </div>
-
-            <div class="notion-input-group" style="grid-column: span 2; display:flex; align-items:center; gap:10px; padding:10px 0;">
-                <InputCheckbox @bind-Value="cliente.RegimenRecargoEquivalencia" id="chkRecargo" style="width: 18px; height: 18px; accent-color: #000;" />
-                <label for="chkRecargo" style="font-size: 14px; font-weight: 500; cursor:pointer;">Recargo de equivalencia</label>
-            </div>
-
-
-            <div class="notion-input-group" style="grid-column: span 2;">
-                <label class="notion-label">Notas fiscales</label>
-                <InputTextArea @bind-Value="cliente.NotasFiscales" class="notion-input-modern" rows="4" placeholder="Observaciones fiscales del cliente" />
-            </div>
-        </div>
-
-
-
-        @* --- ACCIONES --- *@
-        <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
-            <button type="submit" class="btn-modern" style="min-width: 140px;" disabled="@isSaving">
-                @if (isSaving)
-                {
-                    <span class="spinner-border spinner-border-sm" role="status"></span>
-                }
-                else
-                {
-                    <span>Guardar</span>
-                }
-            </button>
-
-            <button type="button" class="btn-modern-secondary" style="min-width: 140px;" @onclick="Cancelar">
-                Cancelar
-            </button>
-        </div>
-    </EditForm>
 </div>
 
 @code {

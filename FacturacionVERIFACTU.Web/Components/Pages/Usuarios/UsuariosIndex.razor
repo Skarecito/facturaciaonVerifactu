@@ -1,168 +1,210 @@
 ﻿@page "/usuarios"
 @using Microsoft.AspNetCore.Authorization
+@using FacturacionVERIFACTU.Web.Models.DTOs
+@inject IApiService ApiService
+@inject NavigationManager Nav
+@inject ConfirmDialogService ConfirmDialog
 @attribute [Authorize(Roles = "Admin")]
 
-<div class="notion-content">
-    <div class="notion-breadcrumb">
-        <a href="/usuarios">Usuarios</a> / @(Id == 0 ? "Nuevo" : "Editar")
-    </div>
+<PageTitle>Usuarios - FacturacionVERIFACTU</PageTitle>
 
-    <div class="notion-page-header">
+<div class="notion-content">
+    <div class="notion-header">
         <div class="header-main">
             <span class="header-icon">
                 <i class="bi bi-person-badge"></i>
             </span>
             <div>
-                <h1>@(Id == 0 ? "Nuevo usuario" : "Editar usuario")</h1>
-
+                <h1>Usuarios</h1>
             </div>
+        </div>
+
+        <button class="btn-modern" @onclick="NuevoUsuario">
+            <i class="bi bi-plus-lg"></i> Nuevo usuario
+        </button>
+    </div>
+
+    <div class="notion-toolbar" style="border-bottom: 1px solid #edeceb; margin-bottom: 24px;">
+        <div class="notion-tabs">
+            <button class="notion-tab @(filtroActivo is null ? "active" : "")" @onclick="() => SetFiltroActivo(null)">
+                <span>Todos</span>
+                <span class="tab-count">@usuarios.Count</span>
+            </button>
+            <button class="notion-tab @(filtroActivo == true ? "active" : "")" @onclick="() => SetFiltroActivo(true)">
+                <span>Activos</span>
+                <span class="tab-count">@usuarios.Count(u => u.Activo)</span>
+            </button>
+            <button class="notion-tab @(filtroActivo == false ? "active" : "")" @onclick="() => SetFiltroActivo(false)">
+                <span>Inactivos</span>
+                <span class="tab-count">@usuarios.Count(u => !u.Activo)</span>
+            </button>
         </div>
     </div>
 
-    <EditForm Model="model" OnValidSubmit="GuardarAsync" class="notion-form-container">
-        <DataAnnotationsValidator />
+    <div class="notion-toolbar" style="margin-bottom: 20px;">
+        <div class="notion-search-wrapper">
+            <i class="bi bi-search"></i>
+            <input class="notion-search-input"
+                   placeholder="Buscar por nombre o email..."
+                   @bind="search"
+                   @bind:event="oninput" />
+        </div>
+    </div>
 
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
-                <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
-            </div>
-        }
-
-        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-            <div class="notion-input-group">
-                <label class="notion-label">Nombre completo</label>
-                <InputText @bind-Value="model.NombreCompleto" class="notion-input-modern" placeholder="Nombre y apellidos" />
-                <ValidationMessage For="() => model.NombreCompleto" class="notion-error" />
-            </div>
-
-            <div class="notion-input-group">
-                <label class="notion-label">Rol</label>
-                <InputSelect @bind-Value="model.Role" class="notion-input-modern">
-                    @foreach (var role in roles)
+    @if (isLoading)
+    {
+        <div class="notion-loading">
+            <div class="spinner-modern"></div>
+            <span>Cargando usuarios...</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" style="font-size: 13px; border-radius: 8px; border: none; background-color: #fff0f0; color: #e03e3e; margin-bottom: 20px; padding: 12px;">
+            <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
+        </div>
+    }
+    else if (!UsuariosFiltrados.Any())
+    {
+        <div class="notion-empty-state" style="padding: 80px 0; text-align: center;">
+            <i class="bi bi-person" style="font-size: 48px; color: #edeceb; margin-bottom: 16px; display: block;"></i>
+            <h4 style="font-weight: 600; margin-bottom: 8px;">No hay usuarios</h4>
+            <p style="color: #787774; font-size: 14px; margin-bottom: 24px;">
+                Crea tu primer usuario para dar acceso al sistema.
+            </p>
+            <button class="btn-modern-secondary" @onclick="NuevoUsuario">Crear usuario</button>
+        </div>
+    }
+    else
+    {
+        <div class="notion-table-wrapper">
+            <table class="notion-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--notion-border);">
+                        <th style="padding: 12px 16px; width: 30%; text-align: left;">EMAIL</th>
+                        <th style="padding: 12px 16px; width: 28%; text-align: left;">NOMBRE</th>
+                        <th style="padding: 12px 16px; width: 14%; text-align: left;">ROL</th>
+                        <th style="padding: 12px 16px; width: 14%; text-align: center;">ESTADO</th>
+                        <th style="padding: 12px 16px; width: 14%; text-align: right;">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in UsuariosFiltrados)
                     {
-                        <option value="@role">@role</option>
+                        <tr>
+                            <td style="padding: 16px;">
+                                <div class="notion-cell-title">@u.Email</div>
+                                <div class="notion-cell-desc">Id @u.Id · Tenant @u.TenantId</div>
+                            </td>
+
+                            <td style="padding: 16px;">
+                                <div class="notion-cell-title">@u.NombreCompleto</div>
+                            </td>
+
+                            <td style="padding: 16px;">
+                                <span class="notion-code-text">@u.Role</span>
+                            </td>
+
+                            <td style="padding: 16px; text-align: center;">
+                                <span class="notion-badge @(u.Activo ? "active" : "inactive")">
+                                    @(u.Activo ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+
+                            <td style="padding: 16px; text-align: right;">
+                                <div class="notion-actions" style="justify-content: flex-end; gap: 4px;">
+                                    <button class="notion-action-btn" title="Editar" @onclick="() => EditarUsuario(u.Id)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+
+                                    <button class="notion-action-btn" title="@(u.Activo ? "Desactivar" : "Activar")"
+                                            @onclick="() => ToggleActivo(u)">
+                                        <i class="bi @(u.Activo ? "bi-person-x" : "bi-person-check")"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
                     }
-                </InputSelect>
-                <ValidationMessage For="() => model.Role" class="notion-error" />
-            </div>
-
-            @if (Id == 0)
-            {
-                <div class="notion-input-group" style="grid-column: span 2;">
-                    <label class="notion-label">Email</label>
-                    <InputText @bind-Value="createModel.Email" class="notion-input-modern" type="email" placeholder="correo@empresa.com" />
-                    <ValidationMessage For="() => createModel.Email" class="notion-error" />
-                </div>
-
-                <div class="notion-input-group" style="grid-column: span 2;">
-                    <label class="notion-label">Contraseña temporal</label>
-                    <InputText @bind-Value="createModel.Password" class="notion-input-modern" type="password" placeholder="Mínimo 8 caracteres" />
-                    <ValidationMessage For="() => createModel.Password" class="notion-error" />
-                </div>
-            }
-            else
-            {
-                <div class="notion-input-group" style="grid-column: span 2;">
-                    <label class="notion-label">Email (solo lectura)</label>
-                    <InputText @bind-Value="email" class="notion-input-modern" disabled />
-                </div>
-            }
-
-            <div class="notion-input-group" style="grid-column: span 2; display: flex; align-items: center; gap: 10px; padding: 10px 0;">
-                <InputCheckbox @bind-Value="model.Activo" id="chkActivo" style="width: 18px; height: 18px; accent-color: #000;" />
-                <label for="chkActivo" style="font-size: 14px; font-weight: 500; cursor: pointer;">Usuario activo</label>
-            </div>
+                </tbody>
+            </table>
         </div>
 
-        <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
-            <button type="submit" class="btn-modern" style="min-width: 140px;" disabled="@isSaving">
-                @if (isSaving)
-                {
-                    <span class="spinner-border spinner-border-sm" role="status"></span>
-                }
-                else
-                {
-                    <span>Guardar</span>
-                }
-            </button>
-
-            <button type="button" class="btn-modern-secondary" style="min-width: 140px;" @onclick="Cancelar">
-                Cancelar
-            </button>
+        <div class="notion-table-footer" style="margin-top: 20px; border-top: 1px solid #edeceb; padding-top: 12px; color: rgba(55, 53, 47, 0.4); font-size: 12px;">
+            <span>Total: @UsuariosFiltrados.Count() usuario(s)</span>
         </div>
-    </EditForm>
+    }
 </div>
 
 @code {
-    [Parameter] public int Id { get; set; }
-
-    private readonly IReadOnlyList<string> roles = new[] { "Admin", "Usuario", "Consulta" };
-    private UpdateUsuarioDto model = new();
-    private CreateUsuarioDto createModel = new();
-    private string email = string.Empty;
-    private bool isSaving;
+    private List<UsuarioResponseDto> usuarios = new();
+    private bool isLoading = true;
     private string errorMessage = string.Empty;
 
-    [Inject] private IApiService ApiService { get; set; } = null!;
-    [Inject] private NavigationManager NavManager { get; set; } = null!;
+    private bool? filtroActivo = null;
+    private string search = string.Empty;
+
+    private IEnumerable<UsuarioResponseDto> UsuariosFiltrados
+        => usuarios
+            .Where(u => filtroActivo is null || u.Activo == filtroActivo.Value)
+            .Where(u =>
+                string.IsNullOrWhiteSpace(search) ||
+                (u.NombreCompleto?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.Email?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false))
+            .OrderBy(u => u.NombreCompleto);
 
     protected override async Task OnInitializedAsync()
     {
-        if (Id <= 0)
-        {
-            model.Role = "Usuario";
-            model.Activo = true;
-            createModel.Role = "Usuario";
-            createModel.Activo = true;
-            return;
-        }
-
-        var response = await ApiService.GetAsync<UsuarioResponseDto>($"api/usuarios/{Id}");
-        if (response == null)
-        {
-            errorMessage = "No se pudo cargar el usuario seleccionado.";
-            return;
-        }
-
-        model.NombreCompleto = response.NombreCompleto;
-        model.Role = response.Role;
-        model.Activo = response.Activo;
-        email = response.Email;
+        await CargarAsync();
     }
 
-    private async Task GuardarAsync()
+    private async Task CargarAsync()
     {
-        isSaving = true;
+        isLoading = true;
         errorMessage = string.Empty;
 
-        if (Id == 0)
+        var response = await ApiService.GetAsync<List<UsuarioResponseDto>>("api/usuarios");
+        if (response is null)
         {
-            createModel.NombreCompleto = model.NombreCompleto;
-            createModel.Role = model.Role;
-            createModel.Activo = model.Activo;
-
-            var result = await ApiService.PostAsync<CreateUsuarioDto, UsuarioResponseDto>("api/usuarios", createModel);
-            if (result == null)
-            {
-                errorMessage = "No se pudo crear el usuario.";
-                isSaving = false;
-                return;
-            }
+            errorMessage = "No se pudieron cargar los usuarios.";
+            usuarios = new();
         }
         else
         {
-            var result = await ApiService.PutAsync<UpdateUsuarioDto, UsuarioResponseDto>($"api/usuarios/{Id}", model);
-            if (result == null)
-            {
-                errorMessage = "No se pudo actualizar el usuario.";
-                isSaving = false;
-                return;
-            }
+            usuarios = response;
         }
 
-        NavManager.NavigateTo("/usuarios");
+        isLoading = false;
     }
 
-    private void Cancelar() => NavManager.NavigateTo("/usuarios");
+    private void SetFiltroActivo(bool? v) => filtroActivo = v;
+
+    private void NuevoUsuario() => Nav.NavigateTo("/usuarios/nuevo");
+    private void EditarUsuario(int id) => Nav.NavigateTo($"/usuarios/editar/{id}");
+
+    private void ToggleActivo(UsuarioResponseDto u)
+    {
+        var nuevo = !u.Activo;
+
+        var options = new ConfirmDialogOptions(
+            nuevo ? "Activar usuario" : "Desactivar usuario",
+            nuevo
+                ? $"¿Activar el usuario {u.Email}?"
+                : $"¿Desactivar el usuario {u.Email}?"
+        );
+
+        ConfirmDialog.Show(options, async () =>
+        {
+            var request = new CambiarEstadoUsuarioDto { Activo = nuevo };
+
+            // endpoint típico (si en tu API el endpoint difiere, dime cuál y lo ajusto)
+            var result = await ApiService.PatchAsync<CambiarEstadoUsuarioDto, UsuarioResponseDto>(
+                $"api/usuarios/{u.Id}/estado", request);
+
+            if (result is null)
+                throw new InvalidOperationException("No se pudo cambiar el estado del usuario.");
+
+            await CargarAsync();
+            await InvokeAsync(StateHasChanged);
+        });
+    }
 }

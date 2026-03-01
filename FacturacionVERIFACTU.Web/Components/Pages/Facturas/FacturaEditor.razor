@@ -8,19 +8,21 @@
 
 <PageTitle>@(Id == 0 ? "Nueva Factura" : "Editar Factura") - FacturacionVERIFACTU</PageTitle>
 
-<div class="notion-content">
-    <div class="notion-breadcrumb">
-        <a href="/facturas">Facturas</a> / @(Id == 0 ? "Nueva" : "Editar")
-    </div>
+<div class="notion-content editor-page">
+    <div class="editor-card">
+        <div class="notion-breadcrumb">
+            <a href="/facturas">Facturas</a> / @(Id == 0 ? "Nueva" : "Editar")
+        </div>
 
-    <div class="notion-page-header">
-        <div class="header-main">
-            <span class="header-icon">
-                <i class="bi bi-receipt"></i>
-            </span>
-            <div>
-                <h1>@(Id == 0 ? "Nueva factura" : $"Factura {numeroFactura}")</h1>
-                <p>@(Id == 0 ? "Crea una factura con líneas y totales automáticos." : $"Estado actual: {estadoFactura}")</p>
+        <div class="notion-page-header">
+            <div class="header-main">
+                <span class="header-icon">
+                    <i class="bi bi-receipt"></i>
+                </span>
+                <div>
+                    <h1>@(Id == 0 ? "Nueva factura" : $"Factura {numeroFactura}")</h1>
+                    <p>@(Id == 0 ? "Crea una factura con líneas y totales automáticos." : $"Estado actual: {estadoFactura}")</p>
+                </div>
             </div>
         </div>
     </div>
@@ -69,71 +71,75 @@
             </div>
         }
 
-        <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
-            <div class="notion-input-group">
-                <label class="notion-label">Cliente *</label>
-                <select class="notion-input-modern"
-                        value="@factura.ClienteId"
-                        @onchange="OnClienteChanged"
-                        disabled="@(!EsEditable)">
-                    <option value="0">Selecciona un cliente</option>
-                    @foreach (var cliente in clientes)
-                    {
-                        <option value="@cliente.ClienteId">@cliente.Nombre (@cliente.NIF)</option>
-                    }
-                </select>
-                <ValidationMessage For="() => factura.ClienteId" class="notion-error" />
-            </div>
+        <div class="editor-card">
+            <div class="notion-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                <div class="notion-input-group">
+                    <label class="notion-label">Cliente *</label>
+                    <select class="notion-input-modern"
+                            value="@factura.ClienteId"
+                            @onchange="OnClienteChanged"
+                            disabled="@(!EsEditable)">
+                        <option value="0">Selecciona un cliente</option>
+                        @foreach (var cliente in clientes)
+                        {
+                            <option value="@cliente.ClienteId">@cliente.Nombre (@cliente.NIF)</option>
+                        }
+                    </select>
+                    <ValidationMessage For="() => factura.ClienteId" class="notion-error" />
+                </div>
 
-            <div class="notion-input-group">
-                <label class="notion-label">Serie *</label>
-                <InputSelect @bind-Value="factura.SerieId" class="notion-input-modern" disabled="@(Id > 0)">
-                    <option value="0">Selecciona una serie</option>
-                    @foreach (var serie in series)
-                    {
-                        <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio</option>
-                    }
-                </InputSelect>
-                <ValidationMessage For="() => factura.SerieId" class="notion-error" />
-            </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Serie *</label>
+                    <InputSelect @bind-Value="factura.SerieId" class="notion-input-modern" disabled="@(Id > 0)">
+                        <option value="0">Selecciona una serie</option>
+                        @foreach (var serie in series)
+                        {
+                            <option value="@serie.Id">@serie.Descripcion (@serie.Codigo) - @serie.Ejercicio</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => factura.SerieId" class="notion-error" />
+                </div>
 
-            <div class="notion-input-group">
-                <label class="notion-label">Fecha Emisión</label>
-                <InputDate @bind-Value="factura.FechaEmision" class="notion-input-modern" disabled="@(!EsEditable)" />
-            </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Fecha Emisión</label>
+                    <InputDate @bind-Value="factura.FechaEmision" class="notion-input-modern" disabled="@(!EsEditable)" />
+                </div>
 
-            <div class="notion-input-group">
-                <label class="notion-label">Tipo VeriFactu</label>
-                <input type="text" value="@factura.TipoFacturaVERIFACTU" class="notion-input-modern" disabled style="background: #f8fafc;" />
-                <small style="color: #999; font-size: 11px;">Se calcula automáticamente según cliente</small>
-            </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Tipo VeriFactu</label>
+                    <input type="text" value="@factura.TipoFacturaVERIFACTU" class="notion-input-modern" disabled style="background: #f8fafc;" />
+                    <small style="color: #999; font-size: 11px;">Se calcula automáticamente según cliente</small>
+                </div>
 
-            <div class="notion-input-group">
-                <label class="notion-label">Retención (%)</label>
-                <input type="number" @bind="factura.PorcentajeRetencion" class="notion-input-modern"
-                       disabled="@(!EsEditable)" step="0.01" min="0" max="100" />
-            </div>
+                <div class="notion-input-group">
+                    <label class="notion-label">Retención (%)</label>
+                    <input type="number" @bind="factura.PorcentajeRetencion" class="notion-input-modern"
+                           disabled="@(!EsEditable)" step="0.01" min="0" max="100" />
+                </div>
 
-            <div class="notion-input-group" style="grid-column: span 3;">
-                <label class="notion-label">Observaciones</label>
-                <InputTextArea @bind-Value="factura.Observaciones" class="notion-input-modern" rows="2" placeholder="Notas adicionales" disabled="@(!EsEditable)" />
+                <div class="notion-input-group" style="grid-column: span 3;">
+                    <label class="notion-label">Observaciones</label>
+                    <InputTextArea @bind-Value="factura.Observaciones" class="notion-input-modern" rows="2" placeholder="Notas adicionales" disabled="@(!EsEditable)" />
+                </div>
             </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #edeceb;">
-            <div>
-                <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Líneas de factura</h3>
-                <p style="color: rgba(55, 53, 47, 0.6); font-size: 13px; margin: 4px 0 0 0;">
-                    Añade productos o líneas manuales y revisa los importes en tiempo real.
-                </p>
-            </div>
-            <div style="display: flex; gap: 8px;">
-                <button type="button" class="btn-modern-secondary" @onclick="AbrirModalProductosAsync" disabled="@(!EsEditable)">
-                    <i class="bi bi-box-seam"></i> Añadir producto
-                </button>
-                <button type="button" class="btn-modern-secondary" @onclick="AgregarLineaManual" disabled="@(!EsEditable)">
-                    <i class="bi bi-plus-circle"></i> Línea manual
-                </button>
+        <div class="editor-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px;">
+                <div>
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Líneas de factura</h3>
+                    <p style="color: rgba(55, 53, 47, 0.6); font-size: 13px; margin: 4px 0 0 0;">
+                        Añade productos o líneas manuales y revisa los importes en tiempo real.
+                    </p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn-modern-secondary" @onclick="AbrirModalProductosAsync" disabled="@(!EsEditable)">
+                        <i class="bi bi-box-seam"></i> Añadir producto
+                    </button>
+                    <button type="button" class="btn-modern-secondary" @onclick="AgregarLineaManual" disabled="@(!EsEditable)">
+                        <i class="bi bi-plus-circle"></i> Línea manual
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -237,79 +243,86 @@
         </div>
 
         <!-- Totales -->
-        <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
-            <div style="min-width: 300px; border: 1px solid #edeceb; border-radius: 8px; padding: 16px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="color: #787774;">Base Imponible:</span>
-                    <span style="font-weight: 600;">@TotalBaseImponible.ToString("C")</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="color: #787774;">Total IVA:</span>
-                    <span style="font-weight: 600;">@TotalIVA.ToString("C")</span>
-                </div>
-                @if (TotalRecargo > 0)
-                {
+        <div class="editor-card">
+            <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
+                <div style="min-width: 300px; border: 1px solid #edeceb; border-radius: 8px; padding: 16px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #787774;">Total Recargo:</span>
-                        <span style="font-weight: 600;">@TotalRecargo.ToString("C")</span>
+                        <span style="color: #787774;">Base Imponible:</span>
+                        <span style="font-weight: 600;">@TotalBaseImponible.ToString("C")</span>
                     </div>
-                }
-                @if (TotalRetencion > 0)
-                {
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #dc2626;">Retención (@factura.PorcentajeRetencion%):</span>
-                        <span style="font-weight: 600; color: #dc2626;">-@TotalRetencion.ToString("C")</span>
+                        <span style="color: #787774;">Total IVA:</span>
+                        <span style="font-weight: 600;">@TotalIVA.ToString("C")</span>
                     </div>
-                }
-                <div style="border-top: 2px solid #edeceb; margin: 12px 0; padding-top: 12px;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-size: 16px; font-weight: 600;">TOTAL:</span>
-                        <span style="font-size: 18px; font-weight: 700; color: #dc2626;">@TotalFactura.ToString("C")</span>
+                    @if (TotalRecargo > 0)
+                    {
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: #787774;">Total Recargo:</span>
+                            <span style="font-weight: 600;">@TotalRecargo.ToString("C")</span>
+                        </div>
+                    }
+                    @if (TotalRetencion > 0)
+                    {
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: #dc2626;">Retención (@factura.PorcentajeRetencion%):</span>
+                            <span style="font-weight: 600; color: #dc2626;">-@TotalRetencion.ToString("C")</span>
+                        </div>
+                    }
+                    <div style="border-top: 2px solid #edeceb; margin: 12px 0; padding-top: 12px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-size: 16px; font-weight: 600;">TOTAL:</span>
+                            <span style="font-size: 18px; font-weight: 700; color: #dc2626;">@TotalFactura.ToString("C")</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Botones de acción -->
-        <div class="notion-form-actions" style="display: flex; gap: 12px; margin-top: 30px; border-top: 1px solid #edeceb; padding-top: 25px;">
-            @if (EsEditable)
-            {
-                <button type="submit" class="btn-modern" disabled="@isSaving">
-                    @if (isSaving)
-                    {
-                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                    }
-                    else
-                    {
-                        <span><i class="bi bi-save"></i> Guardar</span>
-                    }
-                </button>
-            }
+        <div class="convertir-factura estado-panel" style="margin-top: 24px;">
+            <h3>Cambiar estado de la factura</h3>
+            <p>Estado actual: <strong>@estadoFactura</strong></p>
 
-            @if (Id > 0 && !facturaEnviadaVERIFACTU && estadoFactura != "Anulada")
-            {
-                <button type="button" class="btn-modern-secondary" @onclick="EnviarAVerifactu">
-                    <i class="bi bi-send"></i> Enviar a VeriFactu
-                </button>
-            }
+            <div class="notion-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 16px;">
+                @if (EsEditable)
+                {
+                    <button type="submit" class="btn-modern" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                        }
+                        else
+                        {
+                            <span><i class="bi bi-save"></i> Guardar</span>
+                        }
+                    </button>
+                }
 
-            @if (Id > 0 && estadoFactura == "Emitida")
-            {
-                <button type="button" class="btn-modern-secondary" @onclick='() => CambiarEstado("Pagada")'>
-                    <i class="bi bi-cash"></i> Marcar como Pagada
-                </button>
-            }
+                @if (Id > 0 && !facturaEnviadaVERIFACTU && estadoFactura != "Anulada")
+                {
+                    <button type="button" class="btn-modern-secondary" @onclick="EnviarAVerifactu">
+                        <i class="bi bi-send"></i> Enviar a VeriFactu
+                    </button>
+                }
 
-            @if (Id > 0)
-            {
-                <button type="button" class="btn-modern-secondary" @onclick="DescargarPDF">
-                    <i class="bi bi-file-pdf"></i> Descargar PDF
-                </button>
-            }
+                @if (Id > 0 && estadoFactura == "Emitida")
+                {
+                    <button type="button" class="btn-modern-secondary" @onclick='() => CambiarEstado("Pagada")'>
+                        <i class="bi bi-cash"></i> Marcar como Pagada
+                    </button>
+                }
 
-            <button type="button" class="btn-modern-secondary" @onclick="Cancelar">
-                Cancelar
-            </button>
+                @if (Id > 0)
+                {
+                    <button type="button" class="btn-modern-secondary" @onclick="DescargarPDF">
+                        <i class="bi bi-file-pdf"></i> Descargar PDF
+                    </button>
+                }
+
+                <button type="button" class="btn-modern-secondary" @onclick="Cancelar">
+                    Cancelar
+                </button>
+            </div>
         </div>
     </EditForm>
 </div>
@@ -366,7 +379,7 @@
                                         <td style="padding: 12px 10px;">@producto.Descripcion</td>
                                         <td style="padding: 12px 10px; text-align: right; font-weight: 600;">@producto.PrecioUnitario.ToString("C")</td>
                                         <td style="padding: 12px 10px; text-align: center;">
-                                            <button type="button" class="btn-modern-secondary" @onclick="() => AgregarLineaDesdeProducto(producto)">
+                                            <button type="button" class="btn-modern" @onclick="() => AgregarLineaDesdeProducto(producto)">
                                                 <i class="bi bi-plus-lg"></i> Añadir
                                             </button>
                                         </td>
